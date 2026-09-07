@@ -1,6 +1,13 @@
 #include "network/connection_manager.h"
 #include <vector>
 
+#ifdef _WIN32
+    #include <winsock2.h>
+#else
+    #include <sys/socket.h>
+    #include <sys/types.h>
+#endif
+
 namespace guandan {
 
 static bool sendWebSocketFrame(SocketHandle sock, const std::string& message) {
