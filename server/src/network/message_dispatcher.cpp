@@ -3,6 +3,7 @@
 #include "protocol/message.h"
 #include "utils/logger.h"
 #include <algorithm>
+#include <sstream>
 
 namespace guandan {
 
