@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/card.h"
 #include "game/card_pattern.h"
 #include "game/types.h"
 

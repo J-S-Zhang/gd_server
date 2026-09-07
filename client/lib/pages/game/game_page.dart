@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/room_controller.dart';
+import '../../models/room.dart';
 import '../../models/game_state.dart';
 import '../../utils/constants.dart';
 import '../../widgets/game_table.dart';

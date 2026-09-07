@@ -5,7 +5,7 @@ import '../utils/constants.dart';
 
 typedef MessageCallback = void Function(Map<String, dynamic> message);
 
-enum ConnectionState { disconnected, connecting, connected, reconnecting }
+enum WsConnectionState { disconnected, connecting, connected, reconnecting }
 
 class WebSocketClient {
   WebSocketChannel? _channel;
@@ -15,20 +15,20 @@ class WebSocketClient {
   String? _token;
   bool _manualDisconnect = false;
 
-  ConnectionState state = ConnectionState.disconnected;
+  WsConnectionState state = WsConnectionState.disconnected;
   MessageCallback? onMessage;
-  void Function(ConnectionState)? onStateChanged;
+  void Function(WsConnectionState)? onStateChanged;
 
   Future<void> connect({required String token}) async {
     _token = token;
     _manualDisconnect = false;
-    state = ConnectionState.connecting;
+    state = WsConnectionState.connecting;
     onStateChanged?.call(state);
 
     try {
       final uri = Uri.parse(Constants.wsBaseUrl);
       _channel = WebSocketChannel.connect(uri);
-      state = ConnectionState.connected;
+      state = WsConnectionState.connected;
       onStateChanged?.call(state);
 
       _subscription = _channel!.stream.listen(
@@ -40,7 +40,7 @@ class WebSocketClient {
       _startHeartbeat();
       login(token);
     } catch (e) {
-      state = ConnectionState.disconnected;
+      state = WsConnectionState.disconnected;
       onStateChanged?.call(state);
       rethrow;
     }
@@ -51,7 +51,7 @@ class WebSocketClient {
     _heartbeatTimer?.cancel();
     _subscription?.cancel();
     _channel?.sink.close();
-    state = ConnectionState.disconnected;
+    state = WsConnectionState.disconnected;
     onStateChanged?.call(state);
   }
 
@@ -94,13 +94,13 @@ class WebSocketClient {
 
   void _handleError(Object error) {
     if (_manualDisconnect) return;
-    state = ConnectionState.reconnecting;
+    state = WsConnectionState.reconnecting;
     onStateChanged?.call(state);
   }
 
   void _handleDone() {
     if (_manualDisconnect) return;
-    state = ConnectionState.disconnected;
+    state = WsConnectionState.disconnected;
     onStateChanged?.call(state);
   }
 

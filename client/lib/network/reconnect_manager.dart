@@ -17,11 +17,11 @@ class ReconnectManager {
     };
   }
 
-  void _onStateChanged(ConnectionState state) {
-    if (state == ConnectionState.disconnected ||
-        state == ConnectionState.reconnecting) {
+  void _onStateChanged(WsConnectionState state) {
+    if (state == WsConnectionState.disconnected ||
+        state == WsConnectionState.reconnecting) {
       _scheduleReconnect();
-    } else if (state == ConnectionState.connected) {
+    } else if (state == WsConnectionState.connected) {
       _attempt = 0;
       _timer?.cancel();
     }

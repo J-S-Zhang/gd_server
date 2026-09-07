@@ -1,3 +1,5 @@
+import 'player.dart';
+
 enum GamePhase {
   waiting,
   ready,

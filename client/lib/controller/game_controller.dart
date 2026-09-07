@@ -1,7 +1,9 @@
 import '../models/card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
+import '../models/room.dart';
 import '../network/websocket_client.dart';
+import 'room_controller.dart';
 
 final gameStateProvider = StateProvider<ClientGameState>((ref) {
   return const ClientGameState();

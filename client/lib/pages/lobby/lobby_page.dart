@@ -76,7 +76,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
             if (_connecting) const LinearProgressIndicator(),
             const SizedBox(height: 32),
             ElevatedButton.icon(
-              onPressed: wsState == ConnectionState.connected ? _createRoom : null,
+              onPressed: wsState == WsConnectionState.connected ? _createRoom : null,
               icon: const Icon(Icons.add),
               label: const Text('创建房间', style: TextStyle(fontSize: 18)),
               style: ElevatedButton.styleFrom(
@@ -99,7 +99,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: wsState == ConnectionState.connected ? _joinRoom : null,
+              onPressed: wsState == WsConnectionState.connected ? _joinRoom : null,
               icon: const Icon(Icons.login),
               label: const Text('加入房间', style: TextStyle(fontSize: 18)),
               style: ElevatedButton.styleFrom(
@@ -112,16 +112,16 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     );
   }
 
-  Widget _buildConnectionIndicator(ConnectionState state) {
+  Widget _buildConnectionIndicator(WsConnectionState state) {
     Color color;
     String label;
     switch (state) {
-      case ConnectionState.connected:
+      case WsConnectionState.connected:
         color = Colors.green;
         label = '在线';
         break;
-      case ConnectionState.connecting:
-      case ConnectionState.reconnecting:
+      case WsConnectionState.connecting:
+      case WsConnectionState.reconnecting:
         color = Colors.orange;
         label = '连接中';
         break;
