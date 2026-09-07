@@ -1,0 +1,117 @@
+#include "protocol/game_view_builder.h"
+#include "room/room.h"
+#include <sstream>
+
+namespace guandan {
+
+static std::string phaseToString(GamePhase phase) {
+    switch (phase) {
+        case GamePhase::WAITING: return "WAITING";
+        case GamePhase::READY: return "READY";
+        case GamePhase::DEALING: return "DEALING";
+        case GamePhase::PLAYING: return "PLAYING";
+        case GamePhase::ROUND_END: return "ROUND_END";
+        case GamePhase::SETTLEMENT: return "SETTLEMENT";
+        case GamePhase::FINISHED: return "FINISHED";
+        default: return "WAITING";
+    }
+}
+
+static std::string cardIdsToJsonArray(const std::vector<CardId>& cards) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < cards.size(); ++i) {
+        if (i > 0) oss << ",";
+        oss << cards[i];
+    }
+    oss << "]";
+    return oss.str();
+}
+
+std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"room_id\":\"" << roomId << "\"";
+    oss << ",\"phase\":\"" << phaseToString(view.phase) << "\"";
+    oss << ",\"state_version\":" << view.stateVersion;
+    oss << ",\"turn_id\":" << view.turnId;
+    oss << ",\"current_level\":" << view.currentLevel;
+    oss << ",\"current_player_index\":" << view.currentPlayerIndex;
+    oss << ",\"my_seat_index\":" << view.mySeatIndex;
+    oss << ",\"my_cards\":" << cardIdsToJsonArray(view.myCards);
+    oss << ",\"last_played_cards\":" << cardIdsToJsonArray(view.lastPlayedCards);
+    oss << ",\"last_played_player_index\":" << view.lastPlayedPlayerIndex;
+
+    oss << ",\"players\":[";
+    for (size_t i = 0; i < view.others.size(); ++i) {
+        const auto& p = view.others[i];
+        if (i > 0) oss << ",";
+        oss << "{";
+        oss << "\"id\":" << p.id;
+        oss << ",\"seat_index\":" << p.seatIndex;
+        oss << ",\"team\":" << p.team;
+        oss << ",\"card_count\":" << p.cardCount;
+        oss << ",\"has_finished\":" << (p.hasFinished ? "true" : "false");
+        oss << ",\"finish_rank\":" << p.finishRank;
+        oss << ",\"is_ready\":" << (p.isReady ? "true" : "false");
+        oss << ",\"status\":\"" << (p.status == PlayerStatus::ONLINE ? "online" : "offline") << "\"";
+        oss << ",\"nickname\":\"Player" << p.id << "\"";
+        oss << "}";
+    }
+    oss << "]}";
+    return oss.str();
+}
+
+std::string buildPlayerPlayedJson(
+    PlayerId playerId,
+    const std::vector<CardId>& cards,
+    int nextPlayerIndex,
+    uint64_t stateVersion,
+    uint64_t turnId
+) {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"player_id\":" << playerId;
+    oss << ",\"cards\":" << cardIdsToJsonArray(cards);
+    oss << ",\"next_player\":" << nextPlayerIndex;
+    oss << ",\"state_version\":" << stateVersion;
+    oss << ",\"turn_id\":" << turnId;
+    oss << "}";
+    return oss.str();
+}
+
+std::string buildPlayerPassedJson(
+    int nextPlayerIndex,
+    uint64_t stateVersion,
+    uint64_t turnId
+) {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"next_player\":" << nextPlayerIndex;
+    oss << ",\"state_version\":" << stateVersion;
+    oss << ",\"turn_id\":" << turnId;
+    oss << "}";
+    return oss.str();
+}
+
+std::string buildRoomStateJson(const std::vector<RoomPlayer>& players) {
+    std::ostringstream oss;
+    oss << "{\"players\":[";
+    for (size_t i = 0; i < players.size(); ++i) {
+        const auto& p = players[i];
+        if (i > 0) oss << ",";
+        oss << "{";
+        oss << "\"id\":" << p.id;
+        oss << ",\"seat_index\":" << p.seatIndex;
+        oss << ",\"team\":" << (p.seatIndex % 2);
+        oss << ",\"nickname\":\"" << p.nickname << "\"";
+        oss << ",\"is_ready\":" << (p.isReady ? "true" : "false");
+        oss << ",\"is_owner\":" << (p.isOwner ? "true" : "false");
+        oss << ",\"status\":\"" << (p.status == PlayerStatus::ONLINE ? "online" : "offline") << "\"";
+        oss << "}";
+    }
+    oss << "],\"player_count\":" << players.size() << "}";
+    return oss.str();
+}
+
+}  // namespace guandan

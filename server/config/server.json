@@ -1,0 +1,9 @@
+{
+  "port": 9001,
+  "max_connections": 10000,
+  "heartbeat_interval_seconds": 15,
+  "heartbeat_timeout_seconds": 45,
+  "turn_timeout_seconds": 30,
+  "room_idle_destroy_seconds": 300,
+  "rule_version": "six_player_guandan_v1"
+}
