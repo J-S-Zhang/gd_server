@@ -4,9 +4,11 @@
 #include "room/room_manager.h"
 #include "timer/timer_manager.h"
 #include "utils/logger.h"
-#include <chrono>
-#include <iostream>
 #include <atomic>
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
+#include <string>
 #include <thread>
 
 int main(int argc, char* argv[]) {
@@ -32,11 +34,11 @@ int main(int argc, char* argv[]) {
 
     server.setConnectHandler([&](uint64_t sessionId) {
         sessionManager.ensureSession(sessionId);
-        Logger::info("Client connected, session " + std::to_string(sessionId));
+        guandan::Logger::info("Client connected, session " + std::to_string(sessionId));
     });
 
     server.setDisconnectHandler([&](uint64_t sessionId) {
-        Logger::info("Client disconnected, session " + std::to_string(sessionId));
+        guandan::Logger::info("Client disconnected, session " + std::to_string(sessionId));
         sessionManager.removeSession(sessionId);
     });
 

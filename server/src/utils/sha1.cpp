@@ -1,5 +1,6 @@
 #include "utils/sha1.h"
 #include <cstring>
+#include <vector>
 
 namespace guandan {
 

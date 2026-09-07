@@ -1,5 +1,6 @@
 #include "protocol/message.h"
 #include <cctype>
+#include <cstdint>
 #include <sstream>
 #include <stdexcept>
 

@@ -4,6 +4,7 @@
 #include "utils/sha1.h"
 
 #include <atomic>
+#include <cstdint>
 #include <cstring>
 #include <sstream>
 #include <string>

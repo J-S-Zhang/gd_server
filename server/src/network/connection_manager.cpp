@@ -1,4 +1,5 @@
 #include "network/connection_manager.h"
+#include <cstdint>
 #include <vector>
 
 #ifdef _WIN32

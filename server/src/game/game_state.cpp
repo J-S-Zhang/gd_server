@@ -1,5 +1,6 @@
 #include "game/game_state.h"
 #include <stdexcept>
+#include <string>
 
 namespace guandan {
 

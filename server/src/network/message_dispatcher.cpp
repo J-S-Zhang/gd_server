@@ -4,6 +4,7 @@
 #include "utils/logger.h"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 namespace guandan {
 
