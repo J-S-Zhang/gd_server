@@ -1,7 +1,9 @@
 #pragma once
 
 #include "game/game_engine.h"
+#include "room/room.h"
 #include <string>
+#include <vector>
 
 namespace guandan {
 

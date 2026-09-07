@@ -1,11 +1,12 @@
 #pragma once
 
+#include "game/settlement.h"
+#include "protocol/message.h"
 #include "network/session_manager.h"
 #include "room/room_manager.h"
 #include "timer/timer_manager.h"
 #include <functional>
 #include <memory>
-#include <set>
 #include <string>
 
 namespace guandan {

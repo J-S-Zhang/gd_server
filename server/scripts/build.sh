@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 cd "$(dirname "$0")/.."
-mkdir -p build
+mkdir -p build logs
 cd build
-cmake -DGUANDAN_ENABLE_BOOST=ON ..
-cmake --build . --config Release -j$(nproc)
-echo "Build complete: build/guandan_server"
+cmake ..
+cmake --build . -j"$(nproc)"
+echo "Build complete: $(pwd)/guandan_server"

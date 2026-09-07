@@ -1,4 +1,5 @@
 #include "timer/timer_manager.h"
+#include <vector>
 
 namespace guandan {
 

@@ -148,7 +148,14 @@ void MessageDispatcher::handleJoinRoom(uint64_t sessionId, const Message& msg, S
 
     auto room = roomManager_.joinRoom(msg.roomId, playerId, nickname);
     if (!room) {
-        sendError(send, msg.requestId, ErrorCode::ROOM_NOT_FOUND);
+        auto existing = roomManager_.getRoom(msg.roomId);
+        if (!existing) {
+            sendError(send, msg.requestId, ErrorCode::ROOM_NOT_FOUND);
+        } else if (existing->isFull()) {
+            sendError(send, msg.requestId, ErrorCode::ROOM_FULL);
+        } else {
+            sendError(send, msg.requestId, ErrorCode::ALREADY_IN_ROOM);
+        }
         return;
     }
     setupRoomBroadcast(room);

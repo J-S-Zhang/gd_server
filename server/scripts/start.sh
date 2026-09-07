@@ -1,3 +1,6 @@
 #!/bin/bash
+set -e
 cd "$(dirname "$0")/.."
-./build/guandan_server 9001
+mkdir -p logs
+PORT="${1:-9001}"
+exec ./build/guandan_server "$PORT"
