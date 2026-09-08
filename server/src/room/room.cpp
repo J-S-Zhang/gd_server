@@ -136,7 +136,6 @@ bool Room::startGame() {
         if (id == 0) return false;
     }
 
-    engine_ = GameEngine(toGameRuleConfig(config_));
     engine_.init(roomId_, ids);
     for (const auto& p : players_) {
         engine_.setPlayerReady(p.id);
