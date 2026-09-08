@@ -2,6 +2,7 @@
 
 #include "game/settlement.h"
 #include "protocol/message.h"
+#include "auth/auth_service.h"
 #include "network/session_manager.h"
 #include "room/room_manager.h"
 #include "timer/timer_manager.h"
@@ -16,7 +17,7 @@ using SendFn = std::function<void(const std::string&)>;
 class MessageDispatcher {
 public:
     MessageDispatcher(RoomManager& roomManager, SessionManager& sessionManager,
-                      TimerManager& timerManager);
+                      TimerManager& timerManager, AuthService& authService);
 
     void dispatch(uint64_t sessionId, const std::string& rawJson, SendFn send);
     void setupRoomBroadcast(const std::shared_ptr<Room>& room);
@@ -25,6 +26,7 @@ private:
     RoomManager& roomManager_;
     SessionManager& sessionManager_;
     TimerManager& timerManager_;
+    AuthService& authService_;
     int turnTimeoutSeconds_ = 30;
 
     PlayerId resolvePlayerId(uint64_t sessionId);

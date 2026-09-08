@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../utils/constants.dart';
 
@@ -19,40 +20,47 @@ class WebSocketClient {
   MessageCallback? onMessage;
   void Function(WsConnectionState)? onStateChanged;
 
+  void _setState(WsConnectionState next) {
+    if (state == next) return;
+    state = next;
+    onStateChanged?.call(state);
+  }
+
   Future<void> connect({required String token}) async {
     _token = token;
     _manualDisconnect = false;
-    state = WsConnectionState.connecting;
-    onStateChanged?.call(state);
+    await _cleanupChannel();
+    _setState(WsConnectionState.connecting);
 
     try {
       final uri = Uri.parse(Constants.wsBaseUrl);
+      debugPrint('[WS] connecting to $uri');
       _channel = WebSocketChannel.connect(uri);
-      state = WsConnectionState.connected;
-      onStateChanged?.call(state);
+      await _channel!.ready.timeout(const Duration(seconds: 8));
+      debugPrint('[WS] connected');
 
       _subscription = _channel!.stream.listen(
         _handleMessage,
         onError: _handleError,
         onDone: _handleDone,
+        cancelOnError: true,
       );
 
+      _setState(WsConnectionState.connected);
       _startHeartbeat();
       login(token);
     } catch (e) {
-      state = WsConnectionState.disconnected;
-      onStateChanged?.call(state);
+      debugPrint('[WS] connect failed: $e');
+      await _cleanupChannel();
+      _setState(WsConnectionState.disconnected);
       rethrow;
     }
   }
 
-  void disconnect() {
+  Future<void> disconnect() async {
     _manualDisconnect = true;
-    _heartbeatTimer?.cancel();
-    _subscription?.cancel();
-    _channel?.sink.close();
-    state = WsConnectionState.disconnected;
-    onStateChanged?.call(state);
+    await _cleanupChannel();
+    _setState(WsConnectionState.disconnected);
   }
 
   void login(String token) {
@@ -63,8 +71,11 @@ class WebSocketClient {
     send('reconnect', roomId: roomId);
   }
 
-  void send(String type, {Map<String, dynamic>? data, String? roomId, int? turnId}) {
-    if (_channel == null) return;
+  bool send(String type, {Map<String, dynamic>? data, String? roomId, int? turnId}) {
+    if (_channel == null || state != WsConnectionState.connected) {
+      debugPrint('[WS] send skipped ($type): not connected');
+      return false;
+    }
     final msg = {
       'protocol_version': Constants.protocolVersion,
       'type': type,
@@ -73,35 +84,59 @@ class WebSocketClient {
       if (turnId != null) 'turn_id': turnId,
       'data': data ?? {},
     };
-    _channel!.sink.add(jsonEncode(msg));
+    final payload = jsonEncode(msg);
+    try {
+      _channel!.sink.add(payload);
+      debugPrint('[WS] sent: $type (#$_requestId)');
+      return true;
+    } catch (e) {
+      debugPrint('[WS] send failed ($type): $e');
+      return false;
+    }
   }
 
-  void createRoom() => send('create_room');
-  void joinRoom(String roomId) => send('join_room', data: {'room_id': roomId}, roomId: roomId);
-  void leaveRoom(String roomId) => send('leave_room', roomId: roomId);
-  void ready(String roomId) => send('ready', roomId: roomId);
-  void startGame(String roomId) => send('start_game', roomId: roomId);
-  void playCards(String roomId, List<int> cards, int turnId) =>
+  bool createRoom() => send('create_room');
+  bool joinRoom(String roomId) =>
+      send('join_room', data: {'room_id': roomId}, roomId: roomId);
+  bool leaveRoom(String roomId) => send('leave_room', roomId: roomId);
+  bool ready(String roomId) => send('ready', roomId: roomId);
+  bool startGame(String roomId) => send('start_game', roomId: roomId);
+  bool playCards(String roomId, List<int> cards, int turnId) =>
       send('play_cards', data: {'cards': cards}, roomId: roomId, turnId: turnId);
-  void pass(String roomId, int turnId) => send('pass', roomId: roomId, turnId: turnId);
+  bool pass(String roomId, int turnId) => send('pass', roomId: roomId, turnId: turnId);
 
   void _handleMessage(dynamic raw) {
     try {
-      final msg = jsonDecode(raw as String) as Map<String, dynamic>;
+      final text = raw is String ? raw : raw.toString();
+      debugPrint('[WS] recv: ${text.length > 200 ? '${text.substring(0, 200)}...' : text}');
+      final msg = jsonDecode(text) as Map<String, dynamic>;
       onMessage?.call(msg);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[WS] parse error: $e');
+    }
   }
 
   void _handleError(Object error) {
+    debugPrint('[WS] stream error: $error');
     if (_manualDisconnect) return;
-    state = WsConnectionState.reconnecting;
-    onStateChanged?.call(state);
+    _setState(WsConnectionState.reconnecting);
   }
 
   void _handleDone() {
+    debugPrint('[WS] stream closed');
     if (_manualDisconnect) return;
-    state = WsConnectionState.disconnected;
-    onStateChanged?.call(state);
+    _setState(WsConnectionState.disconnected);
+  }
+
+  Future<void> _cleanupChannel() async {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    await _subscription?.cancel();
+    _subscription = null;
+    try {
+      await _channel?.sink.close();
+    } catch (_) {}
+    _channel = null;
   }
 
   void _startHeartbeat() {

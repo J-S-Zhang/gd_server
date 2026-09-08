@@ -30,6 +30,10 @@ set(GUANDAN_CORE_SOURCES
     src/utils/logger.cpp
     src/utils/uuid.cpp
     src/utils/sha1.cpp
+    src/user/user_store.cpp
+    src/auth/password_hash.cpp
+    src/auth/token_manager.cpp
+    src/auth/auth_service.cpp
 )
 
 add_library(guandan_core STATIC ${GUANDAN_CORE_SOURCES})
@@ -37,6 +41,7 @@ target_include_directories(guandan_core PUBLIC ${GUANDAN_INCLUDE_DIR})
 
 set(GUANDAN_SERVER_SOURCES
     src/network/websocket_server.cpp
+    src/network/http_server.cpp
     src/network/connection_manager.cpp
     src/network/session_manager.cpp
     src/network/message_dispatcher.cpp

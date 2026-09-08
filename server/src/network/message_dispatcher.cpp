@@ -10,10 +10,12 @@ namespace guandan {
 
 MessageDispatcher::MessageDispatcher(RoomManager& roomManager,
                                      SessionManager& sessionManager,
-                                     TimerManager& timerManager)
+                                     TimerManager& timerManager,
+                                     AuthService& authService)
     : roomManager_(roomManager),
       sessionManager_(sessionManager),
-      timerManager_(timerManager) {}
+      timerManager_(timerManager),
+      authService_(authService) {}
 
 PlayerId MessageDispatcher::resolvePlayerId(uint64_t sessionId) {
     sessionManager_.ensureSession(sessionId);
@@ -97,16 +99,22 @@ bool MessageDispatcher::validateTurn(const std::shared_ptr<Room>& room, const Me
 }
 
 void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, SendFn send) {
-    if (!sessionManager_.authenticate(sessionId, msg.token)) {
-        // MVP: auto-authenticate with any token
-        sessionManager_.authenticate(sessionId, msg.token.empty() ? "guest" : msg.token);
+    auto user = authService_.validateToken(msg.token);
+    if (!user) {
+        sendError(send, msg.requestId, ErrorCode::UNAUTHORIZED);
+        return;
     }
-    PlayerId playerId = resolvePlayerId(sessionId);
+
+    sessionManager_.ensureSession(sessionId);
+    PlayerId playerId = sessionManager_.bindPlayer(sessionId, user->id, user->nickname);
+    sessionManager_.authenticate(sessionId, msg.token);
 
     Message resp;
     resp.type = "login_result";
     resp.requestId = msg.requestId;
-    resp.dataJson = "{\"player_id\":" + std::to_string(playerId) + ",\"success\":true}";
+    resp.dataJson = "{\"player_id\":" + std::to_string(playerId) +
+                    ",\"nickname\":\"" + user->nickname +
+                    "\",\"success\":true}";
     sendResponse(send, resp);
 
     // 若玩家已在房间中，发送 snapshot

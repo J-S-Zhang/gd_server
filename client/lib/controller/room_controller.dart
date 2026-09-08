@@ -3,11 +3,25 @@ import '../models/room.dart';
 import '../models/player.dart';
 import '../network/websocket_client.dart';
 
-final wsClientProvider = Provider((ref) => WebSocketClient());
+final wsConnectionStateProvider =
+    StateProvider<WsConnectionState>((ref) => WsConnectionState.disconnected);
+
+final wsClientProvider = Provider((ref) {
+  final client = WebSocketClient();
+  client.onStateChanged = (state) {
+    ref.read(wsConnectionStateProvider.notifier).state = state;
+  };
+  ref.onDispose(() {
+    client.disconnect();
+  });
+  return client;
+});
 
 final roomProvider = StateProvider<Room?>((ref) => null);
 
 final pendingNavigationProvider = StateProvider<String?>((ref) => null);
+
+final wsErrorProvider = StateProvider<String?>((ref) => null);
 
 final roomControllerProvider = Provider((ref) {
   return RoomController(ref);
@@ -27,12 +41,22 @@ class RoomController {
     };
   }
 
-  void createRoom() {
-    _ws.createRoom();
+  bool createRoom() {
+    _ref.read(wsErrorProvider.notifier).state = null;
+    if (!_ws.createRoom()) {
+      _ref.read(wsErrorProvider.notifier).state = '未连接到服务器，请检查网络或稍后重试';
+      return false;
+    }
+    return true;
   }
 
-  void joinRoom(String roomId) {
-    _ws.joinRoom(roomId);
+  bool joinRoom(String roomId) {
+    _ref.read(wsErrorProvider.notifier).state = null;
+    if (!_ws.joinRoom(roomId)) {
+      _ref.read(wsErrorProvider.notifier).state = '未连接到服务器，请检查网络或稍后重试';
+      return false;
+    }
+    return true;
   }
 
   void ready(String roomId) {
@@ -49,7 +73,11 @@ class RoomController {
 
     switch (type) {
       case 'room_created':
-        final roomId = data['room_id'] as String;
+        final roomId = data['room_id']?.toString();
+        if (roomId == null || roomId.isEmpty) {
+          _ref.read(wsErrorProvider.notifier).state = '创建房间失败：服务器返回无效房间号';
+          return;
+        }
         _ref.read(roomProvider.notifier).state = Room(
           roomId: roomId,
           isOwner: true,
@@ -58,7 +86,9 @@ class RoomController {
         break;
 
       case 'room_joined':
-        final roomId = msg['room_id'] as String? ?? data['room_id'] as String? ?? '';
+        final roomId = msg['room_id']?.toString() ??
+            data['room_id']?.toString() ??
+            '';
         final players = _parsePlayers(data);
         _ref.read(roomProvider.notifier).state = Room(
           roomId: roomId,
@@ -100,16 +130,30 @@ class RoomController {
 
       case 'game_started':
         final room = _ref.read(roomProvider);
+        final roomId = msg['room_id']?.toString() ??
+            data['room_id']?.toString() ??
+            room?.roomId;
+        if (roomId == null || roomId.isEmpty) return;
         if (room != null) {
           _ref.read(roomProvider.notifier).state =
               room.copyWith(phase: GamePhase.playing);
-          _ref.read(pendingNavigationProvider.notifier).state =
-              '/game/${room.roomId}';
+        } else {
+          _ref.read(roomProvider.notifier).state = Room(
+            roomId: roomId,
+            phase: GamePhase.playing,
+          );
         }
+        _ref.read(pendingNavigationProvider.notifier).state = '/game/$roomId';
         break;
 
       case 'login_result':
         // 登录成功，player_id 可用于后续
+        break;
+
+      case 'error':
+        final code = msg['error_code']?.toString() ?? '';
+        _ref.read(wsErrorProvider.notifier).state =
+            '操作失败${code.isNotEmpty ? ' (错误码: $code)' : ''}';
         break;
     }
   }

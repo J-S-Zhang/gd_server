@@ -14,9 +14,16 @@ class AuthController {
   final Ref _ref;
   AuthController(this._ref);
 
-  Future<void> login(String username, String password) async {
+  Future<void> login(String nickname, String password) async {
     final client = _ref.read(httpClientProvider);
-    final user = await client.login(username, password);
+    final user = await client.login(nickname, password);
+    client.setToken(user.token);
+    _ref.read(userProvider.notifier).state = user;
+  }
+
+  Future<void> register(String nickname, String password) async {
+    final client = _ref.read(httpClientProvider);
+    final user = await client.register(nickname, password);
     client.setToken(user.token);
     _ref.read(userProvider.notifier).state = user;
   }

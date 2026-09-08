@@ -34,6 +34,7 @@ class ReconnectManager {
     _attempt++;
     _timer = Timer(delay, () async {
       try {
+        await client.disconnect();
         await client.connect(token: token);
       } catch (_) {}
     });

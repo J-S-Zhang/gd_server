@@ -13,31 +13,33 @@ class HttpClient {
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
-  Future<User> login(String username, String password) async {
-    // MVP: 本地模拟登录，正式版对接 HTTPS API
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (username.isEmpty) throw Exception('用户名不能为空');
-    return User(
-      id: 10001,
-      username: username,
-      nickname: username,
-      token: 'mock_token_${DateTime.now().millisecondsSinceEpoch}',
+  Future<User> login(String nickname, String password) async {
+    return _authRequest(
+      '${Constants.apiBaseUrl}/api/login',
+      {'nickname': nickname.trim(), 'password': password},
     );
   }
 
-  Future<User> register(String username, String password, String nickname) async {
-    final response = await http.post(
-      Uri.parse('${Constants.apiBaseUrl}/register'),
-      headers: _headers,
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        'nickname': nickname,
-      }),
+  Future<User> register(String nickname, String password) async {
+    return _authRequest(
+      '${Constants.apiBaseUrl}/api/register',
+      {'nickname': nickname.trim(), 'password': password},
     );
-    if (response.statusCode != 200) {
-      throw Exception('注册失败');
+  }
+
+  Future<User> _authRequest(String url, Map<String, dynamic> body) async {
+    final response = await http.post(
+      Uri.parse(url),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode == 200) {
+      return User.fromJson(data);
     }
-    return User.fromJson(jsonDecode(response.body));
+
+    final message = data['message'] as String? ?? '请求失败';
+    throw Exception(message);
   }
 }
