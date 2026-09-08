@@ -95,11 +95,15 @@ class WebSocketClient {
     }
   }
 
-  bool createRoom() => send('create_room');
+  bool createRoom({String mode = 'six'}) =>
+      send('create_room', data: {'mode': mode});
   bool joinRoom(String roomId) =>
       send('join_room', data: {'room_id': roomId}, roomId: roomId);
   bool leaveRoom(String roomId) => send('leave_room', roomId: roomId);
   bool ready(String roomId) => send('ready', roomId: roomId);
+  bool unready(String roomId) => send('unready', roomId: roomId);
+  bool changeSeat(String roomId, int seatIndex) =>
+      send('change_seat', data: {'seat_index': seatIndex}, roomId: roomId);
   bool startGame(String roomId) => send('start_game', roomId: roomId);
   bool playCards(String roomId, List<int> cards, int turnId) =>
       send('play_cards', data: {'cards': cards}, roomId: roomId, turnId: turnId);

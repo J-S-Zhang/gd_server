@@ -1,12 +1,72 @@
 #include "network/message_dispatcher.h"
+#include "game/room_config.h"
 #include "protocol/game_view_builder.h"
 #include "protocol/message.h"
 #include "utils/logger.h"
 #include <algorithm>
+#include <cctype>
 #include <sstream>
 #include <string>
 
 namespace guandan {
+
+namespace {
+
+std::string jsonEscape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out += c; break;
+        }
+    }
+    return out;
+}
+
+const char* roomPhaseToString(RoomPhase phase) {
+    switch (phase) {
+        case RoomPhase::CREATED: return "CREATED";
+        case RoomPhase::WAITING: return "WAITING";
+        case RoomPhase::PLAYING: return "PLAYING";
+        case RoomPhase::SETTLEMENT: return "SETTLEMENT";
+        case RoomPhase::FINISHED: return "FINISHED";
+    }
+    return "WAITING";
+}
+
+uint64_t extractJsonUintFromData(const std::string& json, const std::string& key) {
+    const std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return 0;
+    pos += needle.size();
+    size_t end = pos;
+    while (end < json.size() && (std::isdigit(static_cast<unsigned char>(json[end])) || json[end] == '-')) {
+        ++end;
+    }
+    if (end == pos) return 0;
+    try {
+        return std::stoull(json.substr(pos, end - pos));
+    } catch (...) {
+        return 0;
+    }
+}
+
+std::string extractJsonStringFromData(const std::string& json, const std::string& key) {
+    const std::string needle = "\"" + key + "\":\"";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return "";
+    pos += needle.size();
+    auto end = json.find('"', pos);
+    if (end == std::string::npos) return "";
+    return json.substr(pos, end - pos);
+}
+
+}  // namespace
 
 MessageDispatcher::MessageDispatcher(RoomManager& roomManager,
                                      SessionManager& sessionManager,
@@ -74,8 +134,10 @@ void MessageDispatcher::scheduleTurnTimer(const std::shared_ptr<Room>& room) {
     if (currentIdx < 0 || currentIdx >= state.playerCount) return;
     PlayerId currentPlayer = state.players[currentIdx].id;
 
-    timerManager_.schedule("turn:" + room->id(), turnTimeoutSeconds_, [this, room, currentPlayer]() {
-        Logger::info("Turn timeout, auto pass for player " + std::to_string(currentPlayer));
+    const int botDelaySeconds = isBotPlayer(currentPlayer) ? 1 : turnTimeoutSeconds_;
+
+    timerManager_.schedule("turn:" + room->id(), botDelaySeconds, [this, room, currentPlayer]() {
+        Logger::info("Auto pass for player " + std::to_string(currentPlayer));
         auto result = room->engine().pass(currentPlayer);
         if (result.code == ErrorCode::OK) {
             const auto& st = room->engine().getState();
@@ -109,18 +171,41 @@ void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, Send
     PlayerId playerId = sessionManager_.bindPlayer(sessionId, user->id, user->nickname);
     sessionManager_.authenticate(sessionId, msg.token);
 
+    auto room = roomManager_.findRoomByPlayer(playerId);
+
+    std::ostringstream oss;
+    oss << "{\"player_id\":" << playerId;
+    oss << ",\"nickname\":\"" << jsonEscape(user->nickname) << "\"";
+    oss << ",\"success\":true";
+    if (room && room->phase() != RoomPhase::FINISHED) {
+        oss << ",\"in_room\":true";
+        oss << ",\"room_id\":\"" << room->id() << "\"";
+        oss << ",\"room_phase\":\"" << roomPhaseToString(room->phase()) << "\"";
+        oss << ",\"is_owner\":" << (room->ownerId() == playerId ? "true" : "false");
+    } else {
+        oss << ",\"in_room\":false";
+    }
+    oss << "}";
+
     Message resp;
     resp.type = "login_result";
     resp.requestId = msg.requestId;
-    resp.dataJson = "{\"player_id\":" + std::to_string(playerId) +
-                    ",\"nickname\":\"" + user->nickname +
-                    "\",\"success\":true}";
+    resp.dataJson = oss.str();
     sendResponse(send, resp);
 
-    // 若玩家已在房间中，发送 snapshot
-    auto room = roomManager_.findRoomByPlayer(playerId);
-    if (room && room->phase() == RoomPhase::PLAYING) {
-        sendSnapshotToPlayer(room, playerId);
+    // 若玩家已在房间中，同步房间/对局状态
+    if (room && room->phase() != RoomPhase::FINISHED) {
+        if (room->phase() == RoomPhase::PLAYING ||
+            room->phase() == RoomPhase::SETTLEMENT) {
+            sendSnapshotToPlayer(room, playerId);
+        } else {
+            Message stateMsg;
+            stateMsg.type = "room_state";
+            stateMsg.roomId = room->id();
+            stateMsg.dataJson = buildRoomStateJson(*room);
+            sendResponse(send, stateMsg);
+        }
+        Logger::info("Player " + std::to_string(playerId) + " rejoined room " + room->id());
     }
 }
 
@@ -128,8 +213,10 @@ void MessageDispatcher::handleCreateRoom(uint64_t sessionId, const Message& msg,
     PlayerId playerId = resolvePlayerId(sessionId);
     auto* session = sessionManager_.getSession(sessionId);
     std::string nickname = session ? session->nickname : "Player";
+    std::string mode = extractJsonStringFromData(msg.dataJson, "mode");
+    if (mode.empty()) mode = "six";
 
-    auto room = roomManager_.createRoom(playerId, nickname);
+    auto room = roomManager_.createRoom(playerId, nickname, mode);
     if (!room) {
         sendError(send, msg.requestId, ErrorCode::ALREADY_IN_ROOM);
         return;
@@ -139,16 +226,17 @@ void MessageDispatcher::handleCreateRoom(uint64_t sessionId, const Message& msg,
     Message resp;
     resp.type = "room_created";
     resp.requestId = msg.requestId;
-    resp.dataJson = "{\"room_id\":\"" + room->id() + "\"}";
+    resp.dataJson = "{\"room_id\":\"" + room->id() + "\",\"mode\":\"" + room->config().modeName +
+                    "\",\"max_players\":" + std::to_string(room->config().maxPlayers) + "}";
     sendResponse(send, resp);
 
     Message stateMsg;
     stateMsg.type = "room_state";
     stateMsg.roomId = room->id();
-    stateMsg.dataJson = buildRoomStateJson(room->players());
+    stateMsg.dataJson = buildRoomStateJson(*room);
     broadcastToRoom(room, stateMsg);
 
-    Logger::info("Room created: " + room->id());
+    Logger::info("Room created: " + room->id() + " mode=" + room->config().modeName);
 }
 
 void MessageDispatcher::handleJoinRoom(uint64_t sessionId, const Message& msg, SendFn send) {
@@ -174,7 +262,7 @@ void MessageDispatcher::handleJoinRoom(uint64_t sessionId, const Message& msg, S
     resp.type = "room_joined";
     resp.requestId = msg.requestId;
     resp.roomId = msg.roomId;
-    resp.dataJson = buildRoomStateJson(room->players());
+    resp.dataJson = buildRoomStateJson(*room);
     sendResponse(send, resp);
 
     Message joinBroadcast;
@@ -187,7 +275,7 @@ void MessageDispatcher::handleJoinRoom(uint64_t sessionId, const Message& msg, S
     Message stateMsg;
     stateMsg.type = "room_state";
     stateMsg.roomId = room->id();
-    stateMsg.dataJson = buildRoomStateJson(room->players());
+    stateMsg.dataJson = buildRoomStateJson(*room);
     broadcastToRoom(room, stateMsg);
 }
 
@@ -213,7 +301,7 @@ void MessageDispatcher::handleLeaveRoom(uint64_t sessionId, const Message& msg, 
         Message stateMsg;
         stateMsg.type = "room_state";
         stateMsg.roomId = roomId;
-        stateMsg.dataJson = buildRoomStateJson(remaining->players());
+        stateMsg.dataJson = buildRoomStateJson(*remaining);
         broadcastToRoom(remaining, stateMsg);
     }
 }
@@ -237,7 +325,62 @@ void MessageDispatcher::handleReady(uint64_t sessionId, const Message& msg, Send
     Message stateMsg;
     stateMsg.type = "room_state";
     stateMsg.roomId = room->id();
-    stateMsg.dataJson = buildRoomStateJson(room->players());
+    stateMsg.dataJson = buildRoomStateJson(*room);
+    broadcastToRoom(room, stateMsg);
+}
+
+void MessageDispatcher::handleUnready(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+    if (!room->unready(playerId)) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    Message resp;
+    resp.type = "player_unready";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    resp.dataJson = "{\"player_id\":" + std::to_string(playerId) + "}";
+    broadcastToRoom(room, resp);
+
+    Message stateMsg;
+    stateMsg.type = "room_state";
+    stateMsg.roomId = room->id();
+    stateMsg.dataJson = buildRoomStateJson(*room);
+    broadcastToRoom(room, stateMsg);
+}
+
+void MessageDispatcher::handleChangeSeat(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    int seatIndex = static_cast<int>(extractJsonUintFromData(msg.dataJson, "seat_index"));
+    if (!room->changeSeat(playerId, seatIndex)) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    Message resp;
+    resp.type = "seat_changed";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    resp.dataJson = "{\"player_id\":" + std::to_string(playerId) +
+                    ",\"seat_index\":" + std::to_string(seatIndex) + "}";
+    broadcastToRoom(room, resp);
+
+    Message stateMsg;
+    stateMsg.type = "room_state";
+    stateMsg.roomId = room->id();
+    stateMsg.dataJson = buildRoomStateJson(*room);
     broadcastToRoom(room, stateMsg);
 }
 
@@ -406,7 +549,7 @@ void MessageDispatcher::handleReconnect(uint64_t sessionId, const Message& msg, 
         Message stateMsg;
         stateMsg.type = "room_state";
         stateMsg.roomId = room->id();
-        stateMsg.dataJson = buildRoomStateJson(room->players());
+        stateMsg.dataJson = buildRoomStateJson(*room);
         sendResponse(send, stateMsg);
     }
 }
@@ -431,6 +574,8 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "join_room") handleJoinRoom(sessionId, msg, send);
     else if (msg.type == "leave_room") handleLeaveRoom(sessionId, msg, send);
     else if (msg.type == "ready") handleReady(sessionId, msg, send);
+    else if (msg.type == "unready") handleUnready(sessionId, msg, send);
+    else if (msg.type == "change_seat") handleChangeSeat(sessionId, msg, send);
     else if (msg.type == "start_game") handleStartGame(sessionId, msg, send);
     else if (msg.type == "play_cards") handlePlayCards(sessionId, msg, send);
     else if (msg.type == "pass") handlePass(sessionId, msg, send);

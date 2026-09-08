@@ -40,6 +40,8 @@ private:
     void handleJoinRoom(uint64_t sessionId, const Message& msg, SendFn send);
     void handleLeaveRoom(uint64_t sessionId, const Message& msg, SendFn send);
     void handleReady(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleUnready(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleChangeSeat(uint64_t sessionId, const Message& msg, SendFn send);
     void handleStartGame(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePlayCards(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePass(uint64_t sessionId, const Message& msg, SendFn send);

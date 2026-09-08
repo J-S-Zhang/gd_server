@@ -1,10 +1,12 @@
 #include "room/room_manager.h"
+#include "game/room_config.h"
 #include "utils/uuid.h"
 
 namespace guandan {
 
 std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
-                                              const std::string& nickname) {
+                                              const std::string& nickname,
+                                              const std::string& mode) {
     std::lock_guard lock(mutex_);
     if (playerRoomMap_.count(ownerId)) return nullptr;
 
@@ -13,8 +15,12 @@ std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
         roomId = generateRoomId();
     }
 
-    auto room = std::make_shared<Room>(roomId, ownerId);
+    auto config = RoomConfig::fromModeName(mode);
+    auto room = std::make_shared<Room>(roomId, ownerId, config);
     room->join(ownerId, nickname);
+    if (config.mode == GameMode::SOLO) {
+        room->fillBots();
+    }
     rooms_[roomId] = room;
     playerRoomMap_[ownerId] = roomId;
     return room;
@@ -44,7 +50,9 @@ void RoomManager::removeRoom(const RoomId& roomId) {
     auto it = rooms_.find(roomId);
     if (it == rooms_.end()) return;
     for (const auto& p : it->second->players()) {
-        playerRoomMap_.erase(p.id);
+        if (!isBotPlayer(p.id)) {
+            playerRoomMap_.erase(p.id);
+        }
     }
     rooms_.erase(it);
 }
@@ -59,6 +67,7 @@ std::shared_ptr<Room> RoomManager::findRoomByPlayer(PlayerId playerId) {
 
 void RoomManager::removePlayerFromRoom(PlayerId playerId) {
     std::lock_guard lock(mutex_);
+    if (isBotPlayer(playerId)) return;
     auto it = playerRoomMap_.find(playerId);
     if (it == playerRoomMap_.end()) return;
     auto roomIt = rooms_.find(it->second);

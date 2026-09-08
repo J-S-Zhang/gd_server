@@ -9,6 +9,7 @@ class Player {
   final bool hasFinished;
   final int finishRank;
   final bool isReady;
+  final bool isBot;
   final PlayerStatus status;
 
   const Player({
@@ -20,6 +21,7 @@ class Player {
     this.hasFinished = false,
     this.finishRank = 0,
     this.isReady = false,
+    this.isBot = false,
     this.status = PlayerStatus.online,
   });
 
@@ -33,6 +35,7 @@ class Player {
       hasFinished: json['has_finished'] as bool? ?? false,
       finishRank: json['finish_rank'] as int? ?? 0,
       isReady: json['is_ready'] as bool? ?? false,
+      isBot: json['is_bot'] as bool? ?? (json['id'] as int? ?? 0) >= 9000000000,
       status: json['status'] == 'offline'
           ? PlayerStatus.offline
           : PlayerStatus.online,

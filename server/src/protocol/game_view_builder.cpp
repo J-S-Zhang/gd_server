@@ -94,7 +94,9 @@ std::string buildPlayerPassedJson(
     return oss.str();
 }
 
-std::string buildRoomStateJson(const std::vector<RoomPlayer>& players) {
+std::string buildRoomStateJson(const Room& room) {
+    const auto& players = room.players();
+    const auto& config = room.config();
     std::ostringstream oss;
     oss << "{\"players\":[";
     for (size_t i = 0; i < players.size(); ++i) {
@@ -107,10 +109,14 @@ std::string buildRoomStateJson(const std::vector<RoomPlayer>& players) {
         oss << ",\"nickname\":\"" << p.nickname << "\"";
         oss << ",\"is_ready\":" << (p.isReady ? "true" : "false");
         oss << ",\"is_owner\":" << (p.isOwner ? "true" : "false");
+        oss << ",\"is_bot\":" << (p.isBot ? "true" : "false");
         oss << ",\"status\":\"" << (p.status == PlayerStatus::ONLINE ? "online" : "offline") << "\"";
         oss << "}";
     }
-    oss << "],\"player_count\":" << players.size() << "}";
+    oss << "],\"player_count\":" << players.size();
+    oss << ",\"max_players\":" << config.maxPlayers;
+    oss << ",\"mode\":\"" << config.modeName << "\"";
+    oss << "}";
     return oss.str();
 }
 

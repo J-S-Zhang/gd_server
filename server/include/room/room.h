@@ -1,9 +1,9 @@
 #pragma once
 
 #include "game/game_engine.h"
+#include "game/room_config.h"
 #include "room/room_task_queue.h"
 #include "game/types.h"
-#include <array>
 #include <functional>
 #include <string>
 #include <vector>
@@ -24,15 +24,17 @@ struct RoomPlayer {
     int seatIndex = -1;
     bool isReady = false;
     bool isOwner = false;
+    bool isBot = false;
     PlayerStatus status = PlayerStatus::ONLINE;
 };
 
 class Room {
 public:
-    Room(RoomId roomId, PlayerId ownerId);
+    Room(RoomId roomId, PlayerId ownerId, RoomConfig config);
 
     RoomId id() const { return roomId_; }
     RoomPhase phase() const { return phase_; }
+    const RoomConfig& config() const { return config_; }
     const std::vector<RoomPlayer>& players() const { return players_; }
     GameEngine& engine() { return engine_; }
     RoomTaskQueue& taskQueue() { return taskQueue_; }
@@ -40,17 +42,26 @@ public:
     bool join(PlayerId playerId, const std::string& nickname);
     void leave(PlayerId playerId);
     bool ready(PlayerId playerId);
+    bool unready(PlayerId playerId);
+    bool changeSeat(PlayerId playerId, int seatIndex);
     bool startGame();
-    bool isFull() const { return players_.size() >= kPlayerCount; }
+    void fillBots();
+    bool isFull() const { return static_cast<int>(players_.size()) >= config_.maxPlayers; }
     bool isEmpty() const { return players_.empty(); }
     PlayerId ownerId() const { return ownerId_; }
+
+    int firstEmptySeat() const;
+    bool isSeatTaken(int seatIndex, PlayerId exceptId = 0) const;
 
     using BroadcastFn = std::function<void(PlayerId, const std::string&)>;
     void setBroadcastCallback(BroadcastFn fn) { broadcast_ = std::move(fn); }
 
 private:
+    bool addBotAtSeat(int seatIndex, int botIndex);
+
     RoomId roomId_;
     PlayerId ownerId_;
+    RoomConfig config_;
     RoomPhase phase_ = RoomPhase::WAITING;
     std::vector<RoomPlayer> players_;
     GameEngine engine_;

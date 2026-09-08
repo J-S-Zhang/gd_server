@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/room.dart';
 import '../models/player.dart';
+import '../models/game_mode.dart';
 import '../network/websocket_client.dart';
+import 'auth_controller.dart';
 
 final wsConnectionStateProvider =
     StateProvider<WsConnectionState>((ref) => WsConnectionState.disconnected);
@@ -41,9 +43,9 @@ class RoomController {
     };
   }
 
-  bool createRoom() {
+  bool createRoom([GameMode mode = GameMode.six]) {
     _ref.read(wsErrorProvider.notifier).state = null;
-    if (!_ws.createRoom()) {
+    if (!_ws.createRoom(mode: mode.wireValue)) {
       _ref.read(wsErrorProvider.notifier).state = '未连接到服务器，请检查网络或稍后重试';
       return false;
     }
@@ -63,6 +65,14 @@ class RoomController {
     _ws.ready(roomId);
   }
 
+  void unready(String roomId) {
+    _ws.unready(roomId);
+  }
+
+  void changeSeat(String roomId, int seatIndex) {
+    _ws.changeSeat(roomId, seatIndex);
+  }
+
   void startGame(String roomId) {
     _ws.startGame(roomId);
   }
@@ -78,30 +88,38 @@ class RoomController {
           _ref.read(wsErrorProvider.notifier).state = '创建房间失败：服务器返回无效房间号';
           return;
         }
-        _ref.read(roomProvider.notifier).state = Room(
-          roomId: roomId,
+        _ref.read(roomProvider.notifier).state = _roomFromData(
+          roomId,
+          data,
           isOwner: true,
         );
-        _ref.read(pendingNavigationProvider.notifier).state = '/room/$roomId';
+        _ref.read(pendingNavigationProvider.notifier).state = '/game/$roomId';
         break;
 
       case 'room_joined':
         final roomId = msg['room_id']?.toString() ??
             data['room_id']?.toString() ??
             '';
-        final players = _parsePlayers(data);
-        _ref.read(roomProvider.notifier).state = Room(
-          roomId: roomId,
-          players: players,
-        );
-        _ref.read(pendingNavigationProvider.notifier).state = '/room/$roomId';
+        _ref.read(roomProvider.notifier).state = _roomFromData(roomId, data);
+        _ref.read(pendingNavigationProvider.notifier).state = '/game/$roomId';
         break;
 
       case 'room_state':
+        final roomId = msg['room_id']?.toString() ?? '';
         final room = _ref.read(roomProvider);
-        if (room == null) return;
-        final players = _parsePlayers(data);
-        _ref.read(roomProvider.notifier).state = room.copyWith(players: players);
+        if (room != null) {
+          _ref.read(roomProvider.notifier).state = _mergeRoomData(room, data);
+        } else if (roomId.isNotEmpty) {
+          final userId = _ref.read(userProvider)?.id;
+          final players = _parsePlayers(data);
+          final isOwner = userId != null &&
+              players.any((p) => p.id == userId && _playerIsOwner(p, data, userId));
+          _ref.read(roomProvider.notifier).state = _roomFromData(
+            roomId,
+            data,
+            isOwner: isOwner,
+          );
+        }
         break;
 
       case 'player_joined':
@@ -109,23 +127,9 @@ class RoomController {
         break;
 
       case 'player_ready':
-        final room = _ref.read(roomProvider);
-        if (room == null) return;
-        final playerId = data['player_id'] as int?;
-        if (playerId == null) return;
-        final updated = room.players.map((p) {
-          if (p.id == playerId) {
-            return Player(
-              id: p.id,
-              nickname: p.nickname,
-              seatIndex: p.seatIndex,
-              team: p.team,
-              isReady: true,
-            );
-          }
-          return p;
-        }).toList();
-        _ref.read(roomProvider.notifier).state = room.copyWith(players: updated);
+      case 'player_unready':
+      case 'seat_changed':
+        // room_state 广播会跟随，此处可忽略
         break;
 
       case 'game_started':
@@ -147,15 +151,91 @@ class RoomController {
         break;
 
       case 'login_result':
-        // 登录成功，player_id 可用于后续
+        _handleLoginResult(msg['data'] as Map<String, dynamic>? ?? {});
         break;
 
       case 'error':
-        final code = msg['error_code']?.toString() ?? '';
+        final code = msg['error_code'];
+        final codeStr = code?.toString() ?? '';
+        if (code == 2003 || codeStr == '2003') {
+          _ref.read(wsErrorProvider.notifier).state =
+              '您已在房间中，正在为您自动进入...';
+          return;
+        }
         _ref.read(wsErrorProvider.notifier).state =
-            '操作失败${code.isNotEmpty ? ' (错误码: $code)' : ''}';
+            '操作失败${codeStr.isNotEmpty ? ' (错误码: $codeStr)' : ''}';
         break;
     }
+  }
+
+  void _handleLoginResult(Map<String, dynamic> data) {
+    if (data['success'] != true) return;
+    if (data['in_room'] != true) return;
+
+    final roomId = data['room_id']?.toString();
+    if (roomId == null || roomId.isEmpty) return;
+
+    final phase = data['room_phase']?.toString() ?? 'WAITING';
+    final isOwner = data['is_owner'] == true;
+
+    _ref.read(roomProvider.notifier).state = Room(
+      roomId: roomId,
+      isOwner: isOwner,
+      phase: _parseRoomPhase(phase),
+    );
+
+    if (phase == 'PLAYING' || phase == 'SETTLEMENT') {
+      _ref.read(pendingNavigationProvider.notifier).state = '/game/$roomId';
+    } else {
+      _ref.read(pendingNavigationProvider.notifier).state = '/game/$roomId';
+    }
+  }
+
+  GamePhase _parseRoomPhase(String phase) {
+    switch (phase.toUpperCase()) {
+      case 'PLAYING':
+        return GamePhase.playing;
+      case 'SETTLEMENT':
+        return GamePhase.settlement;
+      default:
+        return GamePhase.waiting;
+    }
+  }
+
+  bool _playerIsOwner(Player player, Map<String, dynamic> data, int userId) {
+    if (player.id != userId) return false;
+    final list = data['players'] as List<dynamic>? ?? [];
+    for (final raw in list) {
+      final p = raw as Map<String, dynamic>;
+      if (p['id'] == userId) {
+        return p['is_owner'] == true;
+      }
+    }
+    return false;
+  }
+
+  Room _roomFromData(
+    String roomId,
+    Map<String, dynamic> data, {
+    bool isOwner = false,
+    GamePhase phase = GamePhase.waiting,
+  }) {
+    return Room.fromRoomData(
+      roomId: roomId,
+      data: data,
+      isOwner: isOwner,
+      phase: phase,
+    );
+  }
+
+  Room _mergeRoomData(Room room, Map<String, dynamic> data) {
+    final mode = GameMode.fromString(data['mode'] as String?);
+    final maxPlayers = data['max_players'] as int? ?? room.maxPlayers;
+    return room.copyWith(
+      players: _parsePlayers(data),
+      mode: data.containsKey('mode') ? mode : room.mode,
+      maxPlayers: data.containsKey('max_players') ? maxPlayers : room.maxPlayers,
+    );
   }
 
   List<Player> _parsePlayers(Map<String, dynamic> data) {

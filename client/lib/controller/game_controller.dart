@@ -1,4 +1,6 @@
 import '../models/card.dart';
+import '../utils/hand_layout.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
 import '../models/room.dart';
@@ -56,6 +58,52 @@ class GameController {
         .where((c) => c.selected)
         .map((c) => c.id)
         .toList();
+  }
+
+  void sortHand() {
+    final state = _ref.read(gameStateProvider);
+    final selected = selectedCardIds.toSet();
+    final sorted = sortHandCards(state.myCards, currentLevel: state.currentLevel);
+    final cards = sorted
+        .map(
+          (c) => GameCard(
+            id: c.id,
+            suit: c.suit,
+            rank: c.rank,
+            selected: selected.contains(c.id),
+          ),
+        )
+        .toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
+  }
+
+  void autoSortHand() => sortHand();
+
+  void hint(BuildContext context) {
+    final state = _ref.read(gameStateProvider);
+    if (!state.isMyTurn || state.myCards.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前无法提示')),
+      );
+      return;
+    }
+
+    final sorted = sortHandCards(state.myCards, currentLevel: state.currentLevel);
+    final target = sorted.first;
+    final cards = state.myCards
+        .map(
+          (c) => GameCard(
+            id: c.id,
+            suit: c.suit,
+            rank: c.rank,
+            selected: c.id == target.id,
+          ),
+        )
+        .toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('提示：可出 ${target.displayName}')),
+    );
   }
 
   void _handleGameMessage(Map<String, dynamic> msg) {

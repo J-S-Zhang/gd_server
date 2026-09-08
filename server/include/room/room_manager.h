@@ -9,7 +9,8 @@ namespace guandan {
 
 class RoomManager {
 public:
-    std::shared_ptr<Room> createRoom(PlayerId ownerId, const std::string& nickname);
+    std::shared_ptr<Room> createRoom(PlayerId ownerId, const std::string& nickname,
+                                     const std::string& mode = "six");
     std::shared_ptr<Room> joinRoom(const RoomId& roomId, PlayerId playerId,
                                    const std::string& nickname);
     std::shared_ptr<Room> getRoom(const RoomId& roomId);

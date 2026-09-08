@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controller/auth_controller.dart';
+import '../../theme/game_theme.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -89,10 +90,18 @@ class _LoginPageState extends ConsumerState<LoginPage>
   InputDecoration _fieldDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      labelStyle: const TextStyle(color: Colors.white70),
+      prefixIcon: Icon(icon, color: Colors.white70),
       filled: true,
-      fillColor: Colors.white,
-      border: const OutlineInputBorder(),
+      fillColor: Colors.white.withValues(alpha: 0.12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: GameTheme.accentGold, width: 2),
+      ),
     );
   }
 
@@ -102,13 +111,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1B5E20), Color(0xFF0D3311)],
-          ),
-        ),
+        decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -118,26 +121,33 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.style, size: 80, color: Colors.amber),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: GameTheme.panelDecoration(),
+                      child: const Icon(Icons.style, size: 64, color: GameTheme.accentGold),
+                    ),
                     const SizedBox(height: 16),
-                    Text(
+                    const Text(
                       '六人掼蛋',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '经典棋牌 · 六人实时对战',
+                      style: TextStyle(color: GameTheme.textSecondary, fontSize: 14),
                     ),
                     const SizedBox(height: 32),
                     Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      decoration: GameTheme.panelDecoration(),
                       child: TabBar(
                         controller: _tabController,
-                        indicatorColor: Colors.amber,
+                        indicatorColor: GameTheme.accentGold,
                         labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white70,
+                        unselectedLabelColor: Colors.white54,
                         onTap: (_) => setState(() {}),
                         tabs: const [
                           Tab(text: '登录'),
@@ -148,12 +158,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     const SizedBox(height: 24),
                     TextField(
                       controller: _nicknameController,
+                      style: const TextStyle(color: Colors.white),
                       decoration: _fieldDecoration('昵称', Icons.person),
                     ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: _passwordController,
                       obscureText: true,
+                      style: const TextStyle(color: Colors.white),
                       decoration: _fieldDecoration('密码', Icons.lock),
                     ),
                     if (isRegister) ...[
@@ -161,6 +173,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       TextField(
                         controller: _confirmPasswordController,
                         obscureText: true,
+                        style: const TextStyle(color: Colors.white),
                         decoration: _fieldDecoration('确认密码', Icons.lock_outline),
                       ),
                     ],
@@ -172,9 +185,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         onPressed: _loading
                             ? null
                             : (isRegister ? _submitRegister : _submitLogin),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber,
-                          foregroundColor: Colors.black,
+                        style: GameTheme.playButtonStyle.copyWith(
+                          minimumSize: WidgetStateProperty.all(const Size(double.infinity, 48)),
                         ),
                         child: _loading
                             ? const SizedBox(

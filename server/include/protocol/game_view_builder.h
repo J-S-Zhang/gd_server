@@ -20,6 +20,6 @@ std::string buildPlayerPassedJson(
     uint64_t stateVersion,
     uint64_t turnId
 );
-std::string buildRoomStateJson(const std::vector<RoomPlayer>& players);
+std::string buildRoomStateJson(const Room& room);
 
 }  // namespace guandan

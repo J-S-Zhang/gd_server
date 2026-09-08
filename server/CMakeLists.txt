@@ -34,6 +34,7 @@ set(GUANDAN_CORE_SOURCES
     src/auth/password_hash.cpp
     src/auth/token_manager.cpp
     src/auth/auth_service.cpp
+    src/game/room_config.cpp
 )
 
 add_library(guandan_core STATIC ${GUANDAN_CORE_SOURCES})

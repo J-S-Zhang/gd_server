@@ -1,4 +1,5 @@
-import 'player.dart';
+import '../models/player.dart';
+import '../models/game_mode.dart';
 
 enum GamePhase {
   waiting,
@@ -15,28 +16,62 @@ class Room {
   final List<Player> players;
   final bool isOwner;
   final GamePhase phase;
+  final GameMode mode;
+  final int maxPlayers;
 
   const Room({
     required this.roomId,
     this.players = const [],
     this.isOwner = false,
     this.phase = GamePhase.waiting,
+    this.mode = GameMode.six,
+    this.maxPlayers = 6,
   });
 
-  bool get isFull => players.length >= 6;
-  bool get allReady => players.length == 6 && players.every((p) => p.isReady);
+  bool get isFull => players.length >= maxPlayers;
+
+  bool get allReady =>
+      players.length == maxPlayers && players.every((p) => p.isReady);
+
+  bool get isSoloMode => mode == GameMode.solo;
 
   Room copyWith({
     String? roomId,
     List<Player>? players,
     bool? isOwner,
     GamePhase? phase,
+    GameMode? mode,
+    int? maxPlayers,
   }) {
     return Room(
       roomId: roomId ?? this.roomId,
       players: players ?? this.players,
       isOwner: isOwner ?? this.isOwner,
       phase: phase ?? this.phase,
+      mode: mode ?? this.mode,
+      maxPlayers: maxPlayers ?? this.maxPlayers,
+    );
+  }
+
+  static Room fromRoomData({
+    required String roomId,
+    required Map<String, dynamic> data,
+    bool isOwner = false,
+    GamePhase phase = GamePhase.waiting,
+  }) {
+    final mode = GameMode.fromString(data['mode'] as String?);
+    final maxPlayers = data['max_players'] as int? ?? mode.maxPlayers;
+    final players = (data['players'] as List<dynamic>?)
+            ?.map((p) => Player.fromJson(p as Map<String, dynamic>))
+            .toList() ??
+        [];
+    return Room(
+      roomId: roomId,
+      players: players,
+      isOwner: isOwner,
+      phase: phase,
+      mode: mode,
+      maxPlayers: maxPlayers,
     );
   }
 }

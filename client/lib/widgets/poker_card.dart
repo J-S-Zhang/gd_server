@@ -18,39 +18,48 @@ class PokerCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isRed = card.suit == Suit.heart || card.suit == Suit.diamond;
-    final color = isRed ? Colors.red : Colors.black;
+    final color = isRed ? const Color(0xFFD32F2F) : const Color(0xFF212121);
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        transform: Matrix4.translationValues(0, card.selected ? -12 : 0, 0),
+        transform: Matrix4.translationValues(0, card.selected ? -14 : 0, 0),
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: card.selected ? Colors.amber.shade100 : Colors.white,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: card.selected
+                ? [const Color(0xFFFFF8E1), const Color(0xFFFFECB3)]
+                : [Colors.white, const Color(0xFFF5F5F5)],
+          ),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: card.selected ? Colors.amber : Colors.grey.shade400,
-            width: card.selected ? 2 : 1,
+            color: card.selected ? const Color(0xFFFFC107) : const Color(0xFFBDBDBD),
+            width: card.selected ? 2.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 4,
-              offset: const Offset(1, 2),
+              color: Colors.black.withValues(alpha: card.selected ? 0.45 : 0.28),
+              blurRadius: card.selected ? 8 : 4,
+              offset: Offset(0, card.selected ? 3 : 2),
             ),
           ],
         ),
-        child: Center(
-          child: Text(
-            card.displayName,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: width * 0.28,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              card.displayName,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: width * 0.28,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
