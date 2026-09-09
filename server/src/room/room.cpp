@@ -121,6 +121,40 @@ bool Room::changeSeat(PlayerId playerId, int seatIndex) {
     return false;
 }
 
+std::vector<DismissVoteEntry> Room::humanVoteEntries() const {
+    std::vector<DismissVoteEntry> entries;
+    for (const auto& p : players_) {
+        if (p.isBot) continue;
+        entries.push_back(DismissVoteEntry{p.id, p.nickname, false, false});
+    }
+    return entries;
+}
+
+bool Room::requestDismiss(PlayerId playerId) {
+    if (isBotPlayer(playerId)) return false;
+    if (dismissVote_.active()) return false;
+    auto humans = humanVoteEntries();
+    if (humans.empty()) return false;
+    bool found = false;
+    for (const auto& h : humans) {
+        if (h.playerId == playerId) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) return false;
+    return dismissVote_.start(playerId, humans);
+}
+
+bool Room::voteDismiss(PlayerId playerId, bool agree) {
+    if (isBotPlayer(playerId)) return false;
+    return dismissVote_.recordVote(playerId, agree);
+}
+
+void Room::cancelDismissVote() {
+    dismissVote_.cancel();
+}
+
 bool Room::startGame() {
     if (!isFull()) return false;
     for (const auto& p : players_) {

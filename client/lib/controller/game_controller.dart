@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../models/room.dart';
+import '../models/seat_round_play.dart';
 import '../network/websocket_client.dart';
+import '../services/game_sound_service.dart';
 import 'auth_controller.dart';
 import 'room_controller.dart';
 
@@ -25,6 +27,8 @@ final gameControllerProvider = Provider((ref) {
 class GameController {
   final Ref _ref;
   GameController(this._ref);
+
+  int? _lastPassSoundKey;
 
   WebSocketClient get _ws => _ref.read(wsClientProvider);
 
@@ -61,15 +65,24 @@ class GameController {
     final myUserId = _ref.read(userProvider)?.id;
     final removeSet = cards.toSet();
 
+    final seatRoundPlays = _applyPlayToSeats(
+      state.seatRoundPlays,
+      state.mySeatIndex,
+      cards,
+      newTrick: state.lastPlayedCards.isEmpty,
+    );
+
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       phase: GamePhase.playing,
       myCards: state.myCards.where((c) => !removeSet.contains(c.id)).toList(),
       lastPlayedCards: cards,
       lastPlayedPlayerId: myUserId ?? state.lastPlayedPlayerId,
       lastPlayedSeatIndex: state.mySeatIndex,
-      handStraightStackIds: state.handStraightStackIds
-          .where((id) => !removeSet.contains(id))
-          .toSet(),
+      seatRoundPlays: seatRoundPlays,
+      handOrganizedGroups: filterOrganizedGroups(
+        state.handOrganizedGroups,
+        state.myCards.where((c) => !removeSet.contains(c.id)).map((c) => c.id).toSet(),
+      ),
     );
 
     _ws.playCards(roomId, cards, state.turnId);
@@ -78,6 +91,7 @@ class GameController {
 
   void pass(String roomId) {
     final state = _ref.read(gameStateProvider);
+    GameSoundService.instance.playPassVoice();
     _ws.pass(roomId, state.turnId);
   }
 
@@ -107,29 +121,29 @@ class GameController {
     final result = organizeHand(
       state.myCards,
       currentLevel: state.currentLevel,
-      tryStraightFromSelection: true,
+      existingGroups: state.handOrganizedGroups,
     );
+    if (result.message != null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.message!)),
+        );
+      }
+      return;
+    }
+
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       myCards: result.cards,
-      handStraightStackIds: result.straightStackIds,
+      handOrganizedGroups: result.organizedGroups,
     );
-    if (result.message != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message!)),
-      );
-    }
   }
 
   void autoSortHand() {
     final state = _ref.read(gameStateProvider);
-    final result = organizeHand(
-      state.myCards,
-      currentLevel: state.currentLevel,
-      tryStraightFromSelection: false,
-    );
+    final sorted = sortHandCards(state.myCards, currentLevel: state.currentLevel);
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
-      myCards: result.cards,
-      handStraightStackIds: const {},
+      myCards: sorted,
+      handOrganizedGroups: const [],
     );
   }
 
@@ -169,19 +183,16 @@ class GameController {
           msg['data'] as Map<String, dynamic>,
         );
         newState = _mergeRoomPlayerInfo(newState);
+        newState = newState.copyWith(
+          seatRoundPlays: _seatPlaysFromSnapshot(newState),
+        );
         _ref.read(gameStateProvider.notifier).state = newState;
         break;
       case 'player_played':
         _applyPlayerPlayed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
       case 'player_passed':
-        final data = msg['data'] as Map<String, dynamic>? ?? {};
-        final state = _ref.read(gameStateProvider);
-        _ref.read(gameStateProvider.notifier).state = state.copyWith(
-          stateVersion: data['state_version'] as int? ?? state.stateVersion,
-          turnId: data['turn_id'] as int? ?? state.turnId,
-          currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
-        );
+        _applyPlayerPassed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
       case 'settlement':
         final state = _ref.read(gameStateProvider);
@@ -192,6 +203,9 @@ class GameController {
         final state = _ref.read(gameStateProvider);
         _ref.read(gameStateProvider.notifier).state =
             state.copyWith(phase: GamePhase.finished);
+        break;
+      case 'room_dismissed':
+        _ref.read(gameStateProvider.notifier).state = const ClientGameState();
         break;
     }
   }
@@ -249,6 +263,13 @@ class GameController {
       }
     }
 
+    final seatRoundPlays = _applyPlayToSeats(
+      state.seatRoundPlays,
+      lastPlayedSeatIndex,
+      playedIds,
+      newTrick: state.lastPlayedCards.isEmpty && playedIds.isNotEmpty,
+    );
+
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       phase: GamePhase.playing,
       lastPlayedCards: playedIds,
@@ -256,13 +277,100 @@ class GameController {
       lastPlayedSeatIndex: lastPlayedSeatIndex,
       myCards: myCards,
       players: players,
-      handStraightStackIds: state.handStraightStackIds
-          .where((id) => myCards.any((c) => c.id == id))
-          .toSet(),
+      seatRoundPlays: seatRoundPlays,
+      handOrganizedGroups: filterOrganizedGroups(
+        state.handOrganizedGroups,
+        myCards.map((c) => c.id).toSet(),
+      ),
       stateVersion: data['state_version'] as int? ?? state.stateVersion,
       turnId: data['turn_id'] as int? ?? state.turnId,
       currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
     );
+  }
+
+  void _applyPlayerPassed(Map<String, dynamic> data) {
+    final state = _ref.read(gameStateProvider);
+    final roundReset = data['round_reset'] == true;
+    final passSeat = _resolvePassSeat(data, state);
+    _playPassVoiceIfNeeded(data);
+
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      seatRoundPlays: _applyPassToSeats(
+        state.seatRoundPlays,
+        passSeat,
+        roundReset: roundReset,
+      ),
+      lastPlayedCards: roundReset ? const [] : null,
+      lastPlayedPlayerId: roundReset ? -1 : null,
+      lastPlayedSeatIndex: roundReset ? -1 : null,
+      stateVersion: data['state_version'] as int? ?? state.stateVersion,
+      turnId: data['turn_id'] as int? ?? state.turnId,
+      currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
+    );
+  }
+
+  void _playPassVoiceIfNeeded(Map<String, dynamic> data) {
+    final playerId = data['player_id'] as int? ?? -1;
+    final myUserId = _ref.read(userProvider)?.id;
+    if (myUserId != null && playerId == myUserId) return;
+
+    final stateVersion = data['state_version'] as int? ?? 0;
+    final soundKey = Object.hash(playerId, stateVersion);
+    if (_lastPassSoundKey == soundKey) return;
+    _lastPassSoundKey = soundKey;
+    GameSoundService.instance.playPassVoice();
+  }
+
+  int _resolvePassSeat(Map<String, dynamic> data, ClientGameState state) {
+    final seatIndex = data['seat_index'] as int?;
+    if (seatIndex != null && seatIndex >= 0) return seatIndex;
+
+    final playerId = data['player_id'] as int? ?? -1;
+    if (playerId >= 0) {
+      for (final p in state.players) {
+        if (p.id == playerId) return p.seatIndex;
+      }
+      final room = _ref.read(roomProvider);
+      for (final p in room?.players ?? const <Player>[]) {
+        if (p.id == playerId) return p.seatIndex;
+      }
+    }
+    return -1;
+  }
+
+  Map<int, SeatRoundPlay> _applyPlayToSeats(
+    Map<int, SeatRoundPlay> current,
+    int seatIndex,
+    List<int> cardIds, {
+    required bool newTrick,
+  }) {
+    if (seatIndex < 0 || cardIds.isEmpty) return current;
+    final next = newTrick
+        ? <int, SeatRoundPlay>{}
+        : Map<int, SeatRoundPlay>.from(current);
+    next[seatIndex] = SeatRoundPlay(cardIds: cardIds);
+    return next;
+  }
+
+  Map<int, SeatRoundPlay> _applyPassToSeats(
+    Map<int, SeatRoundPlay> current,
+    int seatIndex, {
+    required bool roundReset,
+  }) {
+    if (roundReset) return {};
+    if (seatIndex < 0) return current;
+    final next = Map<int, SeatRoundPlay>.from(current);
+    next[seatIndex] = const SeatRoundPlay.passed();
+    return next;
+  }
+
+  Map<int, SeatRoundPlay> _seatPlaysFromSnapshot(ClientGameState state) {
+    if (state.lastPlayedCards.isEmpty || state.lastPlayedSeatIndex < 0) {
+      return {};
+    }
+    return {
+      state.lastPlayedSeatIndex: SeatRoundPlay(cardIds: state.lastPlayedCards),
+    };
   }
 
   ClientGameState _mergeRoomPlayerInfo(ClientGameState state) {

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/dismiss_vote.dart';
 import '../models/room.dart';
 import '../models/player.dart';
 import '../models/game_mode.dart';
@@ -22,6 +23,8 @@ final wsClientProvider = Provider((ref) {
 final roomProvider = StateProvider<Room?>((ref) => null);
 
 final pendingNavigationProvider = StateProvider<String?>((ref) => null);
+
+final dismissVoteProvider = StateProvider<DismissVoteState?>((ref) => null);
 
 final wsErrorProvider = StateProvider<String?>((ref) => null);
 
@@ -75,6 +78,26 @@ class RoomController {
 
   void startGame(String roomId) {
     _ws.startGame(roomId);
+  }
+
+  void leaveRoom(String roomId) {
+    _ws.leaveRoom(roomId);
+    _ref.read(roomProvider.notifier).state = null;
+    _ref.read(dismissVoteProvider.notifier).state = null;
+    _ref.read(pendingNavigationProvider.notifier).state = null;
+  }
+
+  bool requestDismissRoom(String roomId) {
+    _ref.read(wsErrorProvider.notifier).state = null;
+    if (!_ws.requestDismissRoom(roomId)) {
+      _ref.read(wsErrorProvider.notifier).state = '未连接到服务器，无法申请解散';
+      return false;
+    }
+    return true;
+  }
+
+  void voteDismissRoom(String roomId, bool agree) {
+    _ws.voteDismissRoom(roomId, agree);
   }
 
   void _handleMessage(Map<String, dynamic> msg) {
@@ -152,6 +175,23 @@ class RoomController {
 
       case 'login_result':
         _handleLoginResult(msg['data'] as Map<String, dynamic>? ?? {});
+        break;
+
+      case 'dismiss_vote_started':
+      case 'dismiss_vote_updated':
+        _ref.read(dismissVoteProvider.notifier).state =
+            DismissVoteState.fromJson(data);
+        break;
+
+      case 'dismiss_vote_rejected':
+        _ref.read(dismissVoteProvider.notifier).state = null;
+        _ref.read(wsErrorProvider.notifier).state = '解散申请被拒绝';
+        break;
+
+      case 'room_dismissed':
+        _ref.read(dismissVoteProvider.notifier).state = null;
+        _ref.read(roomProvider.notifier).state = null;
+        _ref.read(pendingNavigationProvider.notifier).state = '/lobby';
         break;
 
       case 'error':

@@ -7,7 +7,7 @@ import 'poker_card.dart';
 class HandCardsWidget extends StatefulWidget {
   final List<GameCard> cards;
   final int currentLevel;
-  final Set<int> straightStackIds;
+  final List<Set<int>> organizedGroups;
   final void Function(int cardId) onCardTap;
   final ValueChanged<double>? onRowHeightChanged;
 
@@ -15,7 +15,7 @@ class HandCardsWidget extends StatefulWidget {
     super.key,
     required this.cards,
     required this.currentLevel,
-    this.straightStackIds = const {},
+    this.organizedGroups = const [],
     required this.onCardTap,
     this.onRowHeightChanged,
   });
@@ -47,7 +47,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final rowHeight = computeHandCardsRowHeight(
       cards: widget.cards,
       currentLevel: widget.currentLevel,
-      straightStackIds: widget.straightStackIds,
+      organizedGroups: widget.organizedGroups,
       cardHeight: cardHeight,
       verticalOverlap: cardCfg.verticalOverlap,
       selectionLift: selectionLift,
@@ -72,7 +72,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final groups = buildHandDisplayGroups(
       widget.cards,
       currentLevel: widget.currentLevel,
-      straightStackIds: widget.straightStackIds,
+      organizedGroups: widget.organizedGroups,
     );
 
     final contentWidth = cardWidth + (groups.length - 1) * hStep;

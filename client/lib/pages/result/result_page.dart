@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/ui_scale.dart';
+import '../../controller/game_controller.dart';
+import '../../controller/room_controller.dart';
+import '../../models/game_state.dart';
 import '../../theme/game_theme.dart';
 
-class ResultPage extends StatelessWidget {
+class ResultPage extends ConsumerWidget {
   const ResultPage({super.key});
 
+  void _returnToLobby(WidgetRef ref, BuildContext context) {
+    final roomId = ref.read(roomProvider)?.roomId;
+    if (roomId != null && roomId.isNotEmpty) {
+      ref.read(roomControllerProvider).leaveRoom(roomId);
+    }
+    ref.read(gameStateProvider.notifier).state = const ClientGameState();
+    context.go('/lobby');
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ui = context.ui;
 
     return Scaffold(
@@ -46,7 +59,7 @@ class ResultPage extends StatelessWidget {
                   ),
                   SizedBox(height: ui.h(ui.config.spacing.page + 16)),
                   ElevatedButton(
-                    onPressed: () => context.go('/lobby'),
+                    onPressed: () => _returnToLobby(ref, context),
                     style: GameTheme.playButtonStyle(ui).copyWith(
                       minimumSize: WidgetStateProperty.all(
                         Size(ui.w(180), ui.h(ui.config.layout.loginButtonHeight)),

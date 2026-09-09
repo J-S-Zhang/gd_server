@@ -66,6 +66,15 @@ std::string extractJsonStringFromData(const std::string& json, const std::string
     return json.substr(pos, end - pos);
 }
 
+bool extractJsonBoolFromData(const std::string& json, const std::string& key) {
+    const std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return false;
+    pos += needle.size();
+    while (pos < json.size() && std::isspace(static_cast<unsigned char>(json[pos]))) ++pos;
+    return json.compare(pos, 4, "true") == 0;
+}
+
 }  // namespace
 
 MessageDispatcher::MessageDispatcher(RoomManager& roomManager,
@@ -141,11 +150,20 @@ void MessageDispatcher::scheduleTurnTimer(const std::shared_ptr<Room>& room) {
         auto result = room->engine().pass(currentPlayer);
         if (result.code == ErrorCode::OK) {
             const auto& st = room->engine().getState();
+            int passedSeat = -1;
+            for (int i = 0; i < st.playerCount; ++i) {
+                if (st.players[i].id == currentPlayer) {
+                    passedSeat = i;
+                    break;
+                }
+            }
+            const bool roundReset = !st.lastPattern.isValid;
             Message msg;
             msg.type = "player_passed";
             msg.roomId = room->id();
             msg.dataJson = buildPlayerPassedJson(
-                st.currentPlayerIndex, st.stateVersion, st.turnId);
+                currentPlayer, passedSeat, st.currentPlayerIndex,
+                roundReset, st.stateVersion, st.turnId);
             broadcastToRoom(room, msg);
             scheduleTurnTimer(room);
         }
@@ -540,12 +558,21 @@ void MessageDispatcher::handlePass(uint64_t sessionId, const Message& msg, SendF
 
     cancelTurnTimer(room->id());
     const auto& state = room->engine().getState();
+    int passedSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == playerId) {
+            passedSeat = i;
+            break;
+        }
+    }
+    const bool roundReset = !state.lastPattern.isValid;
 
     Message passed;
     passed.type = "player_passed";
     passed.roomId = room->id();
     passed.dataJson = buildPlayerPassedJson(
-        state.currentPlayerIndex, state.stateVersion, state.turnId);
+        playerId, passedSeat, state.currentPlayerIndex,
+        roundReset, state.stateVersion, state.turnId);
     broadcastToRoom(room, passed);
     scheduleTurnTimer(room);
 
@@ -588,6 +615,98 @@ void MessageDispatcher::handlePing(SendFn send) {
     sendResponse(send, msg);
 }
 
+void MessageDispatcher::broadcastDismissVote(const std::shared_ptr<Room>& room,
+                                             const std::string& type) {
+    Message msg;
+    msg.type = type;
+    msg.roomId = room->id();
+    msg.dataJson = buildDismissVoteJson(room->dismissVote());
+    broadcastToRoom(room, msg);
+}
+
+void MessageDispatcher::dissolveRoom(const std::shared_ptr<Room>& room) {
+    cancelTurnTimer(room->id());
+    const RoomId roomId = room->id();
+
+    Message msg;
+    msg.type = "room_dismissed";
+    msg.roomId = roomId;
+    msg.dataJson = "{}";
+    broadcastToRoom(room, msg);
+
+    roomManager_.removeRoom(roomId);
+    Logger::info("Room dissolved: " + roomId);
+}
+
+void MessageDispatcher::handleRequestDismiss(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+    if (!room->requestDismiss(playerId)) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    broadcastDismissVote(room, "dismiss_vote_started");
+
+    Message resp;
+    resp.type = "dismiss_vote_started";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    resp.dataJson = buildDismissVoteJson(room->dismissVote());
+    sendResponse(send, resp);
+
+    if (room->dismissVote().allAgreed()) {
+        dissolveRoom(room);
+    }
+}
+
+void MessageDispatcher::handleVoteDismiss(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+    if (!room->dismissVote().active()) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    const bool agree = extractJsonBoolFromData(msg.dataJson, "agree");
+    if (!room->voteDismiss(playerId, agree)) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    Message resp;
+    resp.type = agree ? "dismiss_vote_updated" : "dismiss_vote_rejected";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    resp.dataJson = buildDismissVoteJson(room->dismissVote());
+    sendResponse(send, resp);
+
+    if (!agree || room->dismissVote().hasRejection()) {
+        const auto voteSnapshot = room->dismissVote();
+        room->cancelDismissVote();
+        Message rejected;
+        rejected.type = "dismiss_vote_rejected";
+        rejected.roomId = room->id();
+        rejected.dataJson = buildDismissVoteJson(voteSnapshot);
+        broadcastToRoom(room, rejected);
+        return;
+    }
+
+    broadcastDismissVote(room, "dismiss_vote_updated");
+
+    if (room->dismissVote().allAgreed()) {
+        dissolveRoom(room);
+    }
+}
+
 void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson, SendFn send) {
     Message msg;
     try {
@@ -608,6 +727,8 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "play_cards") handlePlayCards(sessionId, msg, send);
     else if (msg.type == "pass") handlePass(sessionId, msg, send);
     else if (msg.type == "reconnect") handleReconnect(sessionId, msg, send);
+    else if (msg.type == "request_dismiss") handleRequestDismiss(sessionId, msg, send);
+    else if (msg.type == "vote_dismiss") handleVoteDismiss(sessionId, msg, send);
     else if (msg.type == "ping") handlePing(send);
     else sendError(send, msg.requestId, ErrorCode::UNKNOWN_TYPE);
 }

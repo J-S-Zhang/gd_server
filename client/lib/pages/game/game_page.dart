@@ -10,6 +10,7 @@ import '../../models/player.dart';
 import '../../models/room.dart' as room_model;
 import '../../theme/game_theme.dart';
 import '../../widgets/game/action_buttons.dart';
+import '../../widgets/game/dismiss_vote_dialog.dart';
 import '../../widgets/game/game_top_bar.dart';
 import '../../widgets/game/hand_toolbar.dart';
 import '../../widgets/game/social_toolbar.dart';
@@ -27,6 +28,8 @@ class GamePage extends ConsumerStatefulWidget {
 }
 
 class _GamePageState extends ConsumerState<GamePage> {
+  bool _dismissVoteDialogOpen = false;
+
   @override
   void initState() {
     super.initState();
@@ -73,6 +76,26 @@ class _GamePageState extends ConsumerState<GamePage> {
       });
     }
 
+    ref.listen(dismissVoteProvider, (prev, next) {
+      if (!mounted) return;
+      if (next == null) {
+        if (_dismissVoteDialogOpen) {
+          Navigator.of(context, rootNavigator: true).maybePop();
+          _dismissVoteDialogOpen = false;
+        }
+        return;
+      }
+      if (_dismissVoteDialogOpen) return;
+      _dismissVoteDialogOpen = true;
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => DismissVoteDialog(roomId: widget.roomId),
+      ).whenComplete(() {
+        _dismissVoteDialogOpen = false;
+      });
+    });
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
@@ -85,6 +108,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                 gameState: gameState,
                 myTeamLevel: gameState.myTeamLevel(mySeatIndex % 2),
                 opponentTeamLevel: gameState.opponentTeamLevel(mySeatIndex % 2),
+                onSettings: () => _showSettingsMenu(context, roomController),
               ),
               Expanded(
                 child: Stack(
@@ -156,7 +180,9 @@ class _GamePageState extends ConsumerState<GamePage> {
                           child: GameActionButtons(
                             enabled: true,
                             canPlay: controller.selectedCardIds.isNotEmpty,
-                            onPass: () => controller.pass(widget.roomId),
+                            onPass: gameState.lastPlayedCards.isNotEmpty
+                                ? () => controller.pass(widget.roomId)
+                                : null,
                             onHint: () => controller.hint(context),
                             onPlay: () => controller.playCards(
                               widget.roomId,
@@ -170,7 +196,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                       HandCardsWidget(
                         cards: gameState.myCards,
                         currentLevel: gameState.currentLevel,
-                        straightStackIds: gameState.handStraightStackIds,
+                        organizedGroups: gameState.handOrganizedGroups,
                         onCardTap: controller.toggleCardSelection,
                         onRowHeightChanged: (height) {
                           ref.read(handCardsMaxHeightProvider.notifier).state = height;
@@ -207,6 +233,49 @@ class _GamePageState extends ConsumerState<GamePage> {
     );
   }
 
+  void _showSettingsMenu(BuildContext context, RoomController roomController) {
+    final ui = context.ui;
+    final dismissActive = ref.read(dismissVoteProvider) != null;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: GameTheme.tableBlueDark,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(ui.r(ui.config.radius.xl))),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.group_off, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+              title: Text(
+                dismissActive ? '解散投票进行中...' : '申请解散房间',
+                style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
+              ),
+              enabled: !dismissActive,
+              onTap: dismissActive
+                  ? null
+                  : () {
+                      Navigator.pop(ctx);
+                      roomController.requestDismissRoom(widget.roomId);
+                    },
+            ),
+            ListTile(
+              leading: Icon(Icons.exit_to_app, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+              title: Text('退出房间', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
+              onTap: () {
+                Navigator.pop(ctx);
+                roomController.leaveRoom(widget.roomId);
+                ref.read(gameStateProvider.notifier).state = const ClientGameState();
+                context.go('/lobby');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showMoreMenu(BuildContext context) {
     final ui = context.ui;
     showModalBottomSheet(
@@ -234,6 +303,8 @@ class _GamePageState extends ConsumerState<GamePage> {
               title: Text('退出房间', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
               onTap: () {
                 Navigator.pop(ctx);
+                ref.read(roomControllerProvider).leaveRoom(widget.roomId);
+                ref.read(gameStateProvider.notifier).state = const ClientGameState();
                 context.go('/lobby');
               },
             ),

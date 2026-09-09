@@ -96,13 +96,19 @@ std::string buildPlayerPlayedJson(
 }
 
 std::string buildPlayerPassedJson(
+    PlayerId playerId,
+    int playerSeatIndex,
     int nextPlayerIndex,
+    bool roundReset,
     uint64_t stateVersion,
     uint64_t turnId
 ) {
     std::ostringstream oss;
     oss << "{";
-    oss << "\"next_player\":" << nextPlayerIndex;
+    oss << "\"player_id\":" << playerId;
+    oss << ",\"seat_index\":" << playerSeatIndex;
+    oss << ",\"next_player\":" << nextPlayerIndex;
+    oss << ",\"round_reset\":" << (roundReset ? "true" : "false");
     oss << ",\"state_version\":" << stateVersion;
     oss << ",\"turn_id\":" << turnId;
     oss << "}";
@@ -132,6 +138,25 @@ std::string buildRoomStateJson(const Room& room) {
     oss << ",\"max_players\":" << config.maxPlayers;
     oss << ",\"mode\":\"" << config.modeName << "\"";
     oss << "}";
+    return oss.str();
+}
+
+std::string buildDismissVoteJson(const DismissVote& vote) {
+    std::ostringstream oss;
+    oss << "{\"requester_id\":" << vote.requesterId();
+    oss << ",\"votes\":[";
+    const auto& entries = vote.entries();
+    for (size_t i = 0; i < entries.size(); ++i) {
+        const auto& entry = entries[i];
+        if (i > 0) oss << ",";
+        oss << "{";
+        oss << "\"player_id\":" << entry.playerId;
+        oss << ",\"nickname\":\"" << entry.nickname << "\"";
+        oss << ",\"voted\":" << (entry.voted ? "true" : "false");
+        oss << ",\"agree\":" << (entry.agree ? "true" : "false");
+        oss << "}";
+    }
+    oss << "]}";
     return oss.str();
 }
 

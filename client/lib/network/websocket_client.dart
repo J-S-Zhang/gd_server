@@ -108,6 +108,9 @@ class WebSocketClient {
   bool playCards(String roomId, List<int> cards, int turnId) =>
       send('play_cards', data: {'cards': cards}, roomId: roomId, turnId: turnId);
   bool pass(String roomId, int turnId) => send('pass', roomId: roomId, turnId: turnId);
+  bool requestDismissRoom(String roomId) => send('request_dismiss', roomId: roomId);
+  bool voteDismissRoom(String roomId, bool agree) =>
+      send('vote_dismiss', data: {'agree': agree}, roomId: roomId);
 
   void _handleMessage(dynamic raw) {
     try {

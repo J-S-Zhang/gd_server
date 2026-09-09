@@ -24,6 +24,7 @@ class PokerCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = context.ui;
     final isWild = isWildCard(card, currentLevel);
+    final isLevel = !isWild && isLevelCard(card, currentLevel);
     final selectionLift = ui.h(ui.config.card.selectionLift);
     final radius = ui.r(6);
 
@@ -73,29 +74,101 @@ class PokerCardWidget extends StatelessWidget {
                 ),
               ),
               if (isWild)
-                Positioned(
-                  top: ui.h(2),
-                  left: ui.w(2),
-                  child: Container(
-                    padding: ui.edgeInsetsSymmetric(horizontal: 3, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF9800),
-                      borderRadius: BorderRadius.circular(ui.r(3)),
-                    ),
-                    child: Text(
-                      '癞',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: ui.sp(ui.config.font.xs),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                _CardCornerMark.vertical(
+                  text: '逢人配',
+                  cardWidth: width,
+                  color: const Color(0xFFD32F2F),
+                )
+              else if (isLevel)
+                _CardCornerMark.single(
+                  text: '级',
+                  cardWidth: width,
+                  color: const Color(0xFFFFC107),
                 ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CardCornerMark extends StatelessWidget {
+  final String text;
+  final double cardWidth;
+  final Color color;
+  final bool vertical;
+
+  const _CardCornerMark._({
+    required this.text,
+    required this.cardWidth,
+    required this.color,
+    required this.vertical,
+  });
+
+  factory _CardCornerMark.single({
+    required String text,
+    required double cardWidth,
+    required Color color,
+  }) {
+    return _CardCornerMark._(
+      text: text,
+      cardWidth: cardWidth,
+      color: color,
+      vertical: false,
+    );
+  }
+
+  factory _CardCornerMark.vertical({
+    required String text,
+    required double cardWidth,
+    required Color color,
+  }) {
+    return _CardCornerMark._(
+      text: text,
+      cardWidth: cardWidth,
+      color: color,
+      vertical: true,
+    );
+  }
+
+  double get _charWidth => cardWidth * 0.3;
+
+  TextStyle _charStyle() {
+    return TextStyle(
+      color: color,
+      fontSize: _charWidth * 0.88,
+      fontWeight: FontWeight.bold,
+      height: 1,
+      shadows: const [
+        Shadow(color: Colors.black54, blurRadius: 2, offset: Offset(0, 1)),
+        Shadow(color: Colors.white70, blurRadius: 1, offset: Offset(0, 0)),
+      ],
+    );
+  }
+
+  Widget _charCell(String char) {
+    return SizedBox(
+      width: _charWidth,
+      height: _charWidth,
+      child: Center(
+        child: Text(char, style: _charStyle(), textAlign: TextAlign.center),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 0,
+      bottom: 0,
+      child: vertical
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: text.split('').map(_charCell).toList(),
+            )
+          : _charCell(text),
     );
   }
 }

@@ -2,6 +2,7 @@
 
 #include "game/game_engine.h"
 #include "game/room_config.h"
+#include "room/dismiss_vote.h"
 #include "room/room_task_queue.h"
 #include "game/types.h"
 #include <functional>
@@ -50,6 +51,12 @@ public:
     bool isEmpty() const { return players_.empty(); }
     PlayerId ownerId() const { return ownerId_; }
 
+    bool requestDismiss(PlayerId playerId);
+    bool voteDismiss(PlayerId playerId, bool agree);
+    void cancelDismissVote();
+    const DismissVote& dismissVote() const { return dismissVote_; }
+    std::vector<DismissVoteEntry> humanVoteEntries() const;
+
     int firstEmptySeat() const;
     bool isSeatTaken(int seatIndex, PlayerId exceptId = 0) const;
 
@@ -67,6 +74,7 @@ private:
     GameEngine engine_;
     RoomTaskQueue taskQueue_;
     BroadcastFn broadcast_;
+    DismissVote dismissVote_;
 };
 
 }  // namespace guandan

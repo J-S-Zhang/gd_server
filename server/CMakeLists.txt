@@ -23,6 +23,7 @@ set(GUANDAN_CORE_SOURCES
     src/game/team_progress.cpp
     src/game/game_engine.cpp
     src/room/room.cpp
+    src/room/dismiss_vote.cpp
     src/room/room_manager.cpp
     src/room/room_task_queue.cpp
     src/protocol/message.cpp

@@ -1,6 +1,7 @@
 import 'card.dart';
 import 'player.dart';
 import 'room.dart';
+import 'seat_round_play.dart';
 import '../utils/card_utils.dart';
 
 GamePhase parsePhase(String? phase) {
@@ -43,7 +44,8 @@ class ClientGameState {
   final int lastPlayedPlayerId;
   final int lastPlayedSeatIndex;
   final List<Player> players;
-  final Set<int> handStraightStackIds;
+  final Map<int, SeatRoundPlay> seatRoundPlays;
+  final List<Set<int>> handOrganizedGroups;
 
   const ClientGameState({
     this.phase = GamePhase.waiting,
@@ -63,7 +65,8 @@ class ClientGameState {
     this.lastPlayedPlayerId = -1,
     this.lastPlayedSeatIndex = -1,
     this.players = const [],
-    this.handStraightStackIds = const {},
+    this.seatRoundPlays = const {},
+    this.handOrganizedGroups = const [],
   });
 
   bool get isMyTurn => currentPlayerIndex == mySeatIndex;
@@ -101,7 +104,8 @@ class ClientGameState {
     int? lastPlayedPlayerId,
     int? lastPlayedSeatIndex,
     List<Player>? players,
-    Set<int>? handStraightStackIds,
+    Map<int, SeatRoundPlay>? seatRoundPlays,
+    List<Set<int>>? handOrganizedGroups,
   }) {
     return ClientGameState(
       phase: phase ?? this.phase,
@@ -121,7 +125,8 @@ class ClientGameState {
       lastPlayedPlayerId: lastPlayedPlayerId ?? this.lastPlayedPlayerId,
       lastPlayedSeatIndex: lastPlayedSeatIndex ?? this.lastPlayedSeatIndex,
       players: players ?? this.players,
-      handStraightStackIds: handStraightStackIds ?? this.handStraightStackIds,
+      seatRoundPlays: seatRoundPlays ?? this.seatRoundPlays,
+      handOrganizedGroups: handOrganizedGroups ?? this.handOrganizedGroups,
     );
   }
 
