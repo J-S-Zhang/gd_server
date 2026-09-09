@@ -30,52 +30,121 @@ class ClientGameState {
   final int stateVersion;
   final int turnId;
   final int currentLevel;
+  final int attackingTeam;
+  final bool isPassARound;
+  final bool isPlayingOwnRound;
+  final List<int> teamLevels;
+  final List<bool> inPassAPhase;
+  final List<int> passAFailCounts;
   final int currentPlayerIndex;
   final int mySeatIndex;
   final List<GameCard> myCards;
   final List<int> lastPlayedCards;
-  final int lastPlayedPlayerIndex;
+  final int lastPlayedPlayerId;
+  final int lastPlayedSeatIndex;
   final List<Player> players;
+  final Set<int> handStraightStackIds;
 
   const ClientGameState({
     this.phase = GamePhase.waiting,
     this.stateVersion = 0,
     this.turnId = 0,
     this.currentLevel = 2,
+    this.attackingTeam = 0,
+    this.isPassARound = false,
+    this.isPlayingOwnRound = false,
+    this.teamLevels = const [2, 2],
+    this.inPassAPhase = const [false, false],
+    this.passAFailCounts = const [0, 0],
     this.currentPlayerIndex = 0,
     this.mySeatIndex = 0,
     this.myCards = const [],
     this.lastPlayedCards = const [],
-    this.lastPlayedPlayerIndex = -1,
+    this.lastPlayedPlayerId = -1,
+    this.lastPlayedSeatIndex = -1,
     this.players = const [],
+    this.handStraightStackIds = const {},
   });
 
   bool get isMyTurn => currentPlayerIndex == mySeatIndex;
+
+  int? myTeamLevel(int myTeam) =>
+      myTeam >= 0 && myTeam < teamLevels.length ? teamLevels[myTeam] : null;
+
+  int? opponentTeamLevel(int myTeam) {
+    final opponent = myTeam ^ 1;
+    return opponent >= 0 && opponent < teamLevels.length
+        ? teamLevels[opponent]
+        : null;
+  }
+
+  int? myPassAFailCount(int myTeam) =>
+      myTeam >= 0 && myTeam < passAFailCounts.length
+          ? passAFailCounts[myTeam]
+          : null;
 
   ClientGameState copyWith({
     GamePhase? phase,
     int? stateVersion,
     int? turnId,
     int? currentLevel,
+    int? attackingTeam,
+    bool? isPassARound,
+    bool? isPlayingOwnRound,
+    List<int>? teamLevels,
+    List<bool>? inPassAPhase,
+    List<int>? passAFailCounts,
     int? currentPlayerIndex,
     int? mySeatIndex,
     List<GameCard>? myCards,
     List<int>? lastPlayedCards,
-    int? lastPlayedPlayerIndex,
+    int? lastPlayedPlayerId,
+    int? lastPlayedSeatIndex,
     List<Player>? players,
+    Set<int>? handStraightStackIds,
   }) {
     return ClientGameState(
       phase: phase ?? this.phase,
       stateVersion: stateVersion ?? this.stateVersion,
       turnId: turnId ?? this.turnId,
       currentLevel: currentLevel ?? this.currentLevel,
+      attackingTeam: attackingTeam ?? this.attackingTeam,
+      isPassARound: isPassARound ?? this.isPassARound,
+      isPlayingOwnRound: isPlayingOwnRound ?? this.isPlayingOwnRound,
+      teamLevels: teamLevels ?? this.teamLevels,
+      inPassAPhase: inPassAPhase ?? this.inPassAPhase,
+      passAFailCounts: passAFailCounts ?? this.passAFailCounts,
       currentPlayerIndex: currentPlayerIndex ?? this.currentPlayerIndex,
       mySeatIndex: mySeatIndex ?? this.mySeatIndex,
       myCards: myCards ?? this.myCards,
       lastPlayedCards: lastPlayedCards ?? this.lastPlayedCards,
-      lastPlayedPlayerIndex: lastPlayedPlayerIndex ?? this.lastPlayedPlayerIndex,
+      lastPlayedPlayerId: lastPlayedPlayerId ?? this.lastPlayedPlayerId,
+      lastPlayedSeatIndex: lastPlayedSeatIndex ?? this.lastPlayedSeatIndex,
       players: players ?? this.players,
+      handStraightStackIds: handStraightStackIds ?? this.handStraightStackIds,
     );
+  }
+
+  static List<int> _parseIntList(dynamic raw, List<int> fallback) {
+    if (raw is! List) return fallback;
+    return raw.map((e) => e as int).toList();
+  }
+
+  static List<bool> _parseBoolList(dynamic raw, List<bool> fallback) {
+    if (raw is! List) return fallback;
+    return raw.map((e) => e == true).toList();
+  }
+
+  static int _resolveLastPlayedPlayerId(
+    int seatIndex,
+    int mySeatIndex,
+    List<Player> players,
+  ) {
+    if (seatIndex < 0) return -1;
+    for (final p in players) {
+      if (p.seatIndex == seatIndex) return p.id;
+    }
+    return -1;
   }
 
   factory ClientGameState.fromSnapshot(Map<String, dynamic> json) {
@@ -98,19 +167,33 @@ class ClientGameState {
             .toList() ??
         [];
 
+    final mySeatIndex = json['my_seat_index'] as int? ?? 0;
+    final lastPlayedSeatIndex = json['last_played_player_index'] as int? ?? -1;
+
     return ClientGameState(
       phase: parsePhase(json['phase'] as String?),
       stateVersion: json['state_version'] as int? ?? 0,
       turnId: json['turn_id'] as int? ?? 0,
       currentLevel: json['current_level'] as int? ?? 2,
+      attackingTeam: json['attacking_team'] as int? ?? 0,
+      isPassARound: json['is_pass_a_round'] == true,
+      isPlayingOwnRound: json['is_playing_own_round'] == true,
+      teamLevels: _parseIntList(json['team_levels'], const [2, 2]),
+      inPassAPhase: _parseBoolList(json['in_pass_a_phase'], const [false, false]),
+      passAFailCounts: _parseIntList(json['pass_a_fail_counts'], const [0, 0]),
       currentPlayerIndex: json['current_player_index'] as int? ?? 0,
-      mySeatIndex: json['my_seat_index'] as int? ?? 0,
+      mySeatIndex: mySeatIndex,
       myCards: myCards,
       lastPlayedCards: (json['last_played_cards'] as List<dynamic>?)
               ?.map((c) => c as int)
               .toList() ??
           [],
-      lastPlayedPlayerIndex: json['last_played_player_index'] as int? ?? -1,
+      lastPlayedPlayerId: _resolveLastPlayedPlayerId(
+        lastPlayedSeatIndex,
+        mySeatIndex,
+        players,
+      ),
+      lastPlayedSeatIndex: lastPlayedSeatIndex,
       players: players,
     );
   }

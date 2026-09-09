@@ -408,7 +408,23 @@ void MessageDispatcher::onGameOver(const std::shared_ptr<Room>& room,
 
     std::ostringstream oss;
     oss << "{\"winning_team\":" << result.winningTeam;
-    oss << ",\"level_upgrade\":" << result.levelUpgrade << "}";
+    oss << ",\"level_upgrade\":" << result.levelUpgrade;
+    oss << ",\"new_level\":" << result.newLevel;
+    oss << ",\"team_levels\":[" << result.teamLevels[0] << ","
+        << result.teamLevels[1] << "]";
+    oss << ",\"attacking_team\":" << result.attackingTeam;
+    oss << ",\"is_pass_a_round\":" << (result.isPassARound ? "true" : "false");
+    oss << ",\"pass_a_team\":" << result.passATeam;
+    oss << ",\"pass_a_success\":" << (result.passASuccess ? "true" : "false");
+    oss << ",\"match_won\":" << (result.matchWon ? "true" : "false");
+    oss << ",\"entered_pass_a_phase\":" << (result.enteredPassAPhase ? "true" : "false");
+    oss << ",\"pass_a_fail_count\":" << result.passAFailCount;
+    oss << ",\"pass_a_fail_reset\":" << (result.passAFailReset ? "true" : "false");
+    oss << ",\"in_pass_a_phase\":["
+        << (result.inPassAPhase[0] ? "true" : "false") << ","
+        << (result.inPassAPhase[1] ? "true" : "false") << "]";
+    oss << ",\"pass_a_fail_counts\":[" << result.passAFailCounts[0] << ","
+        << result.passAFailCounts[1] << "]}";
     Message over;
     over.type = "game_over";
     over.roomId = room->id();
@@ -469,12 +485,24 @@ void MessageDispatcher::handlePlayCards(uint64_t sessionId, const Message& msg, 
 
     cancelTurnTimer(room->id());
     const auto& state = room->engine().getState();
+    int playedSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == playerId) {
+            playedSeat = i;
+            break;
+        }
+    }
+    const auto& playedPlayer = playedSeat >= 0 ? state.players[playedSeat] : state.players[0];
 
     Message played;
     played.type = "player_played";
     played.roomId = room->id();
     played.dataJson = buildPlayerPlayedJson(
-        playerId, msg.cards, state.currentPlayerIndex,
+        playerId, msg.cards,
+        static_cast<int>(playedPlayer.hand.size()),
+        playedPlayer.hasFinished,
+        playedPlayer.finishRank,
+        state.currentPlayerIndex,
         state.stateVersion, state.turnId);
     broadcastToRoom(room, played);
 

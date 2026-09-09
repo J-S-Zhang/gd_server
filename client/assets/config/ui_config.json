@@ -1,0 +1,269 @@
+{
+  // ============================================================
+  // 六人掼蛋 UI 多分辨率配置
+  //
+  // 【适配原理】
+  // 1. 根节点 = 手机档（phone）基准设计稿
+  // 2. tiers.tablet / tiers.largeTablet = 仅写与手机不同的覆盖项
+  // 3. 运行时按屏幕短边自动选档，再合并配置后缩放
+  //
+  // 【档位划分】见 breakpoints（单位：逻辑像素）
+  //   短边 < 600        → 手机
+  //   600 ≤ 短边 < 900  → 平板
+  //   短边 ≥ 900        → 大平板
+  //
+  // 修改后需 Hot Restart 生效。支持 // 和 /* */ 注释。
+  // ============================================================
+
+  // ---------- 分辨率断点 ----------
+  "breakpoints": {
+    // 短边达到此值视为平板（如 iPad 竖屏 ~768）
+    "tabletMinShortSide": 600,
+    // 短边达到此值视为大平板（如 iPad Pro 12.9"）
+    "largeTabletMinShortSide": 900
+  },
+
+  // ============================================================
+  // 手机档（默认，横屏设计基准 844×390）
+  // ============================================================
+  "designWidth": 844,
+  "designHeight": 390,
+  "fontScaleMode": "min",
+
+  "card": {
+    "handWidth": 50,
+    "handHeight": 72,
+    "playedWidth": 48,
+    "playedHeight": 68,
+    "horizontalOverlap": 0.3,
+    "verticalOverlap": 0.7,
+    "selectionLift": 14
+  },
+
+  "seatLayout": {
+    "tableWidthFactor": 0.45,
+    "tableHeightFactor": 0.55,
+    "tableExtraWidthFactor": 0.15,
+    "tableExtraHeightFactor": 0.1,
+    "seatPadding": 12
+  },
+
+  "player": {
+    "width": 88,
+    "compactWidth": 72,
+    "avatarRadius": 22,
+    "compactAvatarRadius": 18,
+    "borderRadius": 10
+  },
+
+  "emptySeat": {
+    "iconSize": 32,
+    "compactIconSize": 28
+  },
+
+  "button": {
+    "passWidth": 88,
+    "passHeight": 44,
+    "hintWidth": 88,
+    "hintHeight": 44,
+    "playWidth": 96,
+    "playHeight": 48,
+    "largeHeight": 52,
+    "borderRadius": 22
+  },
+
+  "socialToolbar": {
+    "width": 52,
+    "iconSize": 20,
+    "borderRadius": 10
+  },
+
+  "countdown": {
+    "circularSize": 48,
+    "strokeWidth": 3
+  },
+
+  "font": {
+    "xs": 9,
+    "sm": 10,
+    "sm2": 11,
+    "md": 13,
+    "md2": 14,
+    "lg": 16,
+    "xl": 18,
+    "xxl": 20,
+    "title": 32
+  },
+
+  "spacing": {
+    "xs": 2,
+    "sm": 4,
+    "md": 8,
+    "lg": 12,
+    "xl": 16,
+    "xxl": 24,
+    "page": 32
+  },
+
+  "layout": {
+    "loginMaxWidth": 420,
+    "lobbyMaxWidth": 520,
+    "roomSidePanelWidth": 200,
+    "playedCardsMaxWidth": 420,
+    "gameSocialTop": 80,
+    "gameSocialSide": 8,
+    "gameBottomBar": 8,
+    "topBarIconSize": 22,
+    "topBarIconMinSize": 36,
+    "topBarLevelBadgeWidth": 28,
+    "topBarLevelBadgeHeight": 38,
+    "handToolbarAvatarRadius": 22,
+    "handToolbarHeight": 52,
+    "handToolbarSuitPanelHeight": 40,
+    "handToolbarSuitIconSize": 22,
+    "handToolbarSortButtonHeight": 36,
+    "handToolbarMessageSize": 40,
+    "loginIconSize": 64,
+    "loginButtonHeight": 48
+  },
+
+  "radius": {
+    "sm": 8,
+    "md": 10,
+    "lg": 12,
+    "xl": 16,
+    "panel": 12
+  },
+
+  // ============================================================
+  // 平板 / 大平板覆盖项（只写需要变大的部分即可）
+  // 大平板会在平板基础上再次合并
+  // ============================================================
+  "tiers": {
+    "tablet": {
+      // 平板横屏设计基准（通常比手机更宽）
+      "designWidth": 1024,
+      "designHeight": 640,
+
+      "card": {
+        "handWidth": 58,
+        "handHeight": 84,
+        "playedWidth": 54,
+        "playedHeight": 78,
+        "selectionLift": 16
+      },
+
+      "player": {
+        "width": 100,
+        "compactWidth": 82,
+        "avatarRadius": 26,
+        "compactAvatarRadius": 21
+      },
+
+      "emptySeat": {
+        "iconSize": 36,
+        "compactIconSize": 32
+      },
+
+      "button": {
+        "passWidth": 100,
+        "passHeight": 48,
+        "hintWidth": 100,
+        "hintHeight": 48,
+        "playWidth": 110,
+        "playHeight": 52,
+        "largeHeight": 56
+      },
+
+      "socialToolbar": {
+        "width": 60,
+        "iconSize": 24
+      },
+
+      "countdown": {
+        "circularSize": 54,
+        "strokeWidth": 3.5
+      },
+
+      "font": {
+        "md": 14,
+        "md2": 15,
+        "lg": 18,
+        "xl": 20,
+        "xxl": 22,
+        "title": 36
+      },
+
+      "spacing": {
+        "md": 10,
+        "lg": 14,
+        "xl": 18,
+        "xxl": 28,
+        "page": 36
+      },
+
+      "layout": {
+        "loginMaxWidth": 480,
+        "lobbyMaxWidth": 600,
+        "roomSidePanelWidth": 240,
+        "playedCardsMaxWidth": 520,
+        "gameSocialTop": 96,
+        "topBarIconSize": 26,
+        "topBarIconMinSize": 42,
+        "handToolbarAvatarRadius": 26,
+        "loginIconSize": 72,
+        "loginButtonHeight": 52
+      }
+    },
+
+    "largeTablet": {
+      // 大平板 / 桌面浏览器横屏
+      "designWidth": 1280,
+      "designHeight": 800,
+
+      "card": {
+        "handWidth": 66,
+        "handHeight": 95,
+        "playedWidth": 62,
+        "playedHeight": 88,
+        "horizontalOverlap": 0.28,
+        "selectionLift": 18
+      },
+
+      "player": {
+        "width": 112,
+        "compactWidth": 92,
+        "avatarRadius": 30,
+        "compactAvatarRadius": 24
+      },
+
+      "button": {
+        "passWidth": 112,
+        "passHeight": 52,
+        "hintWidth": 112,
+        "hintHeight": 52,
+        "playWidth": 124,
+        "playHeight": 56,
+        "largeHeight": 60
+      },
+
+      "font": {
+        "md": 15,
+        "md2": 16,
+        "lg": 20,
+        "xl": 22,
+        "xxl": 24,
+        "title": 40
+      },
+
+      "layout": {
+        "loginMaxWidth": 540,
+        "lobbyMaxWidth": 680,
+        "roomSidePanelWidth": 280,
+        "playedCardsMaxWidth": 620,
+        "loginIconSize": 80,
+        "loginButtonHeight": 56
+      }
+    }
+  }
+}

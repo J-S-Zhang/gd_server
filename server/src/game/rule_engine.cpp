@@ -53,16 +53,34 @@ bool RuleEngine::canBeat(
         return true;
     }
 
+    if (current.type == CardType::STRAIGHT_FLUSH) {
+        if (previous.type == CardType::JOKER_BOMB) return false;
+        if (previous.type == CardType::BOMB) {
+            return previous.length < 6;
+        }
+        if (previous.type == CardType::STRAIGHT_FLUSH) {
+            return sameTypeBeat(current, previous);
+        }
+        return true;
+    }
+
     if (current.type == CardType::BOMB) {
         if (previous.type == CardType::JOKER_BOMB) return false;
+        if (previous.type == CardType::STRAIGHT_FLUSH) {
+            return current.length >= 6;
+        }
         if (previous.type == CardType::BOMB) {
             if (current.length != previous.length) return current.length > previous.length;
             return current.primaryRank > previous.primaryRank;
         }
-        return !isBombType(previous.type);
+        return true;
     }
 
-    if (isBombType(previous.type)) return false;
+    if (previous.type == CardType::JOKER_BOMB ||
+        previous.type == CardType::STRAIGHT_FLUSH ||
+        previous.type == CardType::BOMB) {
+        return false;
+    }
 
     return sameTypeBeat(current, previous);
 }

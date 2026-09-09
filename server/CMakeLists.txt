@@ -20,6 +20,7 @@ set(GUANDAN_CORE_SOURCES
     src/game/game_state.cpp
     src/game/turn_manager.cpp
     src/game/settlement.cpp
+    src/game/team_progress.cpp
     src/game/game_engine.cpp
     src/room/room.cpp
     src/room/room_manager.cpp
@@ -61,6 +62,8 @@ set(GUANDAN_TEST_SOURCES
     tests/test_card_analyzer.cpp
     tests/test_rule_engine.cpp
     tests/test_game_engine.cpp
+    tests/test_settlement.cpp
+    tests/test_pass_a.cpp
     tests/test_message.cpp
 )
 

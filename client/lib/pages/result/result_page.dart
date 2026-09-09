@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/ui_scale.dart';
 import '../../theme/game_theme.dart';
 
 class ResultPage extends StatelessWidget {
@@ -7,40 +8,51 @@ class ResultPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = context.ui;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
         child: SafeArea(
           child: Center(
             child: Container(
-              margin: const EdgeInsets.all(32),
-              padding: const EdgeInsets.all(32),
-              decoration: GameTheme.panelDecoration(),
+              margin: ui.edgeInsetsAll(ui.config.spacing.page),
+              padding: ui.edgeInsetsAll(ui.config.spacing.page),
+              decoration: GameTheme.panelDecoration(ui),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.emoji_events, size: 80, color: GameTheme.accentGold),
-                  const SizedBox(height: 24),
-                  const Text(
+                  Icon(
+                    Icons.emoji_events,
+                    size: ui.sp(80),
+                    color: GameTheme.accentGold,
+                  ),
+                  SizedBox(height: ui.h(ui.config.spacing.xxl)),
+                  Text(
                     '本局结束',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: ui.sp(ui.config.font.title),
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  SizedBox(height: ui.h(ui.config.spacing.lg)),
+                  Text(
                     '感谢参与，期待下一局',
-                    style: TextStyle(color: GameTheme.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                      color: GameTheme.textSecondary,
+                      fontSize: ui.sp(ui.config.font.md2),
+                    ),
                   ),
-                  const SizedBox(height: 48),
+                  SizedBox(height: ui.h(ui.config.spacing.page + 16)),
                   ElevatedButton(
                     onPressed: () => context.go('/lobby'),
-                    style: GameTheme.playButtonStyle.copyWith(
-                      minimumSize: WidgetStateProperty.all(const Size(180, 48)),
+                    style: GameTheme.playButtonStyle(ui).copyWith(
+                      minimumSize: WidgetStateProperty.all(
+                        Size(ui.w(180), ui.h(ui.config.layout.loginButtonHeight)),
+                      ),
                     ),
-                    child: const Text('返回大厅', style: TextStyle(fontSize: 18)),
+                    child: Text('返回大厅', style: TextStyle(fontSize: ui.sp(ui.config.font.xl))),
                   ),
                 ],
               ),

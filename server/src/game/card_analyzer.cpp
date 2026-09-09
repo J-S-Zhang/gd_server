@@ -4,6 +4,23 @@
 
 namespace guandan {
 
+namespace {
+
+constexpr int kStraightMinStart = 1;
+constexpr int kStraightMaxStart = 10;
+constexpr int kThreePairsMinStart = 1;
+constexpr int kThreePairsMaxStart = 12;
+constexpr int kTwoTriplesMinStart = 1;
+constexpr int kTwoTriplesMaxStart = 13;
+
+int straightSlotToRankValue(int slot) {
+    if (slot == 1) return rankValue(Rank::A);
+    if (slot >= 2 && slot <= 14) return slot;
+    return -1;
+}
+
+}  // namespace
+
 int CardAnalyzer::effectiveRank(const Card& card, const RuleContext& ctx) const {
     if (isJoker(card.rank)) return rankValue(card.rank);
     if (ctx.isWildCard(card)) return rankValue(ctx.levelRank());
@@ -252,7 +269,7 @@ CardPattern CardAnalyzer::analyzeTripleWithPair(
 CardPattern CardAnalyzer::analyzeStraight(
     const std::vector<RankGroup>& groups, int wildCount, size_t total
 ) const {
-    if (total < 5) return CardPattern::invalid();
+    if (total != 5) return CardPattern::invalid();
 
     int totalWild = 0;
     std::map<int, int> rankCount;
@@ -261,22 +278,19 @@ CardPattern CardAnalyzer::analyzeStraight(
         else rankCount[g.rank] = g.count;
     }
 
-    // No 2 or jokers in straights
     for (const auto& [r, _] : rankCount) {
-        if (r >= rankValue(Rank::R2) && r <= rankValue(Rank::A)) continue;
-        if (r == rankValue(Rank::R2)) return CardPattern::invalid();
         if (r >= rankValue(Rank::SMALL_JOKER)) return CardPattern::invalid();
     }
 
-    int len = static_cast<int>(total);
-    for (int start = 3; start <= rankValue(Rank::A) - len + 1; ++start) {
+    const int len = 5;
+    for (int start = kStraightMinStart; start <= kStraightMaxStart; ++start) {
         int wildUsed = 0;
         bool ok = true;
         for (int i = 0; i < len; ++i) {
-            int r = start + i;
-            if (r > rankValue(Rank::A)) { ok = false; break; }
-            if (r == rankValue(Rank::R2)) { ok = false; break; }
-            auto it = rankCount.find(r);
+            const int slot = start + i;
+            const int rv = straightSlotToRankValue(slot);
+            if (rv < 0) { ok = false; break; }
+            auto it = rankCount.find(rv);
             if (it == rankCount.end()) {
                 wildUsed++;
             } else if (it->second > 1) {
@@ -298,10 +312,8 @@ CardPattern CardAnalyzer::analyzeStraight(
 CardPattern CardAnalyzer::analyzeThreePairs(
     const std::vector<RankGroup>& groups, int wildCount, size_t total
 ) const {
-    int pairCount = static_cast<int>(total) / 2;
-    if (pairCount < 3 || static_cast<size_t>(pairCount * 2) != total) {
-        return CardPattern::invalid();
-    }
+    if (total != 6) return CardPattern::invalid();
+    const int pairCount = 3;
 
     int totalWild = 0;
     std::map<int, int> rankCount;
@@ -311,17 +323,17 @@ CardPattern CardAnalyzer::analyzeThreePairs(
     }
 
     for (const auto& [r, _] : rankCount) {
-        if (r == rankValue(Rank::R2) || r >= rankValue(Rank::SMALL_JOKER)) {
-            return CardPattern::invalid();
-        }
+        if (r >= rankValue(Rank::SMALL_JOKER)) return CardPattern::invalid();
     }
 
-    for (int start = 3; start <= rankValue(Rank::A) - pairCount + 1; ++start) {
+    for (int start = kThreePairsMinStart; start <= kThreePairsMaxStart; ++start) {
         int wildUsed = 0;
         bool ok = true;
         for (int i = 0; i < pairCount; ++i) {
-            int r = start + i;
-            auto it = rankCount.find(r);
+            const int slot = start + i;
+            const int rv = straightSlotToRankValue(slot);
+            if (rv < 0) { ok = false; break; }
+            auto it = rankCount.find(rv);
             int have = (it == rankCount.end()) ? 0 : it->second;
             if (have > 2) { ok = false; break; }
             wildUsed += std::max(0, 2 - have);
@@ -342,6 +354,7 @@ CardPattern CardAnalyzer::analyzeTwoTriples(
     const std::vector<RankGroup>& groups, int wildCount, size_t total
 ) const {
     if (total != 6) return CardPattern::invalid();
+    const int tripleCount = 2;
 
     int totalWild = 0;
     std::map<int, int> rankCount;
@@ -350,13 +363,18 @@ CardPattern CardAnalyzer::analyzeTwoTriples(
         else rankCount[g.rank] = g.count;
     }
 
-    for (int start = 3; start <= rankValue(Rank::A) - 1; ++start) {
+    for (const auto& [r, _] : rankCount) {
+        if (r >= rankValue(Rank::SMALL_JOKER)) return CardPattern::invalid();
+    }
+
+    for (int start = kTwoTriplesMinStart; start <= kTwoTriplesMaxStart; ++start) {
         int wildUsed = 0;
         bool ok = true;
-        for (int i = 0; i < 2; ++i) {
-            int r = start + i;
-            if (r == rankValue(Rank::R2)) { ok = false; break; }
-            auto it = rankCount.find(r);
+        for (int i = 0; i < tripleCount; ++i) {
+            const int slot = start + i;
+            const int rv = straightSlotToRankValue(slot);
+            if (rv < 0) { ok = false; break; }
+            auto it = rankCount.find(rv);
             int have = (it == rankCount.end()) ? 0 : it->second;
             if (have > 3) { ok = false; break; }
             wildUsed += std::max(0, 3 - have);
@@ -364,8 +382,8 @@ CardPattern CardAnalyzer::analyzeTwoTriples(
         if (ok && wildUsed <= totalWild) {
             CardPattern p;
             p.type = CardType::TWO_TRIPLES;
-            p.primaryRank = start + 1;
-            p.length = 2;
+            p.primaryRank = start + tripleCount - 1;
+            p.length = tripleCount;
             p.isValid = true;
             return p;
         }
@@ -376,7 +394,7 @@ CardPattern CardAnalyzer::analyzeTwoTriples(
 CardPattern CardAnalyzer::analyzeStraightFlush(
     const std::vector<Card>& cards, const RuleContext& ctx
 ) const {
-    if (cards.size() < 5) return CardPattern::invalid();
+    if (cards.size() != 5) return CardPattern::invalid();
 
     std::vector<Card> nonWild;
     int wildCount = 0;
@@ -434,12 +452,10 @@ CardPattern CardAnalyzer::analyze(
     auto straight = analyzeStraight(groups, wildCount, cards.size());
     if (straight.isValid) return straight;
 
-    if (cards.size() >= 6 && cards.size() % 2 == 0) {
+    if (cards.size() == 6) {
         auto tp = analyzeThreePairs(groups, wildCount, cards.size());
         if (tp.isValid) return tp;
-    }
 
-    if (cards.size() == 6) {
         auto tt = analyzeTwoTriples(groups, wildCount, cards.size());
         if (tt.isValid) return tt;
     }

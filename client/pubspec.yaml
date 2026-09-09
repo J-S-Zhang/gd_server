@@ -24,6 +24,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/config/ui_config.json
     - assets/images/
     - assets/images/cards/
     - assets/sounds/

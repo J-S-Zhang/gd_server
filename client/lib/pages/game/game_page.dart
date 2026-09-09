@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/ui_scale.dart';
 import '../../controller/auth_controller.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/room_controller.dart';
@@ -52,6 +53,8 @@ class _GamePageState extends ConsumerState<GamePage> {
 
   @override
   Widget build(BuildContext context) {
+    final ui = context.ui;
+    final layout = ui.config.layout;
     final gameState = ref.watch(gameStateProvider);
     final room = ref.watch(roomProvider);
     final controller = ref.read(gameControllerProvider);
@@ -80,6 +83,8 @@ class _GamePageState extends ConsumerState<GamePage> {
                 roomId: widget.roomId,
                 modeLabel: room?.mode.label ?? '六人掼蛋',
                 gameState: gameState,
+                myTeamLevel: gameState.myTeamLevel(mySeatIndex % 2),
+                opponentTeamLevel: gameState.opponentTeamLevel(mySeatIndex % 2),
               ),
               Expanded(
                 child: Stack(
@@ -97,51 +102,46 @@ class _GamePageState extends ConsumerState<GamePage> {
                               roomController.changeSeat(widget.roomId, seatIndex)
                           : null,
                     ),
-                    const Positioned(
-                      left: 8,
-                      top: 80,
-                      child: SocialToolbar(side: SocialSide.left),
+                    Positioned(
+                      left: ui.w(layout.gameSocialSide),
+                      top: ui.h(layout.gameSocialTop),
+                      child: const SocialToolbar(side: SocialSide.left),
                     ),
                     Positioned(
-                      right: 8,
-                      top: 80,
+                      right: ui.w(layout.gameSocialSide),
+                      top: ui.h(layout.gameSocialTop),
                       child: SocialToolbar(
                         side: SocialSide.right,
                         onMore: () => _showMoreMenu(context),
                       ),
                     ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 8,
-                      child: Center(
-                        child: isWaitingLobby
-                            ? WaitingActionBar(
-                                isReady: me?.isReady ?? false,
-                                isOwner: room?.isOwner ?? false,
-                                canStart: room?.allReady ?? false,
-                                onReady: () => roomController.ready(widget.roomId),
-                                onUnready: () => roomController.unready(widget.roomId),
-                                onStart: () => roomController.startGame(widget.roomId),
-                              )
-                            : GameActionButtons(
-                                enabled: gameState.isMyTurn,
-                                canPlay: controller.selectedCardIds.isNotEmpty,
-                                onPass: () => controller.pass(widget.roomId),
-                                onHint: () => controller.hint(context),
-                                onPlay: () => controller.playCards(
-                                  widget.roomId,
-                                  controller.selectedCardIds,
-                                ),
-                              ),
+                    if (isWaitingLobby)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: ui.h(layout.gameBottomBar),
+                        child: Center(
+                          child: WaitingActionBar(
+                            isReady: me?.isReady ?? false,
+                            isOwner: room?.isOwner ?? false,
+                            canStart: room?.allReady ?? false,
+                            onReady: () => roomController.ready(widget.roomId),
+                            onUnready: () => roomController.unready(widget.roomId),
+                            onStart: () => roomController.startGame(widget.roomId),
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
               if (isPlaying)
                 Container(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+                  padding: ui.edgeInsetsLTRB(
+                    ui.config.spacing.lg,
+                    ui.config.spacing.md,
+                    ui.config.spacing.lg,
+                    ui.config.spacing.md + 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.35),
                     border: Border(
@@ -149,19 +149,37 @@ class _GamePageState extends ConsumerState<GamePage> {
                     ),
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      HandToolbar(
-                        nickname: user?.nickname ?? '玩家',
-                        coinLabel: '6.14万',
-                        onSort: controller.sortHand,
-                        onAutoSort: controller.autoSortHand,
-                        onMore: () => _showMoreMenu(context),
-                      ),
-                      const SizedBox(height: 8),
+                      if (gameState.isMyTurn) ...[
+                        Center(
+                          child: GameActionButtons(
+                            enabled: true,
+                            canPlay: controller.selectedCardIds.isNotEmpty,
+                            onPass: () => controller.pass(widget.roomId),
+                            onHint: () => controller.hint(context),
+                            onPlay: () => controller.playCards(
+                              widget.roomId,
+                              controller.selectedCardIds,
+                              context: context,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: ui.h(ui.config.spacing.md)),
+                      ],
                       HandCardsWidget(
                         cards: gameState.myCards,
                         currentLevel: gameState.currentLevel,
+                        straightStackIds: gameState.handStraightStackIds,
                         onCardTap: controller.toggleCardSelection,
+                        onRowHeightChanged: (height) {
+                          ref.read(handCardsMaxHeightProvider.notifier).state = height;
+                        },
+                      ),
+                      SizedBox(height: ui.h(ui.config.spacing.sm)),
+                      HandToolbar(
+                        nickname: user?.nickname ?? '玩家',
+                        onSort: () => controller.sortHand(context),
                       ),
                     ],
                   ),
@@ -169,14 +187,17 @@ class _GamePageState extends ConsumerState<GamePage> {
               else
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: ui.edgeInsetsSymmetric(vertical: ui.config.spacing.md + 2),
                   color: Colors.black.withValues(alpha: 0.25),
                   child: Text(
                     me == null
                         ? '正在同步房间信息...'
                         : '您当前在座位 ${mySeatIndex + 1}  ·  ${me.isReady ? '已准备' : '未准备'}',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: GameTheme.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: GameTheme.textSecondary,
+                      fontSize: ui.sp(ui.config.font.md),
+                    ),
                   ),
                 ),
             ],
@@ -187,29 +208,30 @@ class _GamePageState extends ConsumerState<GamePage> {
   }
 
   void _showMoreMenu(BuildContext context) {
+    final ui = context.ui;
     showModalBottomSheet(
       context: context,
       backgroundColor: GameTheme.tableBlueDark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(ui.r(ui.config.radius.xl))),
       ),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.help_outline, color: Colors.white70),
-              title: const Text('游戏帮助', style: TextStyle(color: Colors.white)),
+              leading: Icon(Icons.help_outline, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+              title: Text('游戏帮助', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
               onTap: () => Navigator.pop(ctx),
             ),
             ListTile(
-              leading: const Icon(Icons.settings, color: Colors.white70),
-              title: const Text('设置', style: TextStyle(color: Colors.white)),
+              leading: Icon(Icons.settings, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+              title: Text('设置', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
               onTap: () => Navigator.pop(ctx),
             ),
             ListTile(
-              leading: const Icon(Icons.exit_to_app, color: Colors.white70),
-              title: const Text('退出房间', style: TextStyle(color: Colors.white)),
+              leading: Icon(Icons.exit_to_app, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+              title: Text('退出房间', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
               onTap: () {
                 Navigator.pop(ctx);
                 context.go('/lobby');

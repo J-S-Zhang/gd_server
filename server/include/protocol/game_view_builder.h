@@ -11,6 +11,9 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId);
 std::string buildPlayerPlayedJson(
     PlayerId playerId,
     const std::vector<CardId>& cards,
+    int remainingCardCount,
+    bool hasFinished,
+    int finishRank,
     int nextPlayerIndex,
     uint64_t stateVersion,
     uint64_t turnId

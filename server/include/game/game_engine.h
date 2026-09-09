@@ -5,8 +5,10 @@
 #include "game/game_state.h"
 #include "game/rule_engine.h"
 #include "game/settlement.h"
+#include "game/team_progress.h"
 #include "game/turn_manager.h"
 #include "game/types.h"
+#include <array>
 #include <string>
 #include <vector>
 
@@ -24,6 +26,12 @@ struct PlayerView {
     uint64_t stateVersion;
     uint64_t turnId;
     int currentLevel;
+    int attackingTeam;
+    bool isPassARound;
+    bool isPlayingOwnRound;
+    std::array<int, 2> teamLevels{2, 2};
+    std::array<bool, 2> inPassAPhase{false, false};
+    std::array<int, 2> passAFailCounts{0, 0};
     int currentPlayerIndex;
     int mySeatIndex;
     std::vector<CardId> myCards;
@@ -58,6 +66,7 @@ public:
 
     bool isGameOver() const { return state_.phase == GamePhase::FINISHED; }
     const GameState& getState() const { return state_; }
+    const TeamProgress& teamProgress() const { return progress_; }
     PlayerView buildViewFor(PlayerId viewerId) const;
 
 private:
@@ -67,6 +76,7 @@ private:
     RuleEngine ruleEngine_;
     TurnManager turnManager_;
     Settlement settlement_;
+    TeamProgress progress_;
 
     RuleContext ruleContext() const;
     void assignFinishRank(int playerIndex);

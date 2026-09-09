@@ -16,8 +16,8 @@ public:
     std::optional<UserRecord> findById(PlayerId id) const;
 
     /// @return empty string on success, error message on failure
-    std::string registerUser(const std::string& nickname, const std::string& passwordHash,
-                             const std::string& salt);
+    std::string registerUser(const std::string& nickname, const std::string& password,
+                             const std::string& passwordHash, const std::string& salt);
 
     bool updateStats(PlayerId id, const UserStats& stats);
 

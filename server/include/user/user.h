@@ -15,6 +15,7 @@ struct UserStats {
 struct UserRecord {
     PlayerId id = 0;
     std::string nickname;
+    std::string password;
     std::string passwordHash;
     std::string salt;
     UserStats stats;

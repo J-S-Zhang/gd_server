@@ -1,14 +1,8 @@
 #include "game/settlement.h"
+#include <algorithm>
+#include <vector>
 
 namespace guandan {
-
-int Settlement::countTeamFinished(const GameState& state, int team) const {
-    int count = 0;
-    for (const auto& p : state.players) {
-        if (p.team == team && p.hasFinished) ++count;
-    }
-    return count;
-}
 
 int Settlement::findRank(const GameState& state, int rank) const {
     for (int i = 0; i < state.playerCount; ++i) {
@@ -17,7 +11,24 @@ int Settlement::findRank(const GameState& state, int rank) const {
     return -1;
 }
 
-SettlementResult Settlement::calculate(const GameState& state) const {
+int Settlement::sumWinningTeamRanks(const GameState& state, int team, int count) const {
+    std::vector<int> ranks;
+    ranks.reserve(count);
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].team == team && state.players[i].finishRank > 0) {
+            ranks.push_back(state.players[i].finishRank);
+        }
+    }
+    std::sort(ranks.begin(), ranks.end());
+    const int take = std::min(count, static_cast<int>(ranks.size()));
+    int sum = 0;
+    for (int i = 0; i < take; ++i) {
+        sum += ranks[i];
+    }
+    return sum;
+}
+
+SettlementResult Settlement::calculate(const GameState& state, int playersPerTeam) const {
     SettlementResult result;
     result.ranks.resize(state.playerCount, 0);
     result.playerIds.resize(state.playerCount);
@@ -27,23 +38,16 @@ SettlementResult Settlement::calculate(const GameState& state) const {
         result.playerIds[i] = state.players[i].id;
     }
 
-    int headIdx = findRank(state, 1);
+    const int headIdx = findRank(state, 1);
     if (headIdx < 0) return result;
 
-    int headTeam = state.players[headIdx].team;
-    int secondIdx = findRank(state, 2);
-    int thirdIdx = findRank(state, 3);
+    const int winningTeam = state.players[headIdx].team;
+    result.winningTeam = winningTeam;
 
-    if (secondIdx >= 0 && state.players[secondIdx].team == headTeam) {
-        result.winningTeam = headTeam;
-        result.levelUpgrade = 3;  // 双下
-    } else if (thirdIdx >= 0 && state.players[thirdIdx].team == headTeam) {
-        result.winningTeam = headTeam;
-        result.levelUpgrade = 2;  // 单下
-    } else {
-        result.winningTeam = headTeam;
-        result.levelUpgrade = 1;
-    }
+    const int rankCount = playersPerTeam >= 3 ? 2 : playersPerTeam;
+    const int rankSum = sumWinningTeamRanks(state, winningTeam, rankCount);
+    const int base = playersPerTeam >= 3 ? 10 : 6;
+    result.levelUpgrade = base - rankSum;
 
     return result;
 }

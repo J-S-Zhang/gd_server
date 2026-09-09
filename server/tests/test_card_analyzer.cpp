@@ -57,6 +57,59 @@ TEST(test_analyze_bomb) {
     ASSERT(p.length == 4);
 }
 
+TEST(test_analyze_three_pairs_a2233) {
+    auto deck = createFullDeck(3);
+    RuleContext ctx;
+    CardAnalyzer analyzer;
+
+    std::vector<Card> cards;
+    cards.push_back(findCard(deck, Suit::SPADE, Rank::A));
+    cards.push_back(findCard(deck, Suit::HEART, Rank::A, 0));
+    cards.push_back(findCard(deck, Suit::CLUB, Rank::R2));
+    cards.push_back(findCard(deck, Suit::DIAMOND, Rank::R2, 0));
+    cards.push_back(findCard(deck, Suit::SPADE, Rank::R3));
+    cards.push_back(findCard(deck, Suit::HEART, Rank::R3, 0));
+    auto p = analyzer.analyze(cards, ctx);
+    ASSERT(p.isValid);
+    ASSERT(p.type == CardType::THREE_PAIRS);
+    ASSERT(p.primaryRank == 3);
+}
+
+TEST(test_analyze_two_triples_a222) {
+    auto deck = createFullDeck(3);
+    RuleContext ctx;
+    CardAnalyzer analyzer;
+
+    std::vector<Card> cards;
+    cards.push_back(findCard(deck, Suit::SPADE, Rank::A));
+    cards.push_back(findCard(deck, Suit::HEART, Rank::A, 0));
+    cards.push_back(findCard(deck, Suit::CLUB, Rank::A, 1));
+    cards.push_back(findCard(deck, Suit::DIAMOND, Rank::R2));
+    cards.push_back(findCard(deck, Suit::SPADE, Rank::R2, 0));
+    cards.push_back(findCard(deck, Suit::HEART, Rank::R2, 1));
+    auto p = analyzer.analyze(cards, ctx);
+    ASSERT(p.isValid);
+    ASSERT(p.type == CardType::TWO_TRIPLES);
+    ASSERT(p.primaryRank == 2);
+}
+
+TEST(test_analyze_straight_a2345) {
+    auto deck = createFullDeck(3);
+    RuleContext ctx;
+    CardAnalyzer analyzer;
+
+    std::vector<Card> cards;
+    cards.push_back(findCard(deck, Suit::SPADE, Rank::A));
+    cards.push_back(findCard(deck, Suit::HEART, Rank::R2));
+    cards.push_back(findCard(deck, Suit::CLUB, Rank::R3));
+    cards.push_back(findCard(deck, Suit::DIAMOND, Rank::R4));
+    cards.push_back(findCard(deck, Suit::SPADE, Rank::R5));
+    auto p = analyzer.analyze(cards, ctx);
+    ASSERT(p.isValid);
+    ASSERT(p.type == CardType::STRAIGHT);
+    ASSERT(p.primaryRank == 5);
+}
+
 TEST(test_analyze_invalid) {
     auto deck = createFullDeck(3);
     RuleContext ctx;

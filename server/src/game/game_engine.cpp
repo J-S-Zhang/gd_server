@@ -11,7 +11,6 @@ void GameEngine::init(RoomId roomId, const std::vector<PlayerId>& playerIds) {
     state_.roomId = roomId;
     state_.playerCount = static_cast<int>(playerIds.size());
     state_.phase = GamePhase::WAITING;
-    state_.currentLevel = 2;
 
     Deck deck(config_.deckCount);
     state_.allCards = deck.cards();
@@ -88,6 +87,11 @@ PlayResult GameEngine::startGame() {
         state_.players[i].finishRank = 0;
     }
 
+    progress_.prepareNextRound();
+    state_.attackingTeam = progress_.attackingTeam;
+    state_.currentLevel = progress_.currentRoundLevel();
+    state_.isPassARound = progress_.isPassARound();
+
     state_.phase = GamePhase::PLAYING;
     state_.round++;
     state_.firstPlayerIndex = 0;
@@ -117,7 +121,7 @@ bool GameEngine::checkTeamWin() const {
         for (const auto& p : state_.players) {
             if (p.team == team && p.hasFinished) ++finished;
         }
-        if (finished >= kPlayersPerTeam) return true;
+        if (finished >= config_.playersPerTeam) return true;
     }
     return false;
 }
@@ -173,7 +177,8 @@ PlayResult GameEngine::playCards(PlayerId playerId, const std::vector<CardId>& c
         if (checkTeamWin()) {
             state_.phase = GamePhase::FINISHED;
             result.gameOver = true;
-            result.settlement = settlement_.calculate(state_);
+            result.settlement = settlement_.calculate(state_, config_.playersPerTeam);
+            progress_.applySettlement(result.settlement);
             return result;
         }
     }
@@ -232,6 +237,11 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId) const {
     view.stateVersion = state_.stateVersion;
     view.turnId = state_.turnId;
     view.currentLevel = state_.currentLevel;
+    view.attackingTeam = state_.attackingTeam;
+    view.isPassARound = state_.isPassARound;
+    view.teamLevels = progress_.levels;
+    view.inPassAPhase = progress_.inPassAPhase;
+    view.passAFailCounts = progress_.passAFailCounts;
     view.currentPlayerIndex = state_.currentPlayerIndex;
     view.lastPlayedCards = state_.lastPlayedCards;
     view.lastPlayedPlayerIndex = state_.lastPlayedPlayerIndex;
@@ -242,6 +252,8 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId) const {
 
     if (viewerSeat >= 0) {
         view.myCards = state_.players[viewerSeat].hand.cards();
+        const int myTeam = state_.players[viewerSeat].team;
+        view.isPlayingOwnRound = progress_.isPlayingOwnRound(myTeam);
     }
 
     for (int i = 0; i < state_.playerCount; ++i) {

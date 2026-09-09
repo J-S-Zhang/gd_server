@@ -36,6 +36,15 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) 
     oss << ",\"state_version\":" << view.stateVersion;
     oss << ",\"turn_id\":" << view.turnId;
     oss << ",\"current_level\":" << view.currentLevel;
+    oss << ",\"attacking_team\":" << view.attackingTeam;
+    oss << ",\"is_pass_a_round\":" << (view.isPassARound ? "true" : "false");
+    oss << ",\"is_playing_own_round\":" << (view.isPlayingOwnRound ? "true" : "false");
+    oss << ",\"team_levels\":[" << view.teamLevels[0] << "," << view.teamLevels[1] << "]";
+    oss << ",\"in_pass_a_phase\":["
+        << (view.inPassAPhase[0] ? "true" : "false") << ","
+        << (view.inPassAPhase[1] ? "true" : "false") << "]";
+    oss << ",\"pass_a_fail_counts\":[" << view.passAFailCounts[0] << ","
+        << view.passAFailCounts[1] << "]";
     oss << ",\"current_player_index\":" << view.currentPlayerIndex;
     oss << ",\"my_seat_index\":" << view.mySeatIndex;
     oss << ",\"my_cards\":" << cardIdsToJsonArray(view.myCards);
@@ -65,6 +74,9 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) 
 std::string buildPlayerPlayedJson(
     PlayerId playerId,
     const std::vector<CardId>& cards,
+    int remainingCardCount,
+    bool hasFinished,
+    int finishRank,
     int nextPlayerIndex,
     uint64_t stateVersion,
     uint64_t turnId
@@ -73,6 +85,9 @@ std::string buildPlayerPlayedJson(
     oss << "{";
     oss << "\"player_id\":" << playerId;
     oss << ",\"cards\":" << cardIdsToJsonArray(cards);
+    oss << ",\"card_count\":" << remainingCardCount;
+    oss << ",\"has_finished\":" << (hasFinished ? "true" : "false");
+    oss << ",\"finish_rank\":" << finishRank;
     oss << ",\"next_player\":" << nextPlayerIndex;
     oss << ",\"state_version\":" << stateVersion;
     oss << ",\"turn_id\":" << turnId;

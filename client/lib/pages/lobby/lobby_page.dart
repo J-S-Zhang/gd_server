@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/ui_scale.dart';
 import '../../controller/room_controller.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/auth_controller.dart';
@@ -8,6 +9,7 @@ import '../../models/game_mode.dart';
 import '../../network/websocket_client.dart';
 import '../../network/reconnect_manager.dart';
 import '../../theme/game_theme.dart';
+import '../../widgets/lobby_user_header.dart';
 
 class LobbyPage extends ConsumerStatefulWidget {
   const LobbyPage({super.key});
@@ -52,6 +54,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final ui = context.ui;
     final user = ref.watch(userProvider);
     final wsState = ref.watch(wsConnectionStateProvider);
     final isConnected = wsState == WsConnectionState.connected;
@@ -71,72 +74,83 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(user, wsState),
+              _buildHeader(ui, user, wsState),
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: ui.edgeInsetsAll(ui.config.spacing.xxl),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 520),
+                      constraints: BoxConstraints(maxWidth: ui.w(ui.config.layout.lobbyMaxWidth)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (_connecting) const LinearProgressIndicator(color: GameTheme.accentGold),
+                          if (_connecting)
+                            const LinearProgressIndicator(color: GameTheme.accentGold),
                           if (!isConnected && !_connecting) ...[
                             Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: GameTheme.panelDecoration(),
+                              padding: ui.edgeInsetsAll(ui.config.spacing.lg),
+                              decoration: GameTheme.panelDecoration(ui),
                               child: Column(
                                 children: [
                                   Text(
                                     '无法连接服务器，请确认服务端已启动且端口已放行',
-                                    style: TextStyle(color: Colors.red.shade200, fontSize: 13),
+                                    style: TextStyle(
+                                      color: Colors.red.shade200,
+                                      fontSize: ui.sp(ui.config.font.md),
+                                    ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  SizedBox(height: ui.h(ui.config.spacing.md)),
                                   OutlinedButton.icon(
                                     onPressed: _connectWebSocket,
-                                    icon: const Icon(Icons.refresh, color: Colors.white70),
-                                    label: const Text('重新连接', style: TextStyle(color: Colors.white70)),
+                                    icon: Icon(Icons.refresh, color: Colors.white70, size: ui.sp(ui.config.font.lg)),
+                                    label: Text(
+                                      '重新连接',
+                                      style: TextStyle(color: Colors.white70, fontSize: ui.sp(ui.config.font.md2)),
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: ui.h(ui.config.spacing.xl)),
                           ],
                           _lobbyCard(
+                            ui,
                             title: '快速开始',
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Text(
+                                Text(
                                   '选择游戏模式',
-                                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: ui.sp(ui.config.font.md),
+                                  ),
                                 ),
-                                const SizedBox(height: 10),
-                                _buildModeSelector(),
-                                const SizedBox(height: 16),
+                                SizedBox(height: ui.h(ui.config.spacing.md + 2)),
+                                _buildModeSelector(ui),
+                                SizedBox(height: ui.h(ui.config.spacing.xl)),
                                 ElevatedButton.icon(
                                   onPressed: isConnected ? _createRoom : null,
-                                  icon: const Icon(Icons.add),
+                                  icon: Icon(Icons.add, size: ui.sp(ui.config.font.lg)),
                                   label: Text(
                                     _selectedMode == GameMode.solo
                                         ? '创建单人测试房'
                                         : '创建${_selectedMode.label}',
-                                    style: const TextStyle(fontSize: 18),
+                                    style: TextStyle(fontSize: ui.sp(ui.config.font.xl)),
                                   ),
-                                  style: GameTheme.playButtonStyle.copyWith(
+                                  style: GameTheme.playButtonStyle(ui).copyWith(
                                     minimumSize: WidgetStateProperty.all(
-                                      const Size(double.infinity, 52),
+                                      Size(double.infinity, ui.h(ui.config.button.largeHeight)),
                                     ),
                                   ),
                                 ),
                                 if (_selectedMode == GameMode.solo) ...[
-                                  const SizedBox(height: 8),
+                                  SizedBox(height: ui.h(ui.config.spacing.md)),
                                   Text(
                                     '自动填充 3 名机器人，便于开发调试',
                                     style: TextStyle(
                                       color: Colors.white.withValues(alpha: 0.45),
-                                      fontSize: 11,
+                                      fontSize: ui.sp(ui.config.font.sm2),
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
@@ -144,8 +158,9 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: ui.h(ui.config.spacing.xl)),
                           _lobbyCard(
+                            ui,
                             title: '加入房间',
                             child: Column(
                               children: [
@@ -153,26 +168,28 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                                   controller: _roomIdController,
                                   keyboardType: TextInputType.number,
                                   maxLength: 6,
-                                  style: const TextStyle(color: Colors.white),
+                                  style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
                                   decoration: InputDecoration(
-                                    counterStyle: const TextStyle(color: Colors.white38),
+                                    counterStyle: TextStyle(color: Colors.white38, fontSize: ui.sp(ui.config.font.sm)),
                                     labelText: '输入6位房间号',
-                                    labelStyle: const TextStyle(color: Colors.white70),
-                                    prefixIcon: const Icon(Icons.meeting_room, color: Colors.white70),
+                                    labelStyle: TextStyle(color: Colors.white70, fontSize: ui.sp(ui.config.font.md2)),
+                                    prefixIcon: Icon(Icons.meeting_room, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
                                     filled: true,
                                     fillColor: Colors.white.withValues(alpha: 0.08),
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(ui.r(ui.config.radius.lg)),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: ui.h(ui.config.spacing.lg)),
                                 ElevatedButton.icon(
                                   onPressed: isConnected ? _joinRoom : null,
-                                  icon: const Icon(Icons.login),
-                                  label: const Text('加入房间', style: TextStyle(fontSize: 18)),
-                                  style: GameTheme.hintButtonStyle.copyWith(
-                                    minimumSize: WidgetStateProperty.all(const Size(double.infinity, 52)),
+                                  icon: Icon(Icons.login, size: ui.sp(ui.config.font.lg)),
+                                  label: Text('加入房间', style: TextStyle(fontSize: ui.sp(ui.config.font.xl))),
+                                  style: GameTheme.hintButtonStyle(ui).copyWith(
+                                    minimumSize: WidgetStateProperty.all(
+                                      Size(double.infinity, ui.h(ui.config.button.largeHeight)),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -191,56 +208,52 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     );
   }
 
-  Widget _buildHeader(user, WsConnectionState wsState) {
+  Widget _buildHeader(UiScale ui, user, WsConnectionState wsState) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.xl, vertical: ui.config.spacing.md + 2),
       decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2)),
       child: Row(
         children: [
-          const Text(
+          if (user != null) LobbyUserHeader(user: user),
+          const Spacer(),
+          Text(
             '游戏大厅',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: ui.sp(ui.config.font.xl),
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const Spacer(),
-          _buildConnectionIndicator(wsState),
-          if (user != null) ...[
-            const SizedBox(width: 12),
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: GameTheme.tableBlueLight,
-              child: Text(user.nickname[0], style: const TextStyle(color: Colors.white)),
-            ),
-            const SizedBox(width: 8),
-            Text(user.nickname, style: const TextStyle(color: Colors.white70)),
-          ],
+          _buildConnectionIndicator(ui, wsState),
         ],
       ),
     );
   }
 
-  Widget _lobbyCard({required String title, required Widget child}) {
+  Widget _lobbyCard(UiScale ui, {required String title, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: GameTheme.panelDecoration(),
+      padding: ui.edgeInsetsAll(ui.config.spacing.xl),
+      decoration: GameTheme.panelDecoration(ui),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: GameTheme.accentGold,
-              fontSize: 16,
+              fontSize: ui.sp(ui.config.font.lg),
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: ui.h(ui.config.spacing.xl)),
           child,
         ],
       ),
     );
   }
 
-  Widget _buildConnectionIndicator(WsConnectionState state) {
+  Widget _buildConnectionIndicator(UiScale ui, WsConnectionState state) {
     Color color;
     String label;
     switch (state) {
@@ -259,21 +272,21 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     }
     return Row(
       children: [
-        Icon(Icons.circle, color: color, size: 10),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: color, fontSize: 12)),
+        Icon(Icons.circle, color: color, size: ui.sp(ui.config.font.sm)),
+        SizedBox(width: ui.w(ui.config.spacing.sm)),
+        Text(label, style: TextStyle(color: color, fontSize: ui.sp(ui.config.font.sm2 + 1))),
       ],
     );
   }
 
-  Widget _buildModeSelector() {
+  Widget _buildModeSelector(UiScale ui) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: ui.w(ui.config.spacing.md),
+      runSpacing: ui.h(ui.config.spacing.md),
       children: GameMode.values.map((mode) {
         final selected = _selectedMode == mode;
         return ChoiceChip(
-          label: Text(mode.label),
+          label: Text(mode.label, style: TextStyle(fontSize: ui.sp(ui.config.font.md2))),
           selected: selected,
           onSelected: (_) => setState(() => _selectedMode = mode),
           selectedColor: GameTheme.accentGold.withValues(alpha: 0.35),

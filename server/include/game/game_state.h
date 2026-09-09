@@ -29,6 +29,8 @@ struct GameState {
 
     int currentPlayerIndex = 0;
     int currentLevel = 2;
+    int attackingTeam = 0;     // 攻方（打自己级牌的队伍）
+    bool isPassARound = false; // 本局是否为过 A 局
     int firstPlayerIndex = 0;  // 本局首出
 
     std::vector<CardId> lastPlayedCards;

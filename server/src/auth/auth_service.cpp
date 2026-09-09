@@ -29,7 +29,7 @@ AuthResult AuthService::registerUser(const std::string& nickname,
 
     const std::string salt = generateSalt();
     const std::string hash = hashPassword(password, salt);
-    const std::string regErr = userStore_.registerUser(nickname, hash, salt);
+    const std::string regErr = userStore_.registerUser(nickname, password, hash, salt);
     if (!regErr.empty()) {
         result.httpStatus = 409;
         result.errorCode = "nickname_taken";

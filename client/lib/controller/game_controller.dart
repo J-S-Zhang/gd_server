@@ -1,15 +1,22 @@
 import '../models/card.dart';
+import '../utils/card_pattern.dart';
+import '../utils/card_utils.dart';
 import '../utils/hand_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
+import '../models/player.dart';
 import '../models/room.dart';
 import '../network/websocket_client.dart';
+import 'auth_controller.dart';
 import 'room_controller.dart';
 
 final gameStateProvider = StateProvider<ClientGameState>((ref) {
   return const ClientGameState();
 });
+
+/// 当前自己手牌区域占用高度（随叠牌层数变化而更新）。
+final handCardsMaxHeightProvider = StateProvider<double>((ref) => 0);
 
 final gameControllerProvider = Provider((ref) {
   return GameController(ref);
@@ -29,9 +36,44 @@ class GameController {
     };
   }
 
-  void playCards(String roomId, List<int> cards) {
+  bool playCards(String roomId, List<int> cards, {BuildContext? context}) {
+    if (cards.isEmpty) return false;
     final state = _ref.read(gameStateProvider);
+    final selected = state.myCards.where((c) => cards.contains(c.id)).toList();
+    final lastPlayed = state.lastPlayedCards.isEmpty
+        ? null
+        : state.lastPlayedCards.map(cardFromId).toList();
+
+    final error = validatePlaySelection(
+      selected,
+      state.currentLevel,
+      lastPlayedCards: lastPlayed,
+    );
+    if (error != null) {
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
+      return false;
+    }
+
+    final myUserId = _ref.read(userProvider)?.id;
+    final removeSet = cards.toSet();
+
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      phase: GamePhase.playing,
+      myCards: state.myCards.where((c) => !removeSet.contains(c.id)).toList(),
+      lastPlayedCards: cards,
+      lastPlayedPlayerId: myUserId ?? state.lastPlayedPlayerId,
+      lastPlayedSeatIndex: state.mySeatIndex,
+      handStraightStackIds: state.handStraightStackIds
+          .where((id) => !removeSet.contains(id))
+          .toSet(),
+    );
+
     _ws.playCards(roomId, cards, state.turnId);
+    return true;
   }
 
   void pass(String roomId) {
@@ -60,24 +102,36 @@ class GameController {
         .toList();
   }
 
-  void sortHand() {
+  void sortHand(BuildContext context) {
     final state = _ref.read(gameStateProvider);
-    final selected = selectedCardIds.toSet();
-    final sorted = sortHandCards(state.myCards, currentLevel: state.currentLevel);
-    final cards = sorted
-        .map(
-          (c) => GameCard(
-            id: c.id,
-            suit: c.suit,
-            rank: c.rank,
-            selected: selected.contains(c.id),
-          ),
-        )
-        .toList();
-    _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
+    final result = organizeHand(
+      state.myCards,
+      currentLevel: state.currentLevel,
+      tryStraightFromSelection: true,
+    );
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      myCards: result.cards,
+      handStraightStackIds: result.straightStackIds,
+    );
+    if (result.message != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message!)),
+      );
+    }
   }
 
-  void autoSortHand() => sortHand();
+  void autoSortHand() {
+    final state = _ref.read(gameStateProvider);
+    final result = organizeHand(
+      state.myCards,
+      currentLevel: state.currentLevel,
+      tryStraightFromSelection: false,
+    );
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      myCards: result.cards,
+      handStraightStackIds: const {},
+    );
+  }
 
   void hint(BuildContext context) {
     final state = _ref.read(gameStateProvider);
@@ -111,19 +165,14 @@ class GameController {
     switch (type) {
       case 'game_snapshot':
       case 'cards_dealt':
-        _ref.read(gameStateProvider.notifier).state =
-            ClientGameState.fromSnapshot(msg['data'] as Map<String, dynamic>);
+        var newState = ClientGameState.fromSnapshot(
+          msg['data'] as Map<String, dynamic>,
+        );
+        newState = _mergeRoomPlayerInfo(newState);
+        _ref.read(gameStateProvider.notifier).state = newState;
         break;
       case 'player_played':
-        final data = msg['data'] as Map<String, dynamic>;
-        final state = _ref.read(gameStateProvider);
-        _ref.read(gameStateProvider.notifier).state = state.copyWith(
-          lastPlayedCards: (data['cards'] as List).cast<int>(),
-          lastPlayedPlayerIndex: data['player_id'] as int? ?? -1,
-          stateVersion: data['state_version'] as int? ?? state.stateVersion,
-          turnId: data['turn_id'] as int? ?? state.turnId,
-          currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
-        );
+        _applyPlayerPlayed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
       case 'player_passed':
         final data = msg['data'] as Map<String, dynamic>? ?? {};
@@ -145,5 +194,98 @@ class GameController {
             state.copyWith(phase: GamePhase.finished);
         break;
     }
+  }
+
+  void _applyPlayerPlayed(Map<String, dynamic> data) {
+    final state = _ref.read(gameStateProvider);
+    final playerId = data['player_id'] as int? ?? -1;
+    final playedIds = (data['cards'] as List<dynamic>?)
+            ?.map((c) => c as int)
+            .toList() ??
+        [];
+    final myUserId = _ref.read(userProvider)?.id;
+
+    List<GameCard> myCards = state.myCards;
+    if (myUserId != null && playerId == myUserId && playedIds.isNotEmpty) {
+      final removeSet = playedIds.toSet();
+      myCards = state.myCards.where((c) => !removeSet.contains(c.id)).toList();
+    }
+
+    final serverCardCount = data['card_count'] as int?;
+    final serverHasFinished = data['has_finished'] as bool?;
+    final serverFinishRank = data['finish_rank'] as int?;
+
+    final players = state.players.map((p) {
+      if (p.id != playerId || playedIds.isEmpty) return p;
+      return Player(
+        id: p.id,
+        nickname: p.nickname,
+        seatIndex: p.seatIndex,
+        team: p.team,
+        cardCount: serverCardCount ??
+            (p.cardCount - playedIds.length).clamp(0, 999),
+        hasFinished: serverHasFinished ?? p.hasFinished,
+        finishRank: serverFinishRank ?? p.finishRank,
+        isReady: p.isReady,
+        isBot: p.isBot,
+        status: p.status,
+      );
+    }).toList();
+
+    int lastPlayedSeatIndex = state.lastPlayedSeatIndex;
+    for (final p in players) {
+      if (p.id == playerId) {
+        lastPlayedSeatIndex = p.seatIndex;
+        break;
+      }
+    }
+    if (playerId >= 0) {
+      final room = _ref.read(roomProvider);
+      for (final p in room?.players ?? const <Player>[]) {
+        if (p.id == playerId) {
+          lastPlayedSeatIndex = p.seatIndex;
+          break;
+        }
+      }
+    }
+
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      phase: GamePhase.playing,
+      lastPlayedCards: playedIds,
+      lastPlayedPlayerId: playerId,
+      lastPlayedSeatIndex: lastPlayedSeatIndex,
+      myCards: myCards,
+      players: players,
+      handStraightStackIds: state.handStraightStackIds
+          .where((id) => myCards.any((c) => c.id == id))
+          .toSet(),
+      stateVersion: data['state_version'] as int? ?? state.stateVersion,
+      turnId: data['turn_id'] as int? ?? state.turnId,
+      currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
+    );
+  }
+
+  ClientGameState _mergeRoomPlayerInfo(ClientGameState state) {
+    final room = _ref.read(roomProvider);
+    if (room == null) return state;
+
+    final nicknames = {for (final p in room.players) p.id: p.nickname};
+    final players = state.players.map((p) {
+      final nick = nicknames[p.id];
+      if (nick == null) return p;
+      return Player(
+        id: p.id,
+        nickname: nick,
+        seatIndex: p.seatIndex,
+        team: p.team,
+        cardCount: p.cardCount,
+        hasFinished: p.hasFinished,
+        finishRank: p.finishRank,
+        isReady: p.isReady,
+        isBot: p.isBot,
+        status: p.status,
+      );
+    }).toList();
+    return state.copyWith(players: players);
   }
 }

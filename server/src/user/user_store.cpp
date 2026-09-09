@@ -98,6 +98,7 @@ void UserStore::load() {
         if (nickEnd == std::string::npos) break;
         user.nickname = json.substr(nickPos, nickEnd - nickPos);
 
+        user.password = extractJsonStringValue(json.substr(pos), "password");
         user.passwordHash = extractJsonStringValue(json.substr(pos), "password_hash");
         user.salt = extractJsonStringValue(json.substr(pos), "salt");
         user.stats.totalGames = static_cast<uint32_t>(
@@ -123,6 +124,7 @@ void UserStore::save() const {
         oss << "    {";
         oss << "\"id\":" << u.id;
         oss << ",\"nickname\":\"" << escapeJson(u.nickname) << "\"";
+        oss << ",\"password\":\"" << escapeJson(u.password) << "\"";
         oss << ",\"password_hash\":\"" << escapeJson(u.passwordHash) << "\"";
         oss << ",\"salt\":\"" << escapeJson(u.salt) << "\"";
         oss << ",\"total_games\":" << u.stats.totalGames;
@@ -160,8 +162,8 @@ std::optional<UserRecord> UserStore::findById(PlayerId id) const {
     return std::nullopt;
 }
 
-std::string UserStore::registerUser(const std::string& nickname, const std::string& passwordHash,
-                                    const std::string& salt) {
+std::string UserStore::registerUser(const std::string& nickname, const std::string& password,
+                                    const std::string& passwordHash, const std::string& salt) {
     std::lock_guard lock(mutex_);
     const std::string nick = trim(nickname);
     if (nick.size() < 2 || nick.size() > 16) {
@@ -176,6 +178,7 @@ std::string UserStore::registerUser(const std::string& nickname, const std::stri
     UserRecord user;
     user.id = nextId_++;
     user.nickname = nick;
+    user.password = password;
     user.passwordHash = passwordHash;
     user.salt = salt;
     users_.push_back(std::move(user));

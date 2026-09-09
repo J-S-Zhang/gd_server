@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/ui_scale.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
@@ -32,6 +33,9 @@ class GameTableWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = context.ui;
+    final seatCfg = ui.config.seatLayout;
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -42,21 +46,21 @@ class GameTableWidget extends StatelessWidget {
         ),
         Center(
           child: FractionallySizedBox(
-            widthFactor: SeatLayout.tableWidthFactor + 0.15,
-            heightFactor: SeatLayout.tableHeightFactor + 0.1,
+            widthFactor: seatCfg.tableWidthFactor + seatCfg.tableExtraWidthFactor,
+            heightFactor: seatCfg.tableHeightFactor + seatCfg.tableExtraHeightFactor,
             child: Container(
               decoration: BoxDecoration(
                 color: GameTheme.tableBlueMid.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.18),
-                  width: 2,
+                  width: ui.r(2),
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 24,
-                    spreadRadius: 2,
+                    blurRadius: ui.r(24),
+                    spreadRadius: ui.r(2),
                   ),
                 ],
               ),
@@ -64,48 +68,48 @@ class GameTableWidget extends StatelessWidget {
           ),
         ),
         Center(
-          child: isWaitingLobby ? _buildWaitingCenter() : _buildPlayingCenter(),
+          child: isWaitingLobby ? _buildWaitingCenter(ui) : _buildPlayingCenter(ui),
         ),
         if (isWaitingLobby)
-          ..._positionLobbySeats()
+          ..._positionLobbySeats(ui)
         else
-          ..._positionPlayers(gameState.players, gameState.mySeatIndex),
+          ..._positionPlayers(ui, _effectivePlayers(), gameState.mySeatIndex),
       ],
     );
   }
 
-  Widget _buildWaitingCenter() {
+  Widget _buildWaitingCenter(UiScale ui) {
     final readyCount = lobbyPlayers.where((p) => p.isReady).length;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: GameTheme.panelDecoration(),
+      padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.xxl, vertical: ui.config.spacing.xl),
+      decoration: GameTheme.panelDecoration(ui),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             '等待玩家准备',
             style: TextStyle(
               color: GameTheme.accentGold,
-              fontSize: 16,
+              fontSize: ui.sp(ui.config.font.lg),
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: ui.h(ui.config.spacing.md)),
           Text(
             '${lobbyPlayers.length}/$maxPlayers 人  ·  $readyCount 人已准备',
-            style: const TextStyle(color: GameTheme.textSecondary, fontSize: 13),
+            style: TextStyle(color: GameTheme.textSecondary, fontSize: ui.sp(ui.config.font.md)),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: ui.h(ui.config.spacing.sm + 2)),
           Text(
             isSoloMode ? '机器人已就位，点击准备即可开始' : '点击空位可换座',
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
+            style: TextStyle(color: Colors.white38, fontSize: ui.sp(ui.config.font.sm2)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPlayingCenter() {
+  Widget _buildPlayingCenter(UiScale ui) {
     final currentPlayer = _currentPlayer();
     final lastPlayerLabel = _lastPlayedPlayerLabel();
 
@@ -113,10 +117,14 @@ class GameTableWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         PlayedCardsArea(
+          key: ValueKey(
+            '${gameState.lastPlayedPlayerId}_${gameState.lastPlayedCards.join(',')}',
+          ),
           cardIds: gameState.lastPlayedCards,
           playerLabel: lastPlayerLabel,
+          currentLevel: gameState.currentLevel,
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: ui.h(ui.config.spacing.xl)),
         if (currentPlayer != null)
           TurnHintWidget(
             key: ValueKey(gameState.turnId),
@@ -128,25 +136,48 @@ class GameTableWidget extends StatelessWidget {
     );
   }
 
-  Player? _currentPlayer() {
-    if (gameState.players.isEmpty) return null;
+  List<Player> _effectivePlayers() {
+    final merged = <int, Player>{};
+    for (final p in lobbyPlayers) {
+      merged[p.id] = p;
+    }
     for (final p in gameState.players) {
+      merged[p.id] = p;
+    }
+    return merged.values.toList();
+  }
+
+  Player? _currentPlayer() {
+    final players = _effectivePlayers();
+    if (players.isEmpty) return null;
+    for (final p in players) {
       if (p.seatIndex == gameState.currentPlayerIndex) return p;
     }
-    return gameState.players.first;
+    return players.first;
   }
 
   String? _lastPlayedPlayerLabel() {
     if (gameState.lastPlayedCards.isEmpty) return null;
-    for (final p in gameState.players) {
-      if (p.id == gameState.lastPlayedPlayerIndex) {
-        return '${p.nickname} 出牌';
+    final players = _effectivePlayers();
+
+    if (gameState.lastPlayedPlayerId >= 0) {
+      for (final p in players) {
+        if (p.id == gameState.lastPlayedPlayerId) {
+          return '${p.nickname} 出牌';
+        }
+      }
+    }
+    if (gameState.lastPlayedSeatIndex >= 0) {
+      for (final p in players) {
+        if (p.seatIndex == gameState.lastPlayedSeatIndex) {
+          return '${p.nickname} 出牌';
+        }
       }
     }
     return '上家出牌';
   }
 
-  List<Widget> _positionLobbySeats() {
+  List<Widget> _positionLobbySeats(UiScale ui) {
     final widgets = <Widget>[];
     for (var serverSeat = 0; serverSeat < maxPlayers; serverSeat++) {
       final localSeat =
@@ -160,7 +191,7 @@ class GameTableWidget extends StatelessWidget {
         Align(
           alignment: alignment,
           child: Padding(
-            padding: SeatLayout.seatPadding,
+            padding: SeatLayout.seatPadding(ui),
             child: player != null
                 ? PlayerWidget(
                     player: player,
@@ -188,7 +219,7 @@ class GameTableWidget extends StatelessWidget {
     return null;
   }
 
-  List<Widget> _positionPlayers(List<Player> players, int mySeatIndex) {
+  List<Widget> _positionPlayers(UiScale ui, List<Player> players, int mySeatIndex) {
     return players.map((player) {
       final localSeat =
           SeatLayout.toLocalSeat(player.seatIndex, mySeatIndex, maxPlayers);
@@ -199,11 +230,12 @@ class GameTableWidget extends StatelessWidget {
       return Align(
         alignment: alignment,
         child: Padding(
-          padding: SeatLayout.seatPadding,
+          padding: SeatLayout.seatPadding(ui),
           child: PlayerWidget(
             player: player,
             isCurrentTurn: gameState.currentPlayerIndex == player.seatIndex,
             compact: isSelf,
+            cardCountOverride: isSelf ? gameState.myCards.length : null,
           ),
         ),
       );

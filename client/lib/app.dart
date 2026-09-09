@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'config/ui_scale.dart';
 import 'controller/room_controller.dart';
 import 'router.dart';
 
@@ -58,15 +59,17 @@ class _GuandanAppState extends ConsumerState<GuandanApp> {
       useMaterial3: true,
     );
 
-    return MaterialApp.router(
-      title: '六人掼蛋',
-      locale: const Locale('zh', 'CN'),
-      scaffoldMessengerKey: scaffoldMessengerKey,
-      theme: baseTheme.copyWith(
-        textTheme: GoogleFonts.notoSansScTextTheme(baseTheme.textTheme),
-        primaryTextTheme: GoogleFonts.notoSansScTextTheme(baseTheme.primaryTextTheme),
+    return UiScopeBuilder(
+      child: MaterialApp.router(
+        title: '六人掼蛋',
+        locale: const Locale('zh', 'CN'),
+        scaffoldMessengerKey: scaffoldMessengerKey,
+        theme: baseTheme.copyWith(
+          textTheme: GoogleFonts.notoSansScTextTheme(baseTheme.textTheme),
+          primaryTextTheme: GoogleFonts.notoSansScTextTheme(baseTheme.primaryTextTheme),
+        ),
+        routerConfig: appRouter,
       ),
-      routerConfig: appRouter,
     );
   }
 }
