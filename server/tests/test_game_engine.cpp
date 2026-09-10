@@ -36,7 +36,7 @@ TEST(test_player_view_hides_cards) {
     }
 }
 
-TEST(test_solo_mode_deals_10_cards) {
+TEST(test_solo_mode_deals_2_cards) {
     GameRuleConfig config;
     config.playerCount = 4;
     config.deckCount = 2;
@@ -49,12 +49,12 @@ TEST(test_solo_mode_deals_10_cards) {
     auto result = engine.startGame();
     ASSERT(result.code == ErrorCode::OK);
     for (int i = 0; i < engine.getState().playerCount; ++i) {
-        ASSERT(engine.getState().players[i].hand.size() == 10);
+        ASSERT(engine.getState().players[i].hand.size() == 2);
     }
     auto view = engine.buildViewFor(1001);
-    ASSERT(view.myCards.size() == 10);
+    ASSERT(view.myCards.size() == 2);
     for (const auto& o : view.others) {
-        ASSERT(o.cardCount == 10);
+        ASSERT(o.cardCount == 2);
     }
 }
 

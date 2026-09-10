@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game/game_engine.h"
 #include "game/settlement.h"
 #include "protocol/message.h"
 #include "auth/auth_service.h"
@@ -34,6 +35,11 @@ private:
     void sendSnapshotToPlayer(const std::shared_ptr<Room>& room, PlayerId playerId);
     void scheduleTurnTimer(const std::shared_ptr<Room>& room);
     void cancelTurnTimer(const RoomId& roomId);
+    void executeBotTurn(const std::shared_ptr<Room>& room, PlayerId botId);
+    void broadcastPlayerPlayed(const std::shared_ptr<Room>& room, PlayerId playerId,
+                               const std::vector<CardId>& cards, const PlayResult& result);
+    void broadcastPlayerPassed(const std::shared_ptr<Room>& room, PlayerId playerId,
+                               const PlayResult& result);
 
     void handleLogin(uint64_t sessionId, const Message& msg, SendFn send);
     void handleCreateRoom(uint64_t sessionId, const Message& msg, SendFn send);

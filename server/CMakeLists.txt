@@ -22,6 +22,7 @@ set(GUANDAN_CORE_SOURCES
     src/game/settlement.cpp
     src/game/team_progress.cpp
     src/game/tribute.cpp
+    src/game/bot_player.cpp
     src/game/game_engine.cpp
     src/room/room.cpp
     src/room/dismiss_vote.cpp
@@ -64,6 +65,8 @@ set(GUANDAN_TEST_SOURCES
     tests/test_card_analyzer.cpp
     tests/test_rule_engine.cpp
     tests/test_game_engine.cpp
+    tests/test_turn_manager.cpp
+    tests/test_bot_player.cpp
     tests/test_settlement.cpp
     tests/test_pass_a.cpp
     tests/test_tribute.cpp

@@ -232,6 +232,12 @@ PlayResult GameEngine::playCards(PlayerId playerId, const std::vector<CardId>& c
     return result;
 }
 
+std::optional<std::vector<CardId>> GameEngine::chooseBotPlay(PlayerId playerId) const {
+    const int seat = seatOf(playerId);
+    if (seat < 0) return std::nullopt;
+    return botPlayer_.choosePlay(state_, seat, ruleContext(), analyzer_, ruleEngine_);
+}
+
 PlayResult GameEngine::pass(PlayerId playerId) {
     PlayResult result;
     if (state_.phase != GamePhase::PLAYING) {

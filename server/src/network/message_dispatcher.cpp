@@ -146,28 +146,108 @@ void MessageDispatcher::scheduleTurnTimer(const std::shared_ptr<Room>& room) {
     const int botDelaySeconds = isBotPlayer(currentPlayer) ? 1 : turnTimeoutSeconds_;
 
     timerManager_.schedule("turn:" + room->id(), botDelaySeconds, [this, room, currentPlayer]() {
-        Logger::info("Auto pass for player " + std::to_string(currentPlayer));
-        auto result = room->engine().pass(currentPlayer);
+        executeBotTurn(room, currentPlayer);
+    });
+}
+
+void MessageDispatcher::broadcastPlayerPlayed(
+    const std::shared_ptr<Room>& room,
+    PlayerId playerId,
+    const std::vector<CardId>& cards,
+    const PlayResult& result
+) {
+    (void)result;
+    const auto& state = room->engine().getState();
+    int playedSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == playerId) {
+            playedSeat = i;
+            break;
+        }
+    }
+    const auto& playedPlayer = playedSeat >= 0 ? state.players[playedSeat] : state.players[0];
+
+    Message played;
+    played.type = "player_played";
+    played.roomId = room->id();
+    played.dataJson = buildPlayerPlayedJson(
+        playerId, cards,
+        static_cast<int>(playedPlayer.hand.size()),
+        playedPlayer.hasFinished,
+        playedPlayer.finishRank,
+        state.currentPlayerIndex,
+        state.stateVersion, state.turnId);
+    broadcastToRoom(room, played);
+}
+
+void MessageDispatcher::broadcastPlayerPassed(
+    const std::shared_ptr<Room>& room,
+    PlayerId playerId,
+    const PlayResult& result
+) {
+    (void)result;
+    const auto& state = room->engine().getState();
+    int passedSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == playerId) {
+            passedSeat = i;
+            break;
+        }
+    }
+    const bool roundReset = !state.lastPattern.isValid;
+
+    Message passed;
+    passed.type = "player_passed";
+    passed.roomId = room->id();
+    passed.dataJson = buildPlayerPassedJson(
+        playerId, passedSeat, state.currentPlayerIndex,
+        roundReset, state.stateVersion, state.turnId);
+    broadcastToRoom(room, passed);
+}
+
+void MessageDispatcher::executeBotTurn(const std::shared_ptr<Room>& room, PlayerId botId) {
+    if (!isBotPlayer(botId)) return;
+
+    auto& engine = room->engine();
+    const auto& state = engine.getState();
+    if (state.phase != GamePhase::PLAYING) return;
+
+    int seat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == botId) {
+            seat = i;
+            break;
+        }
+    }
+    if (seat < 0 || seat != state.currentPlayerIndex) return;
+
+    cancelTurnTimer(room->id());
+
+    if (auto play = engine.chooseBotPlay(botId)) {
+        auto result = engine.playCards(botId, *play);
         if (result.code == ErrorCode::OK) {
-            const auto& st = room->engine().getState();
-            int passedSeat = -1;
-            for (int i = 0; i < st.playerCount; ++i) {
-                if (st.players[i].id == currentPlayer) {
-                    passedSeat = i;
-                    break;
-                }
+            Logger::info("Bot " + std::to_string(botId) + " played " +
+                         std::to_string(play->size()) + " card(s)");
+            broadcastPlayerPlayed(room, botId, *play, result);
+            if (result.gameOver) {
+                onGameOver(room, result.settlement);
+            } else {
+                scheduleTurnTimer(room);
             }
-            const bool roundReset = !st.lastPattern.isValid;
-            Message msg;
-            msg.type = "player_passed";
-            msg.roomId = room->id();
-            msg.dataJson = buildPlayerPassedJson(
-                currentPlayer, passedSeat, st.currentPlayerIndex,
-                roundReset, st.stateVersion, st.turnId);
-            broadcastToRoom(room, msg);
+            return;
+        }
+    }
+
+    Logger::info("Bot " + std::to_string(botId) + " passed");
+    auto passResult = engine.pass(botId);
+    if (passResult.code == ErrorCode::OK) {
+        broadcastPlayerPassed(room, botId, passResult);
+        if (passResult.gameOver) {
+            onGameOver(room, passResult.settlement);
+        } else {
             scheduleTurnTimer(room);
         }
-    });
+    }
 }
 
 bool MessageDispatcher::validateTurn(const std::shared_ptr<Room>& room, const Message& msg) {
@@ -554,27 +634,7 @@ void MessageDispatcher::handlePlayCards(uint64_t sessionId, const Message& msg, 
     }
 
     cancelTurnTimer(room->id());
-    const auto& state = room->engine().getState();
-    int playedSeat = -1;
-    for (int i = 0; i < state.playerCount; ++i) {
-        if (state.players[i].id == playerId) {
-            playedSeat = i;
-            break;
-        }
-    }
-    const auto& playedPlayer = playedSeat >= 0 ? state.players[playedSeat] : state.players[0];
-
-    Message played;
-    played.type = "player_played";
-    played.roomId = room->id();
-    played.dataJson = buildPlayerPlayedJson(
-        playerId, msg.cards,
-        static_cast<int>(playedPlayer.hand.size()),
-        playedPlayer.hasFinished,
-        playedPlayer.finishRank,
-        state.currentPlayerIndex,
-        state.stateVersion, state.turnId);
-    broadcastToRoom(room, played);
+    broadcastPlayerPlayed(room, playerId, msg.cards, result);
 
     if (result.gameOver) {
         onGameOver(room, result.settlement);
@@ -586,7 +646,22 @@ void MessageDispatcher::handlePlayCards(uint64_t sessionId, const Message& msg, 
     resp.type = "player_played";
     resp.requestId = msg.requestId;
     resp.roomId = room->id();
-    resp.dataJson = played.dataJson;
+    const auto& state = room->engine().getState();
+    int playedSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == playerId) {
+            playedSeat = i;
+            break;
+        }
+    }
+    const auto& playedPlayer = playedSeat >= 0 ? state.players[playedSeat] : state.players[0];
+    resp.dataJson = buildPlayerPlayedJson(
+        playerId, msg.cards,
+        static_cast<int>(playedPlayer.hand.size()),
+        playedPlayer.hasFinished,
+        playedPlayer.finishRank,
+        state.currentPlayerIndex,
+        state.stateVersion, state.turnId);
     sendResponse(send, resp);
 }
 
@@ -609,6 +684,13 @@ void MessageDispatcher::handlePass(uint64_t sessionId, const Message& msg, SendF
     }
 
     cancelTurnTimer(room->id());
+    broadcastPlayerPassed(room, playerId, result);
+    scheduleTurnTimer(room);
+
+    Message resp;
+    resp.type = "player_passed";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
     const auto& state = room->engine().getState();
     int passedSeat = -1;
     for (int i = 0; i < state.playerCount; ++i) {
@@ -617,22 +699,9 @@ void MessageDispatcher::handlePass(uint64_t sessionId, const Message& msg, SendF
             break;
         }
     }
-    const bool roundReset = !state.lastPattern.isValid;
-
-    Message passed;
-    passed.type = "player_passed";
-    passed.roomId = room->id();
-    passed.dataJson = buildPlayerPassedJson(
+    resp.dataJson = buildPlayerPassedJson(
         playerId, passedSeat, state.currentPlayerIndex,
-        roundReset, state.stateVersion, state.turnId);
-    broadcastToRoom(room, passed);
-    scheduleTurnTimer(room);
-
-    Message resp;
-    resp.type = "player_passed";
-    resp.requestId = msg.requestId;
-    resp.roomId = room->id();
-    resp.dataJson = passed.dataJson;
+        !state.lastPattern.isValid, state.stateVersion, state.turnId);
     sendResponse(send, resp);
 }
 

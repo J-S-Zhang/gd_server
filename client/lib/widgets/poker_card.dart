@@ -25,7 +25,7 @@ class PokerCardWidget extends StatelessWidget {
     final ui = context.ui;
     final isWild = isWildCard(card, currentLevel);
     final isLevel = !isWild && isLevelCard(card, currentLevel);
-    final selectionLift = ui.h(ui.config.card.selectionLift);
+    final selectionLift = ui.h(ui.config.handCards.selectionLift);
     final radius = ui.r(6);
 
     return GestureDetector(

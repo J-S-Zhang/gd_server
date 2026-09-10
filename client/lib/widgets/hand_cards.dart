@@ -36,23 +36,23 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
   @override
   Widget build(BuildContext context) {
     final ui = context.ui;
-    final cardCfg = ui.config.card;
-    final cardSize = ui.cardSize(cardCfg.handWidth);
+    final handCfg = ui.config.handCards;
+    final cardSize = ui.handCardSize(handCfg);
     final cardWidth = cardSize.width;
     final cardHeight = cardSize.height;
-    final hStep = cardWidth * (1 - cardCfg.horizontalOverlap);
-    final vStep = cardHeight * (1 - cardCfg.verticalOverlap);
-    final selectionLift = ui.h(cardCfg.selectionLift);
-    final extraPadding = ui.h(1);
+    final hStep = cardWidth * (1 - handCfg.horizontalOverlap);
+    final vStep = cardHeight * (1 - handCfg.verticalOverlap);
+    final selectionLift = ui.h(handCfg.selectionLift);
+    final extraPadding = ui.h(handCfg.extraPadding);
 
     final rowHeight = computeHandCardsRowHeight(
       cards: widget.cards,
       currentLevel: widget.currentLevel,
       organizedGroups: widget.organizedGroups,
       cardHeight: cardHeight,
-      verticalOverlap: cardCfg.verticalOverlap,
+      verticalOverlap: handCfg.verticalOverlap,
       selectionLift: selectionLift,
-      emptyPlaceholderHeight: ui.h(90),
+      emptyPlaceholderHeight: ui.h(handCfg.emptyPlaceholderHeight),
       extraPadding: extraPadding,
     );
 
@@ -108,7 +108,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
         builder: (context, constraints) {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.md),
+            padding: ui.edgeInsetsSymmetric(horizontal: handCfg.scrollPaddingHorizontal),
             child: ConstrainedBox(
               constraints: BoxConstraints(minWidth: constraints.maxWidth),
               child: Center(child: handStack),

@@ -14,7 +14,7 @@ constexpr int kPlayerCount = 6;
 constexpr int kDeckCount = 3;
 constexpr int kTotalCards = 162;  // 3 * 54
 constexpr int kCardsPerPlayer = 27;
-constexpr int kSoloTestCardsPerPlayer = 10;
+constexpr int kSoloTestCardsPerPlayer = 2;
 constexpr int kTeamCount = 2;
 constexpr int kPlayersPerTeam = 3;
 

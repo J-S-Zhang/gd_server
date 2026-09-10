@@ -31,13 +31,19 @@
   "fontScaleMode": "min",
 
   "card": {
-    "handWidth": 50,
-    "handHeight": 70,
     "playedWidth": 48,
-    "playedHeight": 67,
-    "horizontalOverlap": 0.3,
+    "playedHeight": 67
+  },
+
+  "handCards": {
+    "width": 50,
+    "height": 70,
+    "horizontalOverlap": 0.1,
     "verticalOverlap": 0.7,
-    "selectionLift": 14
+    "selectionLift": 14,
+    "extraPadding": 1,
+    "emptyPlaceholderHeight": 90,
+    "scrollPaddingHorizontal": 8
   },
 
   "seatLayout": {
@@ -122,9 +128,28 @@
     "handToolbarHeight": 44,
     "handToolbarSuitPanelHeight": 34,
     "handToolbarSuitIconSize": 20,
+    "handToolbarProfileFlex": 1,
+    "handToolbarActionsFlex": 1,
+    "handToolbarSuitGap": 12,
+    "handToolbarSuitPanelMarginHorizontal": 4,
+    "handToolbarSuitPanelPaddingHorizontal": 12,
+    "handToolbarSuitIconTapPaddingHorizontal": 2,
+    "handToolbarButtonWidth": 0,
+    "handToolbarButtonPaddingHorizontal": 8,
+    "handToolbarButtonGap": 4,
+    "handToolbarButtonIconLabelGap": 4,
     "handToolbarHandGap": 1,
+    "handToolbarBottomPadding": 12,
+    "handToolbarSuitPanelExtendBottom": 0,
     "handToolbarSortButtonHeight": 34,
     "handToolbarMessageSize": 40,
+    "chatPopupWidth": 300,
+    "chatPopupHeight": 220,
+    "chatPopupTabWidth": 44,
+    "chatPopupTabIconSize": 20,
+    "chatPopupCellHeight": 36,
+    "chatPopupEmojiCellSize": 52,
+    "chatPopupGapAboveToolbar": 4,
     "loginIconSize": 64,
     "loginButtonHeight": 48
   },
@@ -148,10 +173,13 @@
       "designHeight": 640,
 
       "card": {
-        "handWidth": 58,
-        "handHeight": 81,
         "playedWidth": 54,
-        "playedHeight": 76,
+        "playedHeight": 76
+      },
+
+      "handCards": {
+        "width": 58,
+        "height": 81,
         "selectionLift": 16
       },
 
@@ -224,11 +252,14 @@
       "designHeight": 800,
 
       "card": {
-        "handWidth": 66,
-        "handHeight": 92,
         "playedWidth": 62,
-        "playedHeight": 87,
-        "horizontalOverlap": 0.28,
+        "playedHeight": 87
+      },
+
+      "handCards": {
+        "width": 66,
+        "height": 92,
+        "horizontalOverlap": 0.1,
         "selectionLift": 18
       },
 

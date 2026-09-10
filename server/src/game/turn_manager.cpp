@@ -17,12 +17,37 @@ void TurnManager::advanceTurn() {
     state_.turnId++;
 }
 
+int TurnManager::windPartnerSeat(int finishedLeaderSeat) const {
+    if (finishedLeaderSeat < 0 || finishedLeaderSeat >= state_.playerCount) {
+        return nextActivePlayer(state_.currentPlayerIndex);
+    }
+
+    const int team = state_.players[finishedLeaderSeat].team;
+    for (int i = 1; i <= state_.playerCount; ++i) {
+        const int idx = (finishedLeaderSeat + i) % state_.playerCount;
+        if (state_.players[idx].hasFinished) continue;
+        if (state_.players[idx].team == team) return idx;
+    }
+
+    return nextActivePlayer(finishedLeaderSeat);
+}
+
+int TurnManager::resolveRoundLeadSeat(int trickWinnerSeat) const {
+    if (trickWinnerSeat < 0) {
+        return nextActivePlayer(state_.currentPlayerIndex);
+    }
+    if (state_.players[trickWinnerSeat].hasFinished) {
+        return windPartnerSeat(trickWinnerSeat);
+    }
+    return trickWinnerSeat;
+}
+
 void TurnManager::resetRound(int winnerIndex) {
     state_.lastPlayedCards.clear();
     state_.lastPattern = CardPattern::invalid();
     state_.lastPlayedPlayerIndex = -1;
     state_.passCount = 0;
-    state_.currentPlayerIndex = winnerIndex;
+    state_.currentPlayerIndex = resolveRoundLeadSeat(winnerIndex);
     state_.turnId++;
 }
 

@@ -210,7 +210,7 @@ class _GamePageState extends ConsumerState<GamePage> {
         ui.config.spacing.lg,
         0,
         ui.config.spacing.lg,
-        ui.config.spacing.md + 2,
+        layout.handToolbarBottomPadding,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/card.h"
+#include "game/bot_player.h"
 #include "game/card_analyzer.h"
 #include "game/game_state.h"
 #include "game/rule_engine.h"
@@ -10,6 +11,7 @@
 #include "game/turn_manager.h"
 #include "game/types.h"
 #include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -68,6 +70,8 @@ public:
     PlayResult playCards(PlayerId playerId, const std::vector<CardId>& cards);
     PlayResult pass(PlayerId playerId);
 
+    std::optional<std::vector<CardId>> chooseBotPlay(PlayerId playerId) const;
+
     bool isGameOver() const { return state_.phase == GamePhase::FINISHED; }
     const GameState& getState() const { return state_; }
     const TeamProgress& teamProgress() const { return progress_; }
@@ -83,6 +87,7 @@ private:
     Settlement settlement_;
     TeamProgress progress_;
     TributeManager tributeManager_;
+    BotPlayer botPlayer_;
     PreviousRoundInfo previousRound_{};
     TributeRoundResult lastTribute_{};
 
