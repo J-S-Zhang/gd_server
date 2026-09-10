@@ -1,5 +1,6 @@
 #include "game/game_engine.h"
 #include "game/deck.h"
+#include "game/finish_rank.h"
 
 namespace guandan {
 
@@ -213,6 +214,7 @@ PlayResult GameEngine::playCards(PlayerId playerId, const std::vector<CardId>& c
     if (state_.players[seat].hand.empty()) {
         assignFinishRank(seat);
         if (checkTeamWin()) {
+            assignRemainingFinishRanks(state_);
             result.gameOver = true;
             result.settlement = settlement_.calculate(state_, config_.playersPerTeam);
             progress_.applySettlement(result.settlement);

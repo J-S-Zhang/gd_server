@@ -3,6 +3,7 @@ import '../config/ui_scale.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
 import '../utils/seat_layout.dart';
+import 'game/finish_rank_badge.dart';
 
 const int kCardCountRevealThreshold = 10;
 
@@ -13,6 +14,8 @@ class PlayerWidget extends StatelessWidget {
   final bool showLobbyState;
   final int? cardCountOverride;
   final PlayerNicknamePlacement nicknamePlacement;
+  final FinishRankPlacement finishRankPlacement;
+  final int maxPlayers;
 
   const PlayerWidget({
     super.key,
@@ -22,6 +25,8 @@ class PlayerWidget extends StatelessWidget {
     this.showLobbyState = false,
     this.cardCountOverride,
     this.nicknamePlacement = PlayerNicknamePlacement.below,
+    this.finishRankPlacement = FinishRankPlacement.below,
+    this.maxPlayers = 6,
   });
 
   int get _effectiveCardCount => cardCountOverride ?? player.cardCount;
@@ -51,6 +56,9 @@ class PlayerWidget extends StatelessWidget {
       color: GameTheme.textPrimary,
       fontSize: ui.sp(ui.config.font.sm2),
     );
+    final finishLabel = player.hasFinished
+        ? SeatLayout.finishRankLabel(player.finishRank, maxPlayers)
+        : '';
 
     final avatar = Stack(
       clipBehavior: Clip.none,
@@ -102,24 +110,52 @@ class PlayerWidget extends StatelessWidget {
       ),
     );
 
-    final content = nicknamePlacement == PlayerNicknamePlacement.trailing
-        ? Row(
+    final gapW = SizedBox(width: ui.w(ui.config.spacing.sm));
+    final gapH = SizedBox(height: ui.h(ui.config.spacing.xs));
+    final rankBadge = finishLabel.isNotEmpty ? FinishRankBadge(label: finishLabel) : null;
+
+    Widget content;
+    if (rankBadge != null) {
+      switch (finishRankPlacement) {
+        case FinishRankPlacement.leading:
+          content = Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              avatar,
-              SizedBox(width: ui.w(ui.config.spacing.sm)),
-              nickname,
-            ],
-          )
-        : Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              avatar,
-              SizedBox(height: ui.h(ui.config.spacing.xs)),
-              nickname,
-            ],
+            children: [rankBadge, gapW, avatar],
           );
+          break;
+        case FinishRankPlacement.trailing:
+          content = Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [avatar, gapW, rankBadge],
+          );
+          break;
+        case FinishRankPlacement.above:
+          content = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [rankBadge, gapH, avatar],
+          );
+          break;
+        case FinishRankPlacement.below:
+          content = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [avatar, gapH, rankBadge],
+          );
+          break;
+      }
+    } else if (nicknamePlacement == PlayerNicknamePlacement.trailing) {
+      content = Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [avatar, gapW, nickname],
+      );
+    } else {
+      content = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [avatar, gapH, nickname],
+      );
+    }
 
     return Container(
       padding: ui.edgeInsetsSymmetric(horizontal: 6, vertical: 4),

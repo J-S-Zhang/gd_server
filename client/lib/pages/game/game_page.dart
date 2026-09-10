@@ -16,6 +16,9 @@ import '../../widgets/game/dismiss_vote_dialog.dart';
 import '../../widgets/game/game_top_bar.dart';
 import '../../widgets/game/hand_toolbar.dart';
 import '../../widgets/game/social_toolbar.dart';
+import '../../models/seat_round_play.dart';
+import '../../utils/seat_layout.dart';
+import '../../widgets/game/seat_played_cards.dart';
 import '../../widgets/game/waiting_action_bar.dart';
 import '../../widgets/game_table.dart';
 import '../../widgets/hand_cards.dart';
@@ -48,12 +51,44 @@ class _GamePageState extends ConsumerState<GamePage> {
         gameState.myCards.isNotEmpty;
   }
 
-  Player? _findMe(room_model.Room? room, int? userId) {
-    if (room == null || userId == null) return null;
-    for (final p in room.players) {
-      if (p.id == userId) return p;
+  Player? _findMe(
+    room_model.Room? room,
+    ClientGameState gameState,
+    int? userId,
+  ) {
+    if (userId == null) return null;
+
+    Player? roomPlayer;
+    for (final p in room?.players ?? const <Player>[]) {
+      if (p.id == userId) {
+        roomPlayer = p;
+        break;
+      }
     }
-    return null;
+
+    Player? gamePlayer;
+    for (final p in gameState.players) {
+      if (p.id == userId) {
+        gamePlayer = p;
+        break;
+      }
+    }
+
+    if (roomPlayer == null) return gamePlayer;
+    if (gamePlayer == null) return roomPlayer;
+
+    return Player(
+      id: roomPlayer.id,
+      nickname: roomPlayer.nickname,
+      seatIndex: roomPlayer.seatIndex,
+      team: roomPlayer.team,
+      cardCount: gamePlayer.cardCount,
+      hasFinished: gamePlayer.hasFinished,
+      finishRank: gamePlayer.finishRank,
+      isReady: roomPlayer.isReady,
+      isBot: roomPlayer.isBot,
+      status: roomPlayer.status,
+    );
   }
 
   @override
@@ -68,7 +103,7 @@ class _GamePageState extends ConsumerState<GamePage> {
 
     final isPlaying = _isPlaying(room, gameState);
     final isWaitingLobby = !isPlaying;
-    final me = _findMe(room, user?.id);
+    final me = _findMe(room, gameState, user?.id);
     final mySeatIndex = me?.seatIndex ?? 0;
 
     if (gameState.phase == room_model.GamePhase.finished ||
@@ -167,6 +202,9 @@ class _GamePageState extends ConsumerState<GamePage> {
                           gameState: gameState,
                           controller: controller,
                           user: user,
+                          mySeatIndex: mySeatIndex,
+                          maxPlayers: room?.maxPlayers ?? 6,
+                          me: me,
                         ),
                       ),
                   ],
@@ -200,10 +238,20 @@ class _GamePageState extends ConsumerState<GamePage> {
     required ClientGameState gameState,
     required GameController controller,
     required User? user,
+    required int mySeatIndex,
+    required int maxPlayers,
+    required Player? me,
   }) {
     final layout = ui.config.layout;
     final gap = ui.h(layout.handToolbarHandGap);
     final actionGap = ui.h(layout.gameActionHandGap);
+    final selfPlay =
+        gameState.seatRoundPlays[mySeatIndex] ?? const SeatRoundPlay();
+    final hasSelfPlay = !selfPlay.isEmpty;
+    final selfFinished = me?.hasFinished ?? false;
+    final selfFinishLabel = selfFinished
+        ? SeatLayout.finishRankLabel(me!.finishRank, maxPlayers)
+        : '';
 
     return Padding(
       padding: ui.edgeInsetsLTRB(
@@ -235,15 +283,26 @@ class _GamePageState extends ConsumerState<GamePage> {
             ),
             SizedBox(height: actionGap),
           ],
-          HandCardsWidget(
-            cards: gameState.myCards,
-            currentLevel: gameState.currentLevel,
-            organizedGroups: gameState.handOrganizedGroups,
-            onCardTap: controller.toggleCardSelection,
-            onRowHeightChanged: (height) {
-              ref.read(handCardsMaxHeightProvider.notifier).state = height;
-            },
-          ),
+          if (hasSelfPlay || selfFinished) ...[
+            Center(
+              child: SeatPlayedCards(
+                play: selfPlay,
+                currentLevel: gameState.currentLevel,
+                finishLabel: selfFinished ? selfFinishLabel : null,
+              ),
+            ),
+            SizedBox(height: actionGap),
+          ],
+          if (!selfFinished)
+            HandCardsWidget(
+              cards: gameState.myCards,
+              currentLevel: gameState.currentLevel,
+              organizedGroups: gameState.handOrganizedGroups,
+              onCardTap: controller.toggleCardSelection,
+              onRowHeightChanged: (height) {
+                ref.read(handCardsMaxHeightProvider.notifier).state = height;
+              },
+            ),
           SizedBox(height: gap),
           HandToolbar(
             nickname: user?.nickname ?? '玩家',

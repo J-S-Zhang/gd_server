@@ -291,6 +291,7 @@ class GameController {
           teamLevels: _parseIntList(data['team_levels'], state.teamLevels),
           passAFailCounts:
               _parseIntList(data['pass_a_fail_counts'], state.passAFailCounts),
+          players: _applyFinishRanksFromSettlement(data, state.players),
         );
         break;
       case 'tribute_resolved':
@@ -473,6 +474,39 @@ class GameController {
     return {
       state.lastPlayedSeatIndex: SeatRoundPlay(cardIds: state.lastPlayedCards),
     };
+  }
+
+  List<Player> _applyFinishRanksFromSettlement(
+    Map<String, dynamic> data,
+    List<Player> players,
+  ) {
+    final ranks = data['finish_ranks'];
+    if (ranks is! List || ranks.isEmpty) return players;
+
+    final rankById = <int, Map<String, dynamic>>{};
+    for (final item in ranks) {
+      if (item is! Map<String, dynamic>) continue;
+      final id = item['player_id'] as int?;
+      if (id != null) rankById[id] = item;
+    }
+    if (rankById.isEmpty) return players;
+
+    return players.map((p) {
+      final info = rankById[p.id];
+      if (info == null) return p;
+      return Player(
+        id: p.id,
+        nickname: p.nickname,
+        seatIndex: p.seatIndex,
+        team: p.team,
+        cardCount: 0,
+        hasFinished: info['has_finished'] as bool? ?? true,
+        finishRank: info['finish_rank'] as int? ?? p.finishRank,
+        isReady: p.isReady,
+        isBot: p.isBot,
+        status: p.status,
+      );
+    }).toList();
   }
 
   List<int> _parseIntList(dynamic raw, List<int> fallback) {

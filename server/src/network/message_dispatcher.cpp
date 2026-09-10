@@ -534,7 +534,17 @@ void MessageDispatcher::onGameOver(const std::shared_ptr<Room>& room,
         << (result.inPassAPhase[0] ? "true" : "false") << ","
         << (result.inPassAPhase[1] ? "true" : "false") << "]";
     oss << ",\"pass_a_fail_counts\":[" << result.passAFailCounts[0] << ","
-        << result.passAFailCounts[1] << "]}";
+        << result.passAFailCounts[1] << "]";
+    oss << ",\"finish_ranks\":[";
+    const auto& state = room->engine().getState();
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (i > 0) oss << ',';
+        oss << "{\"player_id\":" << state.players[i].id
+            << ",\"seat_index\":" << state.players[i].seatIndex
+            << ",\"finish_rank\":" << state.players[i].finishRank
+            << ",\"has_finished\":true}";
+    }
+    oss << "]}";
     Message settlement;
     settlement.type = "settlement";
     settlement.roomId = room->id();

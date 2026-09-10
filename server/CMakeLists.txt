@@ -20,6 +20,7 @@ set(GUANDAN_CORE_SOURCES
     src/game/game_state.cpp
     src/game/turn_manager.cpp
     src/game/settlement.cpp
+    src/game/finish_rank.cpp
     src/game/team_progress.cpp
     src/game/tribute.cpp
     src/game/bot_player.cpp
@@ -68,6 +69,7 @@ set(GUANDAN_TEST_SOURCES
     tests/test_turn_manager.cpp
     tests/test_bot_player.cpp
     tests/test_settlement.cpp
+    tests/test_finish_rank.cpp
     tests/test_pass_a.cpp
     tests/test_tribute.cpp
     tests/test_message.cpp

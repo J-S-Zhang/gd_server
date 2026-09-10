@@ -178,27 +178,16 @@ class GameTableWidget extends StatelessWidget {
       final countdown = isCurrentTurn && !isSelf ? _turnCountdown() : null;
 
       if (isSelf) {
-        if (!isCurrentTurn && !hasPlayed) return const SizedBox.shrink();
-        return Align(
-          alignment: alignment,
-          child: Padding(
-            padding: SeatLayout.seatPadding(ui),
-            child: _buildSeatLayout(
-              ui: ui,
-              playBefore: playBefore,
-              horizontal: horizontal,
-              playedCards: hasPlayed ? playedCards : null,
-            ),
-          ),
-        );
+        return const SizedBox.shrink();
       }
 
       final playerWidget = PlayerWidget(
         player: player,
         isCurrentTurn: isCurrentTurn,
-        compact: isSelf,
         cardCountOverride: isSelf ? gameState.myCards.length : null,
         nicknamePlacement: SeatLayout.nicknamePlacement(localSeat, maxPlayers),
+        finishRankPlacement: SeatLayout.finishRankPlacement(localSeat, maxPlayers),
+        maxPlayers: maxPlayers,
       );
 
       return Align(
