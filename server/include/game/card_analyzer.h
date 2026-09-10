@@ -27,11 +27,28 @@ private:
     ) const;
 
     CardPattern analyzeJokerBomb(const std::vector<Card>& cards) const;
-    CardPattern analyzeBomb(const std::vector<RankGroup>& groups, size_t total) const;
+    CardPattern analyzeBomb(
+        const std::vector<Card>& cards,
+        const std::vector<RankGroup>& groups,
+        size_t total,
+        const RuleContext& ctx
+    ) const;
     CardPattern analyzeSingle(const std::vector<Card>& cards, const RuleContext& ctx) const;
-    CardPattern analyzePair(const std::vector<RankGroup>& groups, int wildCount) const;
-    CardPattern analyzeTriple(const std::vector<RankGroup>& groups, int wildCount) const;
-    CardPattern analyzeTripleWithPair(const std::vector<RankGroup>& groups, int wildCount) const;
+    CardPattern analyzePair(
+        const std::vector<RankGroup>& groups,
+        int wildCount,
+        const RuleContext& ctx
+    ) const;
+    CardPattern analyzeTriple(
+        const std::vector<RankGroup>& groups,
+        int wildCount,
+        const RuleContext& ctx
+    ) const;
+    CardPattern analyzeTripleWithPair(
+        const std::vector<RankGroup>& groups,
+        int wildCount,
+        const RuleContext& ctx
+    ) const;
     CardPattern analyzeStraight(const std::vector<RankGroup>& groups, int wildCount, size_t total) const;
     CardPattern analyzeThreePairs(const std::vector<RankGroup>& groups, int wildCount, size_t total) const;
     CardPattern analyzeTwoTriples(const std::vector<RankGroup>& groups, int wildCount, size_t total) const;

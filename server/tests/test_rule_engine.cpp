@@ -2,8 +2,21 @@
 #include "game/card_analyzer.h"
 #include "game/rule_engine.h"
 #include "test_framework.h"
+#include <stdexcept>
+#include <vector>
 
 using namespace guandan;
+
+static Card findCard(const std::vector<Card>& deck, Suit suit, Rank rank, int nth = 0) {
+    int count = 0;
+    for (const auto& c : deck) {
+        if (c.suit == suit && c.rank == rank) {
+            if (count == nth) return c;
+            count++;
+        }
+    }
+    throw std::runtime_error("card not found");
+}
 
 TEST(test_pair_beats_pair) {
     RuleEngine engine;
@@ -155,4 +168,94 @@ TEST(test_straight_flush_beats_non_bomb) {
 
     ASSERT(engine.canBeat(sf, straight, ctx));
     ASSERT(!engine.canBeat(straight, sf, ctx));
+}
+
+TEST(test_level_single_beats_k) {
+    auto deck = createFullDeck(2);
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+    CardAnalyzer analyzer;
+    RuleEngine engine;
+
+    auto level2 = findCard(deck, Suit::SPADE, Rank::R2);
+    auto king = findCard(deck, Suit::SPADE, Rank::K);
+    auto levelPattern = analyzer.analyze({level2}, ctx);
+    auto kingPattern = analyzer.analyze({king}, ctx);
+
+    ASSERT(levelPattern.primaryRank == kLevelCardPatternRank);
+    ASSERT(kingPattern.primaryRank == rankValue(Rank::K));
+    ASSERT(engine.canBeat(levelPattern, kingPattern, ctx));
+    ASSERT(!engine.canBeat(kingPattern, levelPattern, ctx));
+}
+
+TEST(test_level_pair_beats_k_pair) {
+    auto deck = createFullDeck(2);
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+    CardAnalyzer analyzer;
+    RuleEngine engine;
+
+    std::vector<Card> levelPair = {
+        findCard(deck, Suit::SPADE, Rank::R2),
+        findCard(deck, Suit::CLUB, Rank::R2),
+    };
+    std::vector<Card> kingPair = {
+        findCard(deck, Suit::SPADE, Rank::K),
+        findCard(deck, Suit::CLUB, Rank::K),
+    };
+
+    auto levelPattern = analyzer.analyze(levelPair, ctx);
+    auto kingPattern = analyzer.analyze(kingPair, ctx);
+
+    ASSERT(levelPattern.type == CardType::PAIR);
+    ASSERT(levelPattern.primaryRank == kLevelCardPatternRank);
+    ASSERT(engine.canBeat(levelPattern, kingPattern, ctx));
+}
+
+TEST(test_pure_level_bomb_beats_a_bomb) {
+    auto deck = createFullDeck(2);
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+    CardAnalyzer analyzer;
+    RuleEngine engine;
+
+    std::vector<Card> levelBomb = {
+        findCard(deck, Suit::SPADE, Rank::R2),
+        findCard(deck, Suit::HEART, Rank::R2),
+        findCard(deck, Suit::CLUB, Rank::R2),
+        findCard(deck, Suit::DIAMOND, Rank::R2),
+    };
+    std::vector<Card> aBomb = {
+        findCard(deck, Suit::SPADE, Rank::A),
+        findCard(deck, Suit::HEART, Rank::A),
+        findCard(deck, Suit::CLUB, Rank::A),
+        findCard(deck, Suit::DIAMOND, Rank::A),
+    };
+
+    auto levelPattern = analyzer.analyze(levelBomb, ctx);
+    auto aPattern = analyzer.analyze(aBomb, ctx);
+
+    ASSERT(levelPattern.type == CardType::BOMB);
+    ASSERT(levelPattern.primaryRank == kLevelCardPatternRank);
+    ASSERT(aPattern.primaryRank == rankValue(Rank::A));
+    ASSERT(engine.canBeat(levelPattern, aPattern, ctx));
+}
+
+TEST(test_level_in_straight_uses_normal_rank) {
+    auto deck = createFullDeck(2);
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+    CardAnalyzer analyzer;
+
+    std::vector<Card> straight = {
+        findCard(deck, Suit::SPADE, Rank::A),
+        findCard(deck, Suit::HEART, Rank::R2),
+        findCard(deck, Suit::CLUB, Rank::R3),
+        findCard(deck, Suit::DIAMOND, Rank::R4),
+        findCard(deck, Suit::SPADE, Rank::R5),
+    };
+
+    auto pattern = analyzer.analyze(straight, ctx);
+    ASSERT(pattern.type == CardType::STRAIGHT);
+    ASSERT(pattern.primaryRank == 5);
 }

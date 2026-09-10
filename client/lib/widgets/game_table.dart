@@ -198,6 +198,7 @@ class GameTableWidget extends StatelessWidget {
         isCurrentTurn: isCurrentTurn,
         compact: isSelf,
         cardCountOverride: isSelf ? gameState.myCards.length : null,
+        nicknamePlacement: SeatLayout.nicknamePlacement(localSeat, maxPlayers),
       );
 
       return Align(

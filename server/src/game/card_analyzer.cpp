@@ -22,9 +22,7 @@ int straightSlotToRankValue(int slot) {
 }  // namespace
 
 int CardAnalyzer::effectiveRank(const Card& card, const RuleContext& ctx) const {
-    if (isJoker(card.rank)) return rankValue(card.rank);
-    if (ctx.isWildCard(card)) return rankValue(ctx.levelRank());
-    return rankValue(card.rank);
+    return singleEffectiveRank(card, ctx);
 }
 
 std::vector<CardAnalyzer::RankGroup> CardAnalyzer::groupByRank(
@@ -95,7 +93,10 @@ CardPattern CardAnalyzer::analyzeJokerBomb(const std::vector<Card>& cards) const
 }
 
 CardPattern CardAnalyzer::analyzeBomb(
-    const std::vector<RankGroup>& groups, size_t total
+    const std::vector<Card>& cards,
+    const std::vector<RankGroup>& groups,
+    size_t total,
+    const RuleContext& ctx
 ) const {
     if (total < 4) return CardPattern::invalid();
 
@@ -108,13 +109,21 @@ CardPattern CardAnalyzer::analyzeBomb(
 
     if (normal.size() > 1) return CardPattern::invalid();
 
-    int rank = normal.empty() ? 2 : normal[0].rank;
+    int rank = normal.empty() ? ctx.rawLevelRankValue() : normal[0].rank;
     int count = (normal.empty() ? 0 : normal[0].count) + wildCount;
 
     if (count >= 4 && count == static_cast<int>(total)) {
+        bool pureLevel = true;
+        for (const auto& card : cards) {
+            if (!ctx.isLevelCard(card)) {
+                pureLevel = false;
+                break;
+            }
+        }
+
         CardPattern p;
         p.type = CardType::BOMB;
-        p.primaryRank = rank;
+        p.primaryRank = pureLevel ? kLevelCardPatternRank : rank;
         p.length = count;
         p.isValid = true;
         return p;
@@ -135,7 +144,7 @@ CardPattern CardAnalyzer::analyzeSingle(
 }
 
 CardPattern CardAnalyzer::analyzePair(
-    const std::vector<RankGroup>& groups, int wildCount
+    const std::vector<RankGroup>& groups, int wildCount, const RuleContext& ctx
 ) const {
     if (groups.size() == 0) return CardPattern::invalid();
     int totalWild = wildCount;
@@ -152,7 +161,7 @@ CardPattern CardAnalyzer::analyzePair(
     if (normal.empty() && totalWild >= 2) {
         CardPattern p;
         p.type = CardType::PAIR;
-        p.primaryRank = 2;
+        p.primaryRank = patternRankForLevelCard(ctx.rawLevelRankValue(), ctx);
         p.length = 2;
         p.isValid = true;
         return p;
@@ -160,7 +169,7 @@ CardPattern CardAnalyzer::analyzePair(
     if (normal.size() == 1 && normal[0].count + totalWild == 2) {
         CardPattern p;
         p.type = CardType::PAIR;
-        p.primaryRank = normal[0].rank;
+        p.primaryRank = patternRankForLevelCard(normal[0].rank, ctx);
         p.length = 2;
         p.isValid = true;
         return p;
@@ -169,7 +178,7 @@ CardPattern CardAnalyzer::analyzePair(
 }
 
 CardPattern CardAnalyzer::analyzeTriple(
-    const std::vector<RankGroup>& groups, int wildCount
+    const std::vector<RankGroup>& groups, int wildCount, const RuleContext& ctx
 ) const {
     int totalWild = wildCount;
     std::vector<RankGroup> normal;
@@ -181,7 +190,7 @@ CardPattern CardAnalyzer::analyzeTriple(
     if (normal.empty() && totalWild >= 3) {
         CardPattern p;
         p.type = CardType::TRIPLE;
-        p.primaryRank = 2;
+        p.primaryRank = patternRankForLevelCard(ctx.rawLevelRankValue(), ctx);
         p.length = 3;
         p.isValid = true;
         return p;
@@ -189,7 +198,7 @@ CardPattern CardAnalyzer::analyzeTriple(
     if (normal.size() == 1 && normal[0].count + totalWild == 3) {
         CardPattern p;
         p.type = CardType::TRIPLE;
-        p.primaryRank = normal[0].rank;
+        p.primaryRank = patternRankForLevelCard(normal[0].rank, ctx);
         p.length = 3;
         p.isValid = true;
         return p;
@@ -198,7 +207,7 @@ CardPattern CardAnalyzer::analyzeTriple(
 }
 
 CardPattern CardAnalyzer::analyzeTripleWithPair(
-    const std::vector<RankGroup>& groups, int wildCount
+    const std::vector<RankGroup>& groups, int wildCount, const RuleContext& ctx
 ) const {
     int totalWild = 0;
     std::vector<RankGroup> normal;
@@ -223,7 +232,7 @@ CardPattern CardAnalyzer::analyzeTripleWithPair(
             if (normal[j].count + pairNeed == 2) {
                 CardPattern p;
                 p.type = CardType::TRIPLE_WITH_PAIR;
-                p.primaryRank = tripleRank;
+                p.primaryRank = patternRankForLevelCard(tripleRank, ctx);
                 p.pairRank = normal[j].rank;
                 p.length = 5;
                 p.isValid = true;
@@ -238,7 +247,7 @@ CardPattern CardAnalyzer::analyzeTripleWithPair(
         if (normal[0].count >= 3) {
             CardPattern p;
             p.type = CardType::TRIPLE_WITH_PAIR;
-            p.primaryRank = normal[0].rank;
+            p.primaryRank = patternRankForLevelCard(normal[0].rank, ctx);
             p.pairRank = normal[0].rank;
             p.length = 5;
             p.isValid = true;
@@ -255,7 +264,7 @@ CardPattern CardAnalyzer::analyzeTripleWithPair(
         if (tripleNeed + pairNeed <= totalWild) {
             CardPattern p;
             p.type = CardType::TRIPLE_WITH_PAIR;
-            p.primaryRank = b.rank;
+            p.primaryRank = patternRankForLevelCard(b.rank, ctx);
             p.pairRank = a.rank;
             p.length = 5;
             p.isValid = true;
@@ -435,14 +444,14 @@ CardPattern CardAnalyzer::analyze(
         if (g.rank == -1) wildCount = g.count;
     }
 
-    auto bomb = analyzeBomb(groups, cards.size());
+    auto bomb = analyzeBomb(cards, groups, cards.size(), context);
     if (bomb.isValid) return bomb;
 
     if (cards.size() == 1) return analyzeSingle(cards, context);
-    if (cards.size() == 2) return analyzePair(groups, wildCount);
-    if (cards.size() == 3) return analyzeTriple(groups, wildCount);
+    if (cards.size() == 2) return analyzePair(groups, wildCount, context);
+    if (cards.size() == 3) return analyzeTriple(groups, wildCount, context);
     if (cards.size() == 5) {
-        auto twp = analyzeTripleWithPair(groups, wildCount);
+        auto twp = analyzeTripleWithPair(groups, wildCount, context);
         if (twp.isValid) return twp;
     }
 

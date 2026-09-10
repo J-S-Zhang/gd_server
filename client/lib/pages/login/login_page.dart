@@ -1,9 +1,87 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/ui_scale.dart';
 import '../../controller/auth_controller.dart';
+import '../../services/app_update_service.dart';
 import '../../theme/game_theme.dart';
+import '../../widgets/app_update_dialog.dart';
+
+/// 登录页按可用区域比例分配尺寸，保证一屏完整显示、无需滚动。
+class _LoginLayoutMetrics {
+  const _LoginLayoutMetrics({
+    required this.formWidth,
+    required this.iconSize,
+    required this.iconPadding,
+    required this.titleSize,
+    required this.subtitleSize,
+    required this.tabFontSize,
+    required this.fieldFontSize,
+    required this.fieldIconSize,
+    required this.buttonFontSize,
+    required this.buttonHeight,
+    required this.radius,
+    required this.flexHeader,
+    required this.flexTab,
+    required this.flexField,
+    required this.flexButton,
+  });
+
+  final double formWidth;
+  final double iconSize;
+  final double iconPadding;
+  final double titleSize;
+  final double subtitleSize;
+  final double tabFontSize;
+  final double fieldFontSize;
+  final double fieldIconSize;
+  final double buttonFontSize;
+  final double buttonHeight;
+  final double radius;
+  final int flexHeader;
+  final int flexTab;
+  final int flexField;
+  final int flexButton;
+
+  factory _LoginLayoutMetrics.fromSize(Size size, bool isRegister) {
+    final w = size.width;
+    final h = size.height;
+    final shortSide = size.shortestSide;
+    final scale = math.min(w / 844, h / 390);
+
+    const flexHeader = 24;
+    const flexTab = 8;
+    const flexField = 10;
+    const flexButton = 10;
+    final fitScale = scale.clamp(0.75, 1.25);
+
+    final formWidthFactor = shortSide < 600
+        ? 0.86
+        : shortSide < 900
+            ? 0.52
+            : 0.42;
+
+    return _LoginLayoutMetrics(
+      formWidth: w * formWidthFactor,
+      iconSize: h * 0.11 * fitScale,
+      iconPadding: h * 0.018 * fitScale,
+      titleSize: (h * 0.062 * fitScale).clamp(18.0, 40.0),
+      subtitleSize: (h * 0.032 * fitScale).clamp(11.0, 18.0),
+      tabFontSize: (h * 0.034 * fitScale).clamp(12.0, 18.0),
+      fieldFontSize: (h * 0.034 * fitScale).clamp(12.0, 18.0),
+      fieldIconSize: (h * 0.042 * fitScale).clamp(14.0, 22.0),
+      buttonFontSize: (h * 0.038 * fitScale).clamp(13.0, 20.0),
+      buttonHeight: h * 0.095 * fitScale,
+      radius: 12 * fitScale,
+      flexHeader: flexHeader,
+      flexTab: flexTab,
+      flexField: flexField,
+      flexButton: flexButton,
+    );
+  }
+}
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -19,11 +97,24 @@ class _LoginPageState extends ConsumerState<LoginPage>
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _loading = false;
+  final _updateService = AppUpdateService();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAppUpdate());
+  }
+
+  Future<void> _checkAppUpdate() async {
+    final result = await _updateService.checkForUpdate();
+    if (!mounted || !result.hasUpdate || result.remote == null) return;
+
+    await showAppUpdateDialog(
+      context: context,
+      versionInfo: result.remote!,
+      updateService: _updateService,
+    );
   }
 
   Future<void> _submitLogin() async {
@@ -88,20 +179,60 @@ class _LoginPageState extends ConsumerState<LoginPage>
     );
   }
 
-  InputDecoration _fieldDecoration(UiScale ui, String label, IconData icon) {
+  InputDecoration _fieldDecoration(
+    _LoginLayoutMetrics metrics,
+    String label,
+    IconData icon,
+  ) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.white70, fontSize: ui.sp(ui.config.font.md2)),
-      prefixIcon: Icon(icon, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+      labelStyle: TextStyle(color: Colors.white70, fontSize: metrics.fieldFontSize),
+      prefixIcon: Icon(icon, color: Colors.white70, size: metrics.fieldIconSize),
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.12),
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: metrics.fieldFontSize,
+        vertical: metrics.fieldFontSize * 0.55,
+      ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ui.r(ui.config.radius.lg)),
+        borderRadius: BorderRadius.circular(metrics.radius),
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(ui.r(ui.config.radius.lg)),
-        borderSide: BorderSide(color: GameTheme.accentGold, width: ui.r(2)),
+        borderRadius: BorderRadius.circular(metrics.radius),
+        borderSide: BorderSide(color: GameTheme.accentGold, width: metrics.radius * 0.15),
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required _LoginLayoutMetrics metrics,
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscure = false,
+  }) {
+    return Expanded(
+      flex: metrics.flexField,
+      child: LayoutBuilder(
+        builder: (context, fieldConstraints) {
+          return Align(
+            alignment: Alignment.center,
+            child: SizedBox(
+              height: fieldConstraints.maxHeight * 0.88,
+              child: TextField(
+                controller: controller,
+                obscureText: obscure,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: metrics.fieldFontSize,
+                ),
+                decoration: _fieldDecoration(metrics, label, icon),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -109,114 +240,169 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   Widget build(BuildContext context) {
     final ui = context.ui;
-    final layout = ui.config.layout;
     final isRegister = _tabController.index == 1;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: ui.edgeInsetsAll(ui.config.spacing.page),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: ui.w(layout.loginMaxWidth)),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: ui.edgeInsetsAll(ui.config.spacing.xl),
-                      decoration: GameTheme.panelDecoration(ui),
-                      child: Icon(
-                        Icons.style,
-                        size: ui.sp(layout.loginIconSize),
-                        color: GameTheme.accentGold,
-                      ),
-                    ),
-                    SizedBox(height: ui.h(ui.config.spacing.xl)),
-                    Text(
-                      '六人掼蛋',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: ui.sp(ui.config.font.title),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: ui.h(ui.config.spacing.md)),
-                    Text(
-                      '经典棋牌 · 六人实时对战',
-                      style: TextStyle(
-                        color: GameTheme.textSecondary,
-                        fontSize: ui.sp(ui.config.font.md2),
-                      ),
-                    ),
-                    SizedBox(height: ui.h(ui.config.spacing.page)),
-                    Container(
-                      decoration: GameTheme.panelDecoration(ui),
-                      child: TabBar(
-                        controller: _tabController,
-                        indicatorColor: GameTheme.accentGold,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white54,
-                        labelStyle: TextStyle(fontSize: ui.sp(ui.config.font.md2)),
-                        onTap: (_) => setState(() {}),
-                        tabs: const [
-                          Tab(text: '登录'),
-                          Tab(text: '注册'),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: ui.h(ui.config.spacing.xxl)),
-                    TextField(
-                      controller: _nicknameController,
-                      style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
-                      decoration: _fieldDecoration(ui, '昵称', Icons.person),
-                    ),
-                    SizedBox(height: ui.h(ui.config.spacing.xl)),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
-                      decoration: _fieldDecoration(ui, '密码', Icons.lock),
-                    ),
-                    if (isRegister) ...[
-                      SizedBox(height: ui.h(ui.config.spacing.xl)),
-                      TextField(
-                        controller: _confirmPasswordController,
-                        obscureText: true,
-                        style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
-                        decoration: _fieldDecoration(ui, '确认密码', Icons.lock_outline),
-                      ),
-                    ],
-                    SizedBox(height: ui.h(ui.config.spacing.page)),
-                    SizedBox(
-                      width: double.infinity,
-                      height: ui.h(layout.loginButtonHeight),
-                      child: ElevatedButton(
-                        onPressed: _loading
-                            ? null
-                            : (isRegister ? _submitRegister : _submitLogin),
-                        style: GameTheme.playButtonStyle(ui).copyWith(
-                          minimumSize: WidgetStateProperty.all(
-                            Size(double.infinity, ui.h(layout.loginButtonHeight)),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final metrics = _LoginLayoutMetrics.fromSize(
+                constraints.biggest,
+                isRegister,
+              );
+
+              return Center(
+                child: SizedBox(
+                  width: metrics.formWidth,
+                  height: constraints.maxHeight,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        flex: metrics.flexHeader,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(metrics.iconPadding),
+                                decoration: GameTheme.panelDecoration(
+                                  ui,
+                                  radius: metrics.radius,
+                                ),
+                                child: Icon(
+                                  Icons.style,
+                                  size: metrics.iconSize,
+                                  color: GameTheme.accentGold,
+                                ),
+                              ),
+                              SizedBox(height: metrics.subtitleSize * 0.6),
+                              Text(
+                                '六人掼蛋',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: metrics.titleSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: metrics.subtitleSize * 0.35),
+                              Text(
+                                '经典棋牌 · 六人实时对战',
+                                style: TextStyle(
+                                  color: GameTheme.textSecondary,
+                                  fontSize: metrics.subtitleSize,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: _loading
-                            ? SizedBox(
-                                width: ui.w(ui.config.spacing.xxl),
-                                height: ui.h(ui.config.spacing.xxl),
-                                child: const CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Text(
-                                isRegister ? '注册' : '登录',
-                                style: TextStyle(fontSize: ui.sp(ui.config.font.xl)),
-                              ),
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        flex: metrics.flexTab,
+                        child: LayoutBuilder(
+                          builder: (context, tabConstraints) {
+                            return Center(
+                              child: SizedBox(
+                                height: tabConstraints.maxHeight * 0.9,
+                                child: Container(
+                                  decoration: GameTheme.panelDecoration(
+                                    ui,
+                                    radius: metrics.radius,
+                                  ),
+                                  child: TabBar(
+                                    controller: _tabController,
+                                    indicatorColor: GameTheme.accentGold,
+                                    labelColor: Colors.white,
+                                    unselectedLabelColor: Colors.white54,
+                                    labelStyle:
+                                        TextStyle(fontSize: metrics.tabFontSize),
+                                    unselectedLabelStyle:
+                                        TextStyle(fontSize: metrics.tabFontSize),
+                                    onTap: (_) => setState(() {}),
+                                    tabs: const [
+                                      Tab(text: '登录'),
+                                      Tab(text: '注册'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      _buildField(
+                        metrics: metrics,
+                        controller: _nicknameController,
+                        label: '昵称',
+                        icon: Icons.person,
+                      ),
+                      _buildField(
+                        metrics: metrics,
+                        controller: _passwordController,
+                        label: '密码',
+                        icon: Icons.lock,
+                        obscure: true,
+                      ),
+                      if (isRegister)
+                        _buildField(
+                          metrics: metrics,
+                          controller: _confirmPasswordController,
+                          label: '确认密码',
+                          icon: Icons.lock_outline,
+                          obscure: true,
+                        ),
+                      Expanded(
+                        flex: metrics.flexButton,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: metrics.fieldFontSize * 0.15,
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: metrics.buttonHeight,
+                            child: ElevatedButton(
+                              onPressed: _loading
+                                  ? null
+                                  : (isRegister ? _submitRegister : _submitLogin),
+                              style: GameTheme.playButtonStyle(ui).copyWith(
+                                minimumSize: WidgetStateProperty.all(
+                                  Size(double.infinity, metrics.buttonHeight),
+                                ),
+                                padding: WidgetStateProperty.all(
+                                  EdgeInsets.symmetric(
+                                    vertical: metrics.buttonFontSize * 0.3,
+                                  ),
+                                ),
+                              ),
+                              child: _loading
+                                  ? SizedBox(
+                                      width: metrics.buttonFontSize * 1.4,
+                                      height: metrics.buttonFontSize * 1.4,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        isRegister ? '注册' : '登录',
+                                        style: TextStyle(
+                                          fontSize: metrics.buttonFontSize,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

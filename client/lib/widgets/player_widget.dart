@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
+import '../utils/seat_layout.dart';
 
 const int kCardCountRevealThreshold = 10;
 
@@ -11,6 +12,7 @@ class PlayerWidget extends StatelessWidget {
   final bool compact;
   final bool showLobbyState;
   final int? cardCountOverride;
+  final PlayerNicknamePlacement nicknamePlacement;
 
   const PlayerWidget({
     super.key,
@@ -19,6 +21,7 @@ class PlayerWidget extends StatelessWidget {
     this.compact = false,
     this.showLobbyState = false,
     this.cardCountOverride,
+    this.nicknamePlacement = PlayerNicknamePlacement.below,
   });
 
   int get _effectiveCardCount => cardCountOverride ?? player.cardCount;
@@ -29,9 +32,120 @@ class PlayerWidget extends StatelessWidget {
       _effectiveCardCount > 0 &&
       _effectiveCardCount <= kCardCountRevealThreshold;
 
+  bool get _inGameInfoOnly => !showLobbyState && !compact;
+
   @override
   Widget build(BuildContext context) {
     final ui = context.ui;
+    if (_inGameInfoOnly) {
+      return _buildInGameInfo(ui);
+    }
+    return _buildLobbyInfo(ui);
+  }
+
+  Widget _buildInGameInfo(UiScale ui) {
+    final cfg = ui.config.player;
+    final avatarRadius = ui.r(cfg.compactAvatarRadius);
+    final borderRadius = ui.r(cfg.borderRadius);
+    final nicknameStyle = TextStyle(
+      color: GameTheme.textPrimary,
+      fontSize: ui.sp(ui.config.font.sm2),
+    );
+
+    final avatar = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          radius: avatarRadius,
+          backgroundColor:
+              player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935),
+          child: Text(
+            player.nickname.isNotEmpty ? player.nickname[0] : '?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: ui.sp(ui.config.font.lg),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        if (_showCardCountBadge)
+          Positioned(
+            right: ui.w(-6),
+            bottom: ui.h(-6),
+            child: _CardCountBadge(count: _effectiveCardCount, ui: ui, compact: true),
+          ),
+        if (isCurrentTurn)
+          Positioned(
+            right: ui.w(-4),
+            top: ui.h(-4),
+            child: Container(
+              width: ui.w(10),
+              height: ui.h(10),
+              decoration: const BoxDecoration(
+                color: GameTheme.accentGold,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
+    );
+
+    final nickname = ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: ui.w(cfg.width)),
+      child: Text(
+        player.nickname,
+        style: nicknameStyle,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        textAlign:
+            nicknamePlacement == PlayerNicknamePlacement.trailing ? TextAlign.left : TextAlign.center,
+      ),
+    );
+
+    final content = nicknamePlacement == PlayerNicknamePlacement.trailing
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              avatar,
+              SizedBox(width: ui.w(ui.config.spacing.sm)),
+              nickname,
+            ],
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              avatar,
+              SizedBox(height: ui.h(ui.config.spacing.xs)),
+              nickname,
+            ],
+          );
+
+    return Container(
+      padding: ui.edgeInsetsSymmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: isCurrentTurn
+            ? GameTheme.accentGold.withValues(alpha: 0.25)
+            : Colors.black.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(
+          color: isCurrentTurn ? GameTheme.accentGold : Colors.white.withValues(alpha: 0.15),
+          width: isCurrentTurn ? ui.r(2) : ui.r(1),
+        ),
+        boxShadow: isCurrentTurn
+            ? [
+                BoxShadow(
+                  color: GameTheme.accentGold.withValues(alpha: 0.35),
+                  blurRadius: ui.r(8),
+                ),
+              ]
+            : null,
+      ),
+      child: content,
+    );
+  }
+
+  Widget _buildLobbyInfo(UiScale ui) {
     final cfg = ui.config.player;
     final level = (player.id % 15) + 5;
     final coins = _formatCoins((player.id * 1379) % 99999 + 1000);

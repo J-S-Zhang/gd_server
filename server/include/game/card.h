@@ -36,12 +36,20 @@ struct GameRuleConfig {
     std::string ruleVersion = "six_player_guandan_v1";
 };
 
+constexpr int kLevelCardPatternRank = 15;   // 级牌在指定牌型中大于 A(14)
+constexpr int kSmallJokerPatternRank = 16;
+constexpr int kBigJokerPatternRank = 17;
+
 struct RuleContext {
     int currentLevel = 2;  // 2-14 (2 to A)
     bool enableWildCard = true;
 
     Rank levelRank() const {
         return static_cast<Rank>(currentLevel);
+    }
+
+    int rawLevelRankValue() const {
+        return rankValue(levelRank());
     }
 
     bool isWildCard(const Card& card) const {
@@ -53,6 +61,19 @@ struct RuleContext {
         return !isJoker(card.rank) && card.rank == levelRank();
     }
 };
+
+/// 单牌 / 对子 / 三不带 / 三带二(仅三张部分) / 纯级牌炸弹：级牌按级牌比较。
+inline int patternRankForLevelCard(int rawRank, const RuleContext& ctx) {
+    if (rawRank == ctx.rawLevelRankValue()) return kLevelCardPatternRank;
+    return rawRank;
+}
+
+inline int singleEffectiveRank(const Card& card, const RuleContext& ctx) {
+    if (card.rank == Rank::SMALL_JOKER) return kSmallJokerPatternRank;
+    if (card.rank == Rank::BIG_JOKER) return kBigJokerPatternRank;
+    if (ctx.isLevelCard(card)) return kLevelCardPatternRank;
+    return rankValue(card.rank);
+}
 
 Card makeCard(CardId id, Suit suit, Rank rank);
 

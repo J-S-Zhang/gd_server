@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
     int wsPort = 9001;
     int httpPort = 8080;
     std::string dbPath = "users.json";
+    std::string appVersionPath = "config/app_version.json";
     if (argc > 1) {
         wsPort = std::atoi(argv[1]);
     }
@@ -28,12 +29,21 @@ int main(int argc, char* argv[]) {
     if (argc > 3) {
         dbPath = argv[3];
     }
+    if (argc > 4) {
+        appVersionPath = argv[4];
+    }
 
     guandan::Logger::info("六人掼蛋游戏服务器启动");
     guandan::Logger::info("规则版本: six_player_guandan_v1");
     guandan::Logger::info("WebSocket 端口: " + std::to_string(wsPort));
     guandan::Logger::info("HTTP 端口: " + std::to_string(httpPort));
     guandan::Logger::info("用户数据库: " + dbPath);
+    guandan::Logger::info("版本配置: " + appVersionPath);
+
+    guandan::AppVersionInfo appVersionInfo;
+    if (!guandan::loadAppVersionInfo(appVersionPath, appVersionInfo)) {
+        guandan::Logger::info("使用默认 App 版本配置");
+    }
 
     guandan::UserStore userStore(dbPath);
     guandan::TokenManager tokenManager;
@@ -46,6 +56,7 @@ int main(int argc, char* argv[]) {
 
     guandan::HttpServer httpServer(httpPort);
     httpServer.setAuthService(&authService);
+    httpServer.setAppVersionInfo(appVersionInfo);
     std::thread httpThread([&]() { httpServer.run(); });
 
     guandan::WebSocketServer server(wsPort);

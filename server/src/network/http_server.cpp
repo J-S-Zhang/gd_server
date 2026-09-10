@@ -20,6 +20,7 @@
 #endif
 
 #include <cctype>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -83,6 +84,35 @@ std::string extractJsonStringValue(const std::string& json, const std::string& k
     return json.substr(pos, end - pos);
 }
 
+int extractJsonIntValue(const std::string& json, const std::string& key, int defaultValue) {
+    const std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return defaultValue;
+    pos += needle.size();
+    while (pos < json.size() && json[pos] == ' ') ++pos;
+    auto end = pos;
+    while (end < json.size() && (std::isdigit(static_cast<unsigned char>(json[end])) || json[end] == '-')) {
+        ++end;
+    }
+    if (end == pos) return defaultValue;
+    try {
+        return std::stoi(json.substr(pos, end - pos));
+    } catch (...) {
+        return defaultValue;
+    }
+}
+
+bool extractJsonBoolValue(const std::string& json, const std::string& key, bool defaultValue) {
+    const std::string needle = "\"" + key + "\":";
+    auto pos = json.find(needle);
+    if (pos == std::string::npos) return defaultValue;
+    pos += needle.size();
+    while (pos < json.size() && json[pos] == ' ') ++pos;
+    if (json.compare(pos, 4, "true") == 0) return true;
+    if (json.compare(pos, 5, "false") == 0) return false;
+    return defaultValue;
+}
+
 std::string escapeJson(const std::string& s) {
     std::string out;
     out.reserve(s.size());
@@ -120,6 +150,18 @@ std::string buildErrorJson(const std::string& errorCode, const std::string& mess
            escapeJson(message) + "\"}";
 }
 
+std::string buildAppVersionJson(const AppVersionInfo& info) {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"version\":\"" << escapeJson(info.version) << "\"";
+    oss << ",\"version_code\":" << info.versionCode;
+    oss << ",\"download_url\":\"" << escapeJson(info.downloadUrl) << "\"";
+    oss << ",\"force_update\":" << (info.forceUpdate ? "true" : "false");
+    oss << ",\"changelog\":\"" << escapeJson(info.changelog) << "\"";
+    oss << "}";
+    return oss.str();
+}
+
 void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& statusText,
                       const std::string& body) {
     std::ostringstream resp;
@@ -127,7 +169,7 @@ void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& stat
     resp << "Content-Type: application/json; charset=utf-8\r\n";
     resp << "Access-Control-Allow-Origin: *\r\n";
     resp << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
-    resp << "Access-Control-Allow-Methods: POST, OPTIONS\r\n";
+    resp << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
     resp << "Content-Length: " << body.size() << "\r\n";
     resp << "Connection: close\r\n";
     resp << "\r\n";
@@ -136,7 +178,7 @@ void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& stat
     ::send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
 }
 
-void handleClient(SocketHandle sock, AuthService* authService) {
+void handleClient(SocketHandle sock, AuthService* authService, const AppVersionInfo& appVersionInfo) {
     std::string requestLine;
     if (!recvLine(sock, requestLine)) {
         closeSocket(sock);
@@ -185,6 +227,12 @@ void handleClient(SocketHandle sock, AuthService* authService) {
         return;
     }
 
+    if (method == "GET" && path == "/api/app/version") {
+        sendHttpResponse(sock, 200, "OK", buildAppVersionJson(appVersionInfo));
+        closeSocket(sock);
+        return;
+    }
+
     if (!authService) {
         sendHttpResponse(sock, 503, "Service Unavailable",
                          buildErrorJson("service_unavailable", "认证服务未就绪"));
@@ -227,6 +275,37 @@ void handleClient(SocketHandle sock, AuthService* authService) {
 }
 
 }  // namespace
+
+bool loadAppVersionInfo(const std::string& path, AppVersionInfo& out) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        Logger::error("HTTP: failed to load app version config: " + path);
+        return false;
+    }
+
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    const std::string json = buffer.str();
+
+    const std::string version = extractJsonStringValue(json, "version");
+    if (!version.empty()) {
+        out.version = version;
+    }
+    out.versionCode = extractJsonIntValue(json, "version_code", out.versionCode);
+    const std::string downloadUrl = extractJsonStringValue(json, "download_url");
+    if (!downloadUrl.empty()) {
+        out.downloadUrl = downloadUrl;
+    }
+    out.forceUpdate = extractJsonBoolValue(json, "force_update", out.forceUpdate);
+    const std::string changelog = extractJsonStringValue(json, "changelog");
+    if (!changelog.empty()) {
+        out.changelog = changelog;
+    }
+
+    Logger::info("App version config loaded: " + out.version +
+                 " (code " + std::to_string(out.versionCode) + ")");
+    return true;
+}
 
 HttpServer::HttpServer(int port) : port_(port) {}
 
@@ -289,7 +368,7 @@ void HttpServer::run() {
         if (clientSock == kInvalidSocket) continue;
 
         std::thread([this, clientSock]() {
-            handleClient(clientSock, authService_);
+            handleClient(clientSock, authService_, appVersionInfo_);
         }).detach();
     }
 
