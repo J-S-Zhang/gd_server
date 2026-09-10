@@ -13,7 +13,8 @@ public:
     void shuffle();
     void shuffle(uint64_t seed);
 
-    std::vector<std::vector<CardId>> deal(int playerCount);
+    /// cardsPerPlayer <= 0：整副牌均分；> 0：洗牌后每人随机发固定张数。
+    std::vector<std::vector<CardId>> deal(int playerCount, int cardsPerPlayer = 0);
 
     const std::vector<Card>& cards() const { return cards_; }
     Card getCard(CardId id) const;

@@ -8,7 +8,9 @@ import '../../controller/room_controller.dart';
 import '../../models/game_state.dart';
 import '../../models/player.dart';
 import '../../models/room.dart' as room_model;
+import '../../models/user.dart';
 import '../../theme/game_theme.dart';
+import '../../utils/hand_layout.dart';
 import '../../widgets/game/action_buttons.dart';
 import '../../widgets/game/dismiss_vote_dialog.dart';
 import '../../widgets/game/game_top_bar.dart';
@@ -97,8 +99,7 @@ class _GamePageState extends ConsumerState<GamePage> {
     });
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
+      body: GameTheme.gameBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -112,6 +113,7 @@ class _GamePageState extends ConsumerState<GamePage> {
               ),
               Expanded(
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
                     GameTableWidget(
                       gameState: gameState,
@@ -155,62 +157,22 @@ class _GamePageState extends ConsumerState<GamePage> {
                           ),
                         ),
                       ),
+                    if (isPlaying)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: _buildPlayingBottom(
+                          ui: ui,
+                          gameState: gameState,
+                          controller: controller,
+                          user: user,
+                        ),
+                      ),
                   ],
                 ),
               ),
-              if (isPlaying)
-                Container(
-                  padding: ui.edgeInsetsLTRB(
-                    ui.config.spacing.lg,
-                    ui.config.spacing.md,
-                    ui.config.spacing.lg,
-                    ui.config.spacing.md + 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    border: Border(
-                      top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (gameState.isMyTurn) ...[
-                        Center(
-                          child: GameActionButtons(
-                            enabled: true,
-                            canPlay: controller.selectedCardIds.isNotEmpty,
-                            onPass: gameState.lastPlayedCards.isNotEmpty
-                                ? () => controller.pass(widget.roomId)
-                                : null,
-                            onHint: () => controller.hint(context),
-                            onPlay: () => controller.playCards(
-                              widget.roomId,
-                              controller.selectedCardIds,
-                              context: context,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: ui.h(ui.config.spacing.md)),
-                      ],
-                      HandCardsWidget(
-                        cards: gameState.myCards,
-                        currentLevel: gameState.currentLevel,
-                        organizedGroups: gameState.handOrganizedGroups,
-                        onCardTap: controller.toggleCardSelection,
-                        onRowHeightChanged: (height) {
-                          ref.read(handCardsMaxHeightProvider.notifier).state = height;
-                        },
-                      ),
-                      SizedBox(height: ui.h(ui.config.spacing.sm)),
-                      HandToolbar(
-                        nickname: user?.nickname ?? '玩家',
-                        onSort: () => controller.sortHand(context),
-                      ),
-                    ],
-                  ),
-                )
-              else
+              if (!isPlaying)
                 Container(
                   width: double.infinity,
                   padding: ui.edgeInsetsSymmetric(vertical: ui.config.spacing.md + 2),
@@ -233,6 +195,71 @@ class _GamePageState extends ConsumerState<GamePage> {
     );
   }
 
+  Widget _buildPlayingBottom({
+    required UiScale ui,
+    required ClientGameState gameState,
+    required GameController controller,
+    required User? user,
+  }) {
+    final layout = ui.config.layout;
+    final gap = ui.h(layout.handToolbarHandGap);
+    final actionGap = ui.h(layout.gameActionHandGap);
+
+    return Padding(
+      padding: ui.edgeInsetsLTRB(
+        ui.config.spacing.lg,
+        0,
+        ui.config.spacing.lg,
+        ui.config.spacing.md + 2,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (gameState.isMyTurn) ...[
+            Center(
+              child: GameActionButtons(
+                enabled: true,
+                canPlay: controller.selectedCardIds.isNotEmpty,
+                turnId: gameState.turnId,
+                onPass: gameState.mustRespondToTrick(user?.id)
+                    ? () => controller.pass(widget.roomId)
+                    : null,
+                onHint: () => controller.hint(context),
+                onPlay: () => controller.playCards(
+                  widget.roomId,
+                  controller.selectedCardIds,
+                  context: context,
+                ),
+              ),
+            ),
+            SizedBox(height: actionGap),
+          ],
+          HandCardsWidget(
+            cards: gameState.myCards,
+            currentLevel: gameState.currentLevel,
+            organizedGroups: gameState.handOrganizedGroups,
+            onCardTap: controller.toggleCardSelection,
+            onRowHeightChanged: (height) {
+              ref.read(handCardsMaxHeightProvider.notifier).state = height;
+            },
+          ),
+          SizedBox(height: gap),
+          HandToolbar(
+            nickname: user?.nickname ?? '玩家',
+            straightFlushSuits: detectStraightFlushSuits(
+              gameState.myCards,
+              currentLevel: gameState.currentLevel,
+            ),
+            onSuitTap: controller.cycleStraightFlushSelection,
+            onRestore: controller.restoreHand,
+            onSort: () => controller.sortHand(context),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSettingsMenu(BuildContext context, RoomController roomController) {
     final ui = context.ui;
     final dismissActive = ref.read(dismissVoteProvider) != null;
@@ -242,10 +269,37 @@ class _GamePageState extends ConsumerState<GamePage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(ui.r(ui.config.radius.xl))),
       ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      builder: (ctx) => Consumer(
+        builder: (context, ref, _) {
+          final room = ref.watch(roomProvider);
+          final canEditTribute =
+              room?.isOwner == true && room?.phase == room_model.GamePhase.waiting;
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  secondary: Icon(Icons.card_giftcard, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+                  title: Text(
+                    '进贡',
+                    style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
+                  ),
+                  subtitle: Text(
+                    canEditTribute
+                        ? '开启后本局将进行进贡'
+                        : room?.isOwner == true
+                            ? '对局开始后不可修改'
+                            : '仅房主可在开局前设置',
+                    style: TextStyle(color: Colors.white54, fontSize: ui.sp(ui.config.font.sm)),
+                  ),
+                  value: room?.enableTribute ?? false,
+                  activeThumbColor: GameTheme.accentGold,
+                  onChanged: canEditTribute
+                      ? (value) {
+                          roomController.setEnableTribute(widget.roomId, value);
+                        }
+                      : null,
+                ),
             ListTile(
               leading: Icon(Icons.group_off, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
               title: Text(
@@ -260,18 +314,20 @@ class _GamePageState extends ConsumerState<GamePage> {
                       roomController.requestDismissRoom(widget.roomId);
                     },
             ),
-            ListTile(
-              leading: Icon(Icons.exit_to_app, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
-              title: Text('退出房间', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
-              onTap: () {
-                Navigator.pop(ctx);
-                roomController.leaveRoom(widget.roomId);
-                ref.read(gameStateProvider.notifier).state = const ClientGameState();
-                context.go('/lobby');
-              },
+                ListTile(
+                  leading: Icon(Icons.exit_to_app, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
+                  title: Text('退出房间', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    roomController.leaveRoom(widget.roomId);
+                    ref.read(gameStateProvider.notifier).state = const ClientGameState();
+                    context.go('/lobby');
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

@@ -18,6 +18,7 @@ class Room {
   final GamePhase phase;
   final GameMode mode;
   final int maxPlayers;
+  final bool enableTribute;
 
   const Room({
     required this.roomId,
@@ -26,6 +27,7 @@ class Room {
     this.phase = GamePhase.waiting,
     this.mode = GameMode.six,
     this.maxPlayers = 6,
+    this.enableTribute = false,
   });
 
   bool get isFull => players.length >= maxPlayers;
@@ -42,6 +44,7 @@ class Room {
     GamePhase? phase,
     GameMode? mode,
     int? maxPlayers,
+    bool? enableTribute,
   }) {
     return Room(
       roomId: roomId ?? this.roomId,
@@ -50,6 +53,7 @@ class Room {
       phase: phase ?? this.phase,
       mode: mode ?? this.mode,
       maxPlayers: maxPlayers ?? this.maxPlayers,
+      enableTribute: enableTribute ?? this.enableTribute,
     );
   }
 
@@ -72,6 +76,7 @@ class Room {
       phase: phase,
       mode: mode,
       maxPlayers: maxPlayers,
+      enableTribute: data['enable_tribute'] == true,
     );
   }
 }

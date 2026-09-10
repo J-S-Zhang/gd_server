@@ -37,12 +37,13 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
   Widget build(BuildContext context) {
     final ui = context.ui;
     final cardCfg = ui.config.card;
-    final cardWidth = ui.w(cardCfg.handWidth);
-    final cardHeight = ui.h(cardCfg.handHeight);
+    final cardSize = ui.cardSize(cardCfg.handWidth);
+    final cardWidth = cardSize.width;
+    final cardHeight = cardSize.height;
     final hStep = cardWidth * (1 - cardCfg.horizontalOverlap);
     final vStep = cardHeight * (1 - cardCfg.verticalOverlap);
     final selectionLift = ui.h(cardCfg.selectionLift);
-    final extraPadding = ui.h(4);
+    final extraPadding = ui.h(1);
 
     final rowHeight = computeHandCardsRowHeight(
       cards: widget.cards,
@@ -78,33 +79,42 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final contentWidth = cardWidth + (groups.length - 1) * hStep;
     final contentHeight = rowHeight - extraPadding;
 
+    final handStack = SizedBox(
+      width: contentWidth,
+      height: contentHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (var gi = 0; gi < groups.length; gi++)
+            for (var i = groups[gi].length - 1; i >= 0; i--)
+              Positioned(
+                left: gi * hStep,
+                bottom: i * vStep,
+                child: PokerCardWidget(
+                  card: groups[gi][i],
+                  width: cardWidth,
+                  height: cardHeight,
+                  currentLevel: widget.currentLevel,
+                  onTap: () => widget.onCardTap(groups[gi][i].id),
+                ),
+              ),
+        ],
+      ),
+    );
+
     return SizedBox(
       height: rowHeight,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.md),
-        child: SizedBox(
-          width: contentWidth,
-          height: contentHeight,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              for (var gi = 0; gi < groups.length; gi++)
-                for (var i = groups[gi].length - 1; i >= 0; i--)
-                  Positioned(
-                    left: gi * hStep,
-                    bottom: i * vStep,
-                    child: PokerCardWidget(
-                      card: groups[gi][i],
-                      width: cardWidth,
-                      height: cardHeight,
-                      currentLevel: widget.currentLevel,
-                      onTap: () => widget.onCardTap(groups[gi][i].id),
-                    ),
-                  ),
-            ],
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.md),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: Center(child: handStack),
+            ),
+          );
+        },
       ),
     );
   }

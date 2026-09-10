@@ -12,6 +12,7 @@ public:
     void advanceTurn();
     void resetRound(int winnerIndex);
     bool allOthersPassed() const;
+    bool shouldResetRoundAfterPass(int seatIndex) const;
 
 private:
     GameState& state_;

@@ -34,6 +34,20 @@ class _CountdownWidgetState extends State<CountdownWidget> {
   }
 
   @override
+  void didUpdateWidget(covariant CountdownWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.seconds != widget.seconds) {
+      _timer?.cancel();
+      _remaining = widget.seconds;
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (_remaining > 0) {
+          setState(() => _remaining--);
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
     super.dispose();

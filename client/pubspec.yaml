@@ -27,5 +27,6 @@ flutter:
   assets:
     - assets/config/ui_config.json
     - assets/images/
+    - assets/images/bgs/
     - assets/images/cards/
     - assets/sounds/

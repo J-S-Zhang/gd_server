@@ -155,6 +155,25 @@ void Room::cancelDismissVote() {
     dismissVote_.cancel();
 }
 
+bool Room::setEnableTribute(PlayerId playerId, bool enabled) {
+    if (phase_ != RoomPhase::WAITING) return false;
+    if (playerId != ownerId_) return false;
+    if (isBotPlayer(playerId)) return false;
+    config_.enableTribute = enabled;
+    engine_.updateConfig(toGameRuleConfig(config_));
+    return true;
+}
+
+bool Room::startNextRound() {
+    if (phase_ != RoomPhase::PLAYING) return false;
+    auto result = engine_.startNextRound();
+    return result.code == ErrorCode::OK;
+}
+
+void Room::finishMatch() {
+    phase_ = RoomPhase::FINISHED;
+}
+
 bool Room::startGame() {
     if (!isFull()) return false;
     for (const auto& p : players_) {

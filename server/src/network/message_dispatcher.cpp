@@ -408,6 +408,18 @@ void MessageDispatcher::onGameStarted(const std::shared_ptr<Room>& room, uint64_
     started.requestId = requestId;
     started.roomId = room->id();
     broadcastToRoom(room, started);
+    onRoundStarted(room);
+}
+
+void MessageDispatcher::onRoundStarted(const std::shared_ptr<Room>& room) {
+    const auto& tribute = room->engine().lastTributeResult();
+    if (!tribute.skipped || tribute.antiTribute || !tribute.tributes.empty()) {
+        Message tributeMsg;
+        tributeMsg.type = "tribute_resolved";
+        tributeMsg.roomId = room->id();
+        tributeMsg.dataJson = buildTributeResolvedJson(tribute);
+        broadcastToRoom(room, tributeMsg);
+    }
 
     for (const auto& p : room->players()) {
         auto view = room->engine().buildViewFor(p.id);
@@ -443,17 +455,57 @@ void MessageDispatcher::onGameOver(const std::shared_ptr<Room>& room,
         << (result.inPassAPhase[1] ? "true" : "false") << "]";
     oss << ",\"pass_a_fail_counts\":[" << result.passAFailCounts[0] << ","
         << result.passAFailCounts[1] << "]}";
-    Message over;
-    over.type = "game_over";
-    over.roomId = room->id();
-    over.dataJson = oss.str();
-    broadcastToRoom(room, over);
-
     Message settlement;
     settlement.type = "settlement";
     settlement.roomId = room->id();
     settlement.dataJson = oss.str();
     broadcastToRoom(room, settlement);
+
+    if (result.matchWon) {
+        Message over;
+        over.type = "game_over";
+        over.roomId = room->id();
+        over.dataJson = oss.str();
+        broadcastToRoom(room, over);
+        room->finishMatch();
+        return;
+    }
+
+    if (room->startNextRound()) {
+        onRoundStarted(room);
+    }
+}
+
+void MessageDispatcher::handleSetRoomOptions(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+    if (room->ownerId() != playerId) {
+        sendError(send, msg.requestId, ErrorCode::NOT_ROOM_OWNER);
+        return;
+    }
+
+    const bool enableTribute = extractJsonBoolFromData(msg.dataJson, "enable_tribute");
+    if (!room->setEnableTribute(playerId, enableTribute)) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    Message resp;
+    resp.type = "room_options_updated";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    resp.dataJson = "{\"enable_tribute\":" + std::string(enableTribute ? "true" : "false") + "}";
+    sendResponse(send, resp);
+
+    Message stateMsg;
+    stateMsg.type = "room_state";
+    stateMsg.roomId = room->id();
+    stateMsg.dataJson = buildRoomStateJson(*room);
+    broadcastToRoom(room, stateMsg);
 }
 
 void MessageDispatcher::handleStartGame(uint64_t sessionId, const Message& msg, SendFn send) {
@@ -723,6 +775,7 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "ready") handleReady(sessionId, msg, send);
     else if (msg.type == "unready") handleUnready(sessionId, msg, send);
     else if (msg.type == "change_seat") handleChangeSeat(sessionId, msg, send);
+    else if (msg.type == "set_room_options") handleSetRoomOptions(sessionId, msg, send);
     else if (msg.type == "start_game") handleStartGame(sessionId, msg, send);
     else if (msg.type == "play_cards") handlePlayCards(sessionId, msg, send);
     else if (msg.type == "pass") handlePass(sessionId, msg, send);

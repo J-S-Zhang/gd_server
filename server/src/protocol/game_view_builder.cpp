@@ -46,6 +46,7 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) 
     oss << ",\"pass_a_fail_counts\":[" << view.passAFailCounts[0] << ","
         << view.passAFailCounts[1] << "]";
     oss << ",\"current_player_index\":" << view.currentPlayerIndex;
+    oss << ",\"first_player_index\":" << view.firstPlayerIndex;
     oss << ",\"my_seat_index\":" << view.mySeatIndex;
     oss << ",\"my_cards\":" << cardIdsToJsonArray(view.myCards);
     oss << ",\"last_played_cards\":" << cardIdsToJsonArray(view.lastPlayedCards);
@@ -137,6 +138,37 @@ std::string buildRoomStateJson(const Room& room) {
     oss << "],\"player_count\":" << players.size();
     oss << ",\"max_players\":" << config.maxPlayers;
     oss << ",\"mode\":\"" << config.modeName << "\"";
+    oss << ",\"enable_tribute\":" << (config.enableTribute ? "true" : "false");
+    oss << "}";
+    return oss.str();
+}
+
+static std::string tributeTransfersToJson(const std::vector<TributeTransfer>& transfers) {
+    std::ostringstream oss;
+    oss << "[";
+    for (size_t i = 0; i < transfers.size(); ++i) {
+        if (i > 0) oss << ",";
+        const auto& tr = transfers[i];
+        oss << "{";
+        oss << "\"from_seat\":" << tr.fromSeat;
+        oss << ",\"to_seat\":" << tr.toSeat;
+        oss << ",\"card_id\":" << tr.cardId;
+        oss << "}";
+    }
+    oss << "]";
+    return oss.str();
+}
+
+std::string buildTributeResolvedJson(const TributeRoundResult& result) {
+    std::ostringstream oss;
+    oss << "{";
+    oss << "\"skipped\":" << (result.skipped ? "true" : "false");
+    oss << ",\"anti_tribute\":" << (result.antiTribute ? "true" : "false");
+    oss << ",\"first_player_seat\":" << result.firstPlayerSeat;
+    oss << ",\"head_tributer_seat\":" << result.headTributerSeat;
+    oss << ",\"summary\":\"" << result.summary << "\"";
+    oss << ",\"tributes\":" << tributeTransfersToJson(result.tributes);
+    oss << ",\"returns\":" << tributeTransfersToJson(result.returns);
     oss << "}";
     return oss.str();
 }

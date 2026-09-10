@@ -36,6 +36,13 @@ bool GameEngine::allReady() const {
     return state_.playerCount == config_.playerCount;
 }
 
+void GameEngine::updateConfig(const GameRuleConfig& config) {
+    if (state_.phase == GamePhase::PLAYING || state_.phase == GamePhase::FINISHED) {
+        return;
+    }
+    config_ = config;
+}
+
 RuleContext GameEngine::ruleContext() const {
     RuleContext ctx;
     ctx.currentLevel = state_.currentLevel;
@@ -63,22 +70,16 @@ int GameEngine::seatOf(PlayerId id) const {
     return -1;
 }
 
-PlayResult GameEngine::startGame() {
+PlayResult GameEngine::dealAndStartPlaying(bool applyTribute) {
     PlayResult result;
-    if (state_.phase != GamePhase::WAITING && state_.phase != GamePhase::READY) {
-        result.code = ErrorCode::INVALID_STATE;
-        result.message = "Cannot start game in current phase";
-        return result;
-    }
-    if (!allReady()) {
-        result.code = ErrorCode::NOT_ALL_READY;
-        result.message = "Not all players ready";
-        return result;
-    }
 
     Deck deck(config_.deckCount);
     deck.shuffle();
-    auto hands = deck.deal(state_.playerCount);
+    state_.allCards = deck.cards();
+
+    const int cardsPerPlayer =
+        (config_.ruleVersion == "solo_test_v1") ? kSoloTestCardsPerPlayer : 0;
+    auto hands = deck.deal(state_.playerCount, cardsPerPlayer);
 
     for (int i = 0; i < state_.playerCount; ++i) {
         state_.players[i].hand = Hand{};
@@ -92,10 +93,19 @@ PlayResult GameEngine::startGame() {
     state_.currentLevel = progress_.currentRoundLevel();
     state_.isPassARound = progress_.isPassARound();
 
+    if (applyTribute) {
+        lastTribute_ = tributeManager_.resolveRound(
+            state_, config_, previousRound_, ruleContext());
+        state_.firstPlayerIndex = lastTribute_.firstPlayerSeat;
+    } else {
+        lastTribute_ = {};
+        lastTribute_.skipped = true;
+        state_.firstPlayerIndex = 0;
+    }
+
     state_.phase = GamePhase::PLAYING;
     state_.round++;
-    state_.firstPlayerIndex = 0;
-    state_.currentPlayerIndex = 0;
+    state_.currentPlayerIndex = state_.firstPlayerIndex;
     state_.lastPlayedCards.clear();
     state_.lastPattern = CardPattern::invalid();
     state_.lastPlayedPlayerIndex = -1;
@@ -104,6 +114,34 @@ PlayResult GameEngine::startGame() {
     incrementStateVersion();
 
     return result;
+}
+
+PlayResult GameEngine::startGame() {
+    PlayResult result;
+    if (state_.phase != GamePhase::WAITING && state_.phase != GamePhase::READY) {
+        result.code = ErrorCode::INVALID_STATE;
+        result.message = "Cannot start game in current phase";
+        return result;
+    }
+    if (!allReady()) {
+        result.code = ErrorCode::NOT_ALL_READY;
+        result.message = "Not all players ready";
+        return result;
+    }
+
+    previousRound_ = {};
+    return dealAndStartPlaying(false);
+}
+
+PlayResult GameEngine::startNextRound() {
+    PlayResult result;
+    if (state_.phase != GamePhase::FINISHED) {
+        result.code = ErrorCode::INVALID_STATE;
+        result.message = "Cannot start next round in current phase";
+        return result;
+    }
+
+    return dealAndStartPlaying(true);
 }
 
 void GameEngine::assignFinishRank(int playerIndex) {
@@ -175,10 +213,11 @@ PlayResult GameEngine::playCards(PlayerId playerId, const std::vector<CardId>& c
     if (state_.players[seat].hand.empty()) {
         assignFinishRank(seat);
         if (checkTeamWin()) {
-            state_.phase = GamePhase::FINISHED;
             result.gameOver = true;
             result.settlement = settlement_.calculate(state_, config_.playersPerTeam);
             progress_.applySettlement(result.settlement);
+            previousRound_ = buildPreviousRoundInfo(state_, result.settlement.winningTeam);
+            state_.phase = GamePhase::FINISHED;
             return result;
         }
     }
@@ -215,17 +254,17 @@ PlayResult GameEngine::pass(PlayerId playerId) {
     state_.passCount++;
     incrementStateVersion();
 
-    if (turnManager_.allOthersPassed()) {
-        int winner = state_.lastPlayedPlayerIndex;
-        turnManager_.resetRound(winner);
-        while (state_.players[state_.currentPlayerIndex].hasFinished) {
-            turnManager_.advanceTurn();
-        }
+    const int leader = state_.lastPlayedPlayerIndex;
+    if (leader >= 0 &&
+        (turnManager_.shouldResetRoundAfterPass(seat) ||
+         turnManager_.allOthersPassed())) {
+        turnManager_.resetRound(leader);
     } else {
         turnManager_.advanceTurn();
-        while (state_.players[state_.currentPlayerIndex].hasFinished) {
-            turnManager_.advanceTurn();
-        }
+    }
+
+    while (state_.players[state_.currentPlayerIndex].hasFinished) {
+        turnManager_.advanceTurn();
     }
 
     return result;
@@ -243,6 +282,7 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId) const {
     view.inPassAPhase = progress_.inPassAPhase;
     view.passAFailCounts = progress_.passAFailCounts;
     view.currentPlayerIndex = state_.currentPlayerIndex;
+    view.firstPlayerIndex = state_.firstPlayerIndex;
     view.lastPlayedCards = state_.lastPlayedCards;
     view.lastPlayedPlayerIndex = state_.lastPlayedPlayerIndex;
     view.lastPattern = state_.lastPattern;

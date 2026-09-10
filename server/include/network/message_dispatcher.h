@@ -42,6 +42,7 @@ private:
     void handleReady(uint64_t sessionId, const Message& msg, SendFn send);
     void handleUnready(uint64_t sessionId, const Message& msg, SendFn send);
     void handleChangeSeat(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleSetRoomOptions(uint64_t sessionId, const Message& msg, SendFn send);
     void handleStartGame(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePlayCards(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePass(uint64_t sessionId, const Message& msg, SendFn send);
@@ -55,6 +56,7 @@ private:
     void sendError(SendFn send, uint64_t requestId, ErrorCode code);
     void sendResponse(SendFn send, const Message& msg);
     void onGameStarted(const std::shared_ptr<Room>& room, uint64_t requestId);
+    void onRoundStarted(const std::shared_ptr<Room>& room);
     void onGameOver(const std::shared_ptr<Room>& room, const SettlementResult& result);
     void broadcastDismissVote(const std::shared_ptr<Room>& room, const std::string& type);
     void dissolveRoom(const std::shared_ptr<Room>& room);

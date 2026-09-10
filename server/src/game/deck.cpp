@@ -17,7 +17,27 @@ void Deck::shuffle(uint64_t seed) {
     std::shuffle(cards_.begin(), cards_.end(), rng);
 }
 
-std::vector<std::vector<CardId>> Deck::deal(int playerCount) {
+std::vector<std::vector<CardId>> Deck::deal(int playerCount, int cardsPerPlayer) {
+    if (playerCount <= 0) {
+        throw std::runtime_error("Invalid player count");
+    }
+
+    if (cardsPerPlayer > 0) {
+        const int needed = playerCount * cardsPerPlayer;
+        if (static_cast<int>(cards_.size()) < needed) {
+            throw std::runtime_error("Not enough cards to deal");
+        }
+        std::vector<std::vector<CardId>> hands(playerCount);
+        size_t cursor = 0;
+        for (int p = 0; p < playerCount; ++p) {
+            hands[p].reserve(cardsPerPlayer);
+            for (int c = 0; c < cardsPerPlayer; ++c) {
+                hands[p].push_back(cards_[cursor++].id);
+            }
+        }
+        return hands;
+    }
+
     if (static_cast<int>(cards_.size()) % playerCount != 0) {
         throw std::runtime_error("Cannot deal cards evenly");
     }

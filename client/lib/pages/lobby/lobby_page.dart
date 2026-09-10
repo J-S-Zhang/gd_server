@@ -147,7 +147,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                                 if (_selectedMode == GameMode.solo) ...[
                                   SizedBox(height: ui.h(ui.config.spacing.md)),
                                   Text(
-                                    '自动填充 3 名机器人，便于开发调试',
+                                    '自动填充 3 名机器人，每人随机发 10 张测试牌',
                                     style: TextStyle(
                                       color: Colors.white.withValues(alpha: 0.45),
                                       fontSize: ui.sp(ui.config.font.sm2),

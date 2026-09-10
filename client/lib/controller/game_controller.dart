@@ -29,6 +29,8 @@ class GameController {
   GameController(this._ref);
 
   int? _lastPassSoundKey;
+  List<int>? _straightFlushHandSignature;
+  final Map<Suit, int> _straightFlushClickIndex = {};
 
   WebSocketClient get _ws => _ref.read(wsClientProvider);
 
@@ -44,7 +46,8 @@ class GameController {
     if (cards.isEmpty) return false;
     final state = _ref.read(gameStateProvider);
     final selected = state.myCards.where((c) => cards.contains(c.id)).toList();
-    final lastPlayed = state.lastPlayedCards.isEmpty
+    final myUserId = _ref.read(userProvider)?.id;
+    final lastPlayed = state.canLeadFreely(myUserId)
         ? null
         : state.lastPlayedCards.map(cardFromId).toList();
 
@@ -62,28 +65,29 @@ class GameController {
       return false;
     }
 
-    final myUserId = _ref.read(userProvider)?.id;
     final removeSet = cards.toSet();
 
     final seatRoundPlays = _applyPlayToSeats(
       state.seatRoundPlays,
       state.mySeatIndex,
       cards,
-      newTrick: state.lastPlayedCards.isEmpty,
+      newTrick: state.canLeadFreely(myUserId),
     );
 
+    final nextCards = state.myCards.where((c) => !removeSet.contains(c.id)).toList();
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       phase: GamePhase.playing,
-      myCards: state.myCards.where((c) => !removeSet.contains(c.id)).toList(),
+      myCards: nextCards,
       lastPlayedCards: cards,
       lastPlayedPlayerId: myUserId ?? state.lastPlayedPlayerId,
       lastPlayedSeatIndex: state.mySeatIndex,
       seatRoundPlays: seatRoundPlays,
       handOrganizedGroups: filterOrganizedGroups(
         state.handOrganizedGroups,
-        state.myCards.where((c) => !removeSet.contains(c.id)).map((c) => c.id).toSet(),
+        nextCards.map((c) => c.id).toSet(),
       ),
     );
+    _resetStraightFlushCycleIfHandChanged(nextCards);
 
     _ws.playCards(roomId, cards, state.turnId);
     return true;
@@ -96,6 +100,7 @@ class GameController {
   }
 
   void toggleCardSelection(int cardId) {
+    _resetStraightFlushCycleIfHandChanged(_ref.read(gameStateProvider).myCards);
     final state = _ref.read(gameStateProvider);
     final cards = state.myCards.map((c) {
       if (c.id == cardId) {
@@ -107,6 +112,61 @@ class GameController {
       return c;
     }).toList();
     _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
+  }
+
+  void _resetStraightFlushCycleIfHandChanged(List<GameCard> cards) {
+    final signature = cards.map((c) => c.id).toList()..sort();
+    if (_straightFlushHandSignature == null ||
+        !_listEquals(_straightFlushHandSignature!, signature)) {
+      _straightFlushHandSignature = signature;
+      _straightFlushClickIndex.clear();
+    }
+  }
+
+  bool _listEquals(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  void _setSelectedCardIds(Set<int> selectedIds) {
+    final state = _ref.read(gameStateProvider);
+    final cards = state.myCards
+        .map(
+          (c) => GameCard(
+            id: c.id,
+            suit: c.suit,
+            rank: c.rank,
+            selected: selectedIds.contains(c.id),
+          ),
+        )
+        .toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
+  }
+
+  /// 点击高亮花色：循环选中该花色每组同花顺，全部展示后再点一次取消选中。
+  void cycleStraightFlushSelection(Suit suit) {
+    final state = _ref.read(gameStateProvider);
+    _resetStraightFlushCycleIfHandChanged(state.myCards);
+
+    final groups = findStraightFlushGroups(
+      state.myCards,
+      suit: suit,
+      currentLevel: state.currentLevel,
+    );
+    if (groups.isEmpty) return;
+
+    final clickIndex = _straightFlushClickIndex[suit] ?? 0;
+    if (clickIndex >= groups.length) {
+      _straightFlushClickIndex[suit] = 0;
+      _setSelectedCardIds({});
+      return;
+    }
+
+    _setSelectedCardIds(groups[clickIndex].toSet());
+    _straightFlushClickIndex[suit] = clickIndex + 1;
   }
 
   List<int> get selectedCardIds {
@@ -136,6 +196,7 @@ class GameController {
       myCards: result.cards,
       handOrganizedGroups: result.organizedGroups,
     );
+    _resetStraightFlushCycleIfHandChanged(result.cards);
   }
 
   void autoSortHand() {
@@ -145,6 +206,27 @@ class GameController {
       myCards: sorted,
       handOrganizedGroups: const [],
     );
+  }
+
+  /// 恢复理牌前的默认手牌排列（取消叠牌分组与选中状态）。
+  void restoreHand() {
+    final state = _ref.read(gameStateProvider);
+    final sorted = sortHandCards(state.myCards, currentLevel: state.currentLevel);
+    final restored = sorted
+        .map(
+          (c) => GameCard(
+            id: c.id,
+            suit: c.suit,
+            rank: c.rank,
+            selected: false,
+          ),
+        )
+        .toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      myCards: restored,
+      handOrganizedGroups: const [],
+    );
+    _resetStraightFlushCycleIfHandChanged(restored);
   }
 
   void hint(BuildContext context) {
@@ -184,9 +266,15 @@ class GameController {
         );
         newState = _mergeRoomPlayerInfo(newState);
         newState = newState.copyWith(
-          seatRoundPlays: _seatPlaysFromSnapshot(newState),
+          phase: GamePhase.playing,
+          seatRoundPlays: const {},
+          lastPlayedCards: const [],
+          lastPlayedPlayerId: -1,
+          lastPlayedSeatIndex: -1,
+          handOrganizedGroups: const [],
         );
         _ref.read(gameStateProvider.notifier).state = newState;
+        _resetStraightFlushCycleIfHandChanged(newState.myCards);
         break;
       case 'player_played':
         _applyPlayerPlayed(msg['data'] as Map<String, dynamic>? ?? {});
@@ -195,9 +283,17 @@ class GameController {
         _applyPlayerPassed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
       case 'settlement':
+        final data = msg['data'] as Map<String, dynamic>? ?? {};
+        final matchWon = data['match_won'] == true;
         final state = _ref.read(gameStateProvider);
-        _ref.read(gameStateProvider.notifier).state =
-            state.copyWith(phase: GamePhase.settlement);
+        _ref.read(gameStateProvider.notifier).state = state.copyWith(
+          phase: matchWon ? GamePhase.settlement : GamePhase.roundEnd,
+          teamLevels: _parseIntList(data['team_levels'], state.teamLevels),
+          passAFailCounts:
+              _parseIntList(data['pass_a_fail_counts'], state.passAFailCounts),
+        );
+        break;
+      case 'tribute_resolved':
         break;
       case 'game_over':
         final state = _ref.read(gameStateProvider);
@@ -294,18 +390,24 @@ class GameController {
     final passSeat = _resolvePassSeat(data, state);
     _playPassVoiceIfNeeded(data);
 
+    final nextPlayer = data['next_player'] as int? ?? state.currentPlayerIndex;
+    final leadAgain = !roundReset &&
+        state.lastPlayedSeatIndex >= 0 &&
+        nextPlayer == state.lastPlayedSeatIndex;
+    final clearTrick = roundReset || leadAgain;
+
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       seatRoundPlays: _applyPassToSeats(
         state.seatRoundPlays,
         passSeat,
-        roundReset: roundReset,
+        roundReset: clearTrick,
       ),
-      lastPlayedCards: roundReset ? const [] : null,
-      lastPlayedPlayerId: roundReset ? -1 : null,
-      lastPlayedSeatIndex: roundReset ? -1 : null,
+      lastPlayedCards: clearTrick ? const [] : null,
+      lastPlayedPlayerId: clearTrick ? -1 : null,
+      lastPlayedSeatIndex: clearTrick ? -1 : null,
       stateVersion: data['state_version'] as int? ?? state.stateVersion,
       turnId: data['turn_id'] as int? ?? state.turnId,
-      currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
+      currentPlayerIndex: nextPlayer,
     );
   }
 
@@ -371,6 +473,11 @@ class GameController {
     return {
       state.lastPlayedSeatIndex: SeatRoundPlay(cardIds: state.lastPlayedCards),
     };
+  }
+
+  List<int> _parseIntList(dynamic raw, List<int> fallback) {
+    if (raw is! List) return fallback;
+    return raw.map((e) => e as int).toList();
   }
 
   ClientGameState _mergeRoomPlayerInfo(ClientGameState state) {

@@ -71,6 +71,16 @@ class ClientGameState {
 
   bool get isMyTurn => currentPlayerIndex == mySeatIndex;
 
+  /// 本墩其他玩家均已不要，轮到自己重新领出（可出任意牌型）。
+  bool canLeadFreely(int? myUserId) {
+    if (lastPlayedCards.isEmpty) return true;
+    if (myUserId == null || !isMyTurn) return false;
+    return lastPlayedPlayerId == myUserId;
+  }
+
+  bool mustRespondToTrick(int? myUserId) =>
+      lastPlayedCards.isNotEmpty && !canLeadFreely(myUserId);
+
   int? myTeamLevel(int myTeam) =>
       myTeam >= 0 && myTeam < teamLevels.length ? teamLevels[myTeam] : null;
 

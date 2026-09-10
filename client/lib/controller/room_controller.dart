@@ -100,6 +100,15 @@ class RoomController {
     _ws.voteDismissRoom(roomId, agree);
   }
 
+  bool setEnableTribute(String roomId, bool enabled) {
+    _ref.read(wsErrorProvider.notifier).state = null;
+    if (!_ws.setRoomOptions(roomId, enableTribute: enabled)) {
+      _ref.read(wsErrorProvider.notifier).state = '未连接到服务器，无法修改房间设置';
+      return false;
+    }
+    return true;
+  }
+
   void _handleMessage(Map<String, dynamic> msg) {
     final type = msg['type'] as String?;
     final data = msg['data'] as Map<String, dynamic>? ?? {};
@@ -152,6 +161,7 @@ class RoomController {
       case 'player_ready':
       case 'player_unready':
       case 'seat_changed':
+      case 'room_options_updated':
         // room_state 广播会跟随，此处可忽略
         break;
 
@@ -275,6 +285,9 @@ class RoomController {
       players: _parsePlayers(data),
       mode: data.containsKey('mode') ? mode : room.mode,
       maxPlayers: data.containsKey('max_players') ? maxPlayers : room.maxPlayers,
+      enableTribute: data.containsKey('enable_tribute')
+          ? data['enable_tribute'] == true
+          : room.enableTribute,
     );
   }
 

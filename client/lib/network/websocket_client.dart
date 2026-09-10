@@ -111,6 +111,8 @@ class WebSocketClient {
   bool requestDismissRoom(String roomId) => send('request_dismiss', roomId: roomId);
   bool voteDismissRoom(String roomId, bool agree) =>
       send('vote_dismiss', data: {'agree': agree}, roomId: roomId);
+  bool setRoomOptions(String roomId, {required bool enableTribute}) =>
+      send('set_room_options', data: {'enable_tribute': enableTribute}, roomId: roomId);
 
   void _handleMessage(dynamic raw) {
     try {

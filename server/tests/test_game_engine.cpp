@@ -36,6 +36,28 @@ TEST(test_player_view_hides_cards) {
     }
 }
 
+TEST(test_solo_mode_deals_10_cards) {
+    GameRuleConfig config;
+    config.playerCount = 4;
+    config.deckCount = 2;
+    config.playersPerTeam = 2;
+    config.ruleVersion = "solo_test_v1";
+    GameEngine engine(config);
+    std::vector<PlayerId> players = {1001, 9000000001, 9000000002, 9000000003};
+    engine.init("solo1", players);
+    for (auto id : players) engine.setPlayerReady(id);
+    auto result = engine.startGame();
+    ASSERT(result.code == ErrorCode::OK);
+    for (int i = 0; i < engine.getState().playerCount; ++i) {
+        ASSERT(engine.getState().players[i].hand.size() == 10);
+    }
+    auto view = engine.buildViewFor(1001);
+    ASSERT(view.myCards.size() == 10);
+    for (const auto& o : view.others) {
+        ASSERT(o.cardCount == 10);
+    }
+}
+
 TEST(test_not_your_turn) {
     GameEngine engine;
     std::vector<PlayerId> players = {1001, 1002, 1003, 1004, 1005, 1006};

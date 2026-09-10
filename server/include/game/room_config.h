@@ -19,6 +19,7 @@ struct RoomConfig {
     int deckCount = 3;
     int playersPerTeam = 3;
     std::string modeName = "six";
+    bool enableTribute = false;
 
     static RoomConfig fromModeName(const std::string& mode);
 };
@@ -32,6 +33,7 @@ inline GameRuleConfig toGameRuleConfig(const RoomConfig& config) {
     cfg.playerCount = config.maxPlayers;
     cfg.deckCount = config.deckCount;
     cfg.playersPerTeam = config.playersPerTeam;
+    cfg.enableTribute = config.enableTribute;
     switch (config.mode) {
         case GameMode::FOUR:
             cfg.ruleVersion = "four_player_guandan_v1";

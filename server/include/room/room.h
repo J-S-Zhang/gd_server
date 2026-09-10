@@ -45,7 +45,10 @@ public:
     bool ready(PlayerId playerId);
     bool unready(PlayerId playerId);
     bool changeSeat(PlayerId playerId, int seatIndex);
+    bool setEnableTribute(PlayerId playerId, bool enabled);
     bool startGame();
+    bool startNextRound();
+    void finishMatch();
     void fillBots();
     bool isFull() const { return static_cast<int>(players_.size()) >= config_.maxPlayers; }
     bool isEmpty() const { return players_.empty(); }

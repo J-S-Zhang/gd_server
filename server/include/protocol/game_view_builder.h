@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/game_engine.h"
+#include "game/tribute.h"
 #include "room/dismiss_vote.h"
 #include "room/room.h"
 #include <string>
@@ -29,5 +30,6 @@ std::string buildPlayerPassedJson(
 );
 std::string buildRoomStateJson(const Room& room);
 std::string buildDismissVoteJson(const DismissVote& vote);
+std::string buildTributeResolvedJson(const TributeRoundResult& result);
 
 }  // namespace guandan

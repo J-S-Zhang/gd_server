@@ -6,6 +6,7 @@
 #include "game/rule_engine.h"
 #include "game/settlement.h"
 #include "game/team_progress.h"
+#include "game/tribute.h"
 #include "game/turn_manager.h"
 #include "game/types.h"
 #include <array>
@@ -33,6 +34,7 @@ struct PlayerView {
     std::array<bool, 2> inPassAPhase{false, false};
     std::array<int, 2> passAFailCounts{0, 0};
     int currentPlayerIndex;
+    int firstPlayerIndex;
     int mySeatIndex;
     std::vector<CardId> myCards;
     std::vector<CardId> lastPlayedCards;
@@ -59,7 +61,9 @@ public:
     void init(RoomId roomId, const std::vector<PlayerId>& playerIds);
     void setPlayerReady(PlayerId playerId);
     bool allReady() const;
+    void updateConfig(const GameRuleConfig& config);
     PlayResult startGame();
+    PlayResult startNextRound();
 
     PlayResult playCards(PlayerId playerId, const std::vector<CardId>& cards);
     PlayResult pass(PlayerId playerId);
@@ -67,6 +71,7 @@ public:
     bool isGameOver() const { return state_.phase == GamePhase::FINISHED; }
     const GameState& getState() const { return state_; }
     const TeamProgress& teamProgress() const { return progress_; }
+    const TributeRoundResult& lastTributeResult() const { return lastTribute_; }
     PlayerView buildViewFor(PlayerId viewerId) const;
 
 private:
@@ -77,8 +82,12 @@ private:
     TurnManager turnManager_;
     Settlement settlement_;
     TeamProgress progress_;
+    TributeManager tributeManager_;
+    PreviousRoundInfo previousRound_{};
+    TributeRoundResult lastTribute_{};
 
     RuleContext ruleContext() const;
+    PlayResult dealAndStartPlaying(bool applyTribute);
     void assignFinishRank(int playerIndex);
     bool checkTeamWin() const;
     void incrementStateVersion();

@@ -27,11 +27,18 @@ void TurnManager::resetRound(int winnerIndex) {
 }
 
 bool TurnManager::allOthersPassed() const {
-    int activeCount = 0;
-    for (const auto& p : state_.players) {
-        if (!p.hasFinished) ++activeCount;
+    int responders = 0;
+    for (int i = 0; i < state_.playerCount; ++i) {
+        if (state_.players[i].hasFinished) continue;
+        if (i == state_.lastPlayedPlayerIndex) continue;
+        ++responders;
     }
-    return state_.passCount >= activeCount - 1;
+    return responders > 0 && state_.passCount >= responders;
+}
+
+bool TurnManager::shouldResetRoundAfterPass(int seatIndex) const {
+    if (state_.lastPlayedPlayerIndex < 0) return false;
+    return nextActivePlayer(seatIndex) == state_.lastPlayedPlayerIndex;
 }
 
 }  // namespace guandan

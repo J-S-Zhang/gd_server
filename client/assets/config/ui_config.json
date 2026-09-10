@@ -32,9 +32,9 @@
 
   "card": {
     "handWidth": 50,
-    "handHeight": 72,
+    "handHeight": 70,
     "playedWidth": 48,
-    "playedHeight": 68,
+    "playedHeight": 67,
     "horizontalOverlap": 0.3,
     "verticalOverlap": 0.7,
     "selectionLift": 14
@@ -113,15 +113,17 @@
     "gameSocialTop": 80,
     "gameSocialSide": 8,
     "gameBottomBar": 8,
+    "gameActionHandGap": 2,
     "topBarIconSize": 22,
     "topBarIconMinSize": 36,
     "topBarLevelBadgeWidth": 28,
     "topBarLevelBadgeHeight": 38,
-    "handToolbarAvatarRadius": 22,
-    "handToolbarHeight": 52,
-    "handToolbarSuitPanelHeight": 40,
-    "handToolbarSuitIconSize": 22,
-    "handToolbarSortButtonHeight": 36,
+    "handToolbarAvatarRadius": 20,
+    "handToolbarHeight": 44,
+    "handToolbarSuitPanelHeight": 34,
+    "handToolbarSuitIconSize": 20,
+    "handToolbarHandGap": 1,
+    "handToolbarSortButtonHeight": 34,
     "handToolbarMessageSize": 40,
     "loginIconSize": 64,
     "loginButtonHeight": 48
@@ -147,9 +149,9 @@
 
       "card": {
         "handWidth": 58,
-        "handHeight": 84,
+        "handHeight": 81,
         "playedWidth": 54,
-        "playedHeight": 78,
+        "playedHeight": 76,
         "selectionLift": 16
       },
 
@@ -223,9 +225,9 @@
 
       "card": {
         "handWidth": 66,
-        "handHeight": 95,
+        "handHeight": 92,
         "playedWidth": 62,
-        "playedHeight": 88,
+        "playedHeight": 87,
         "horizontalOverlap": 0.28,
         "selectionLift": 18
       },

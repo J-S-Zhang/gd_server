@@ -4,10 +4,11 @@ import '../models/game_state.dart';
 import '../models/player.dart';
 import '../models/seat_round_play.dart';
 import '../theme/game_theme.dart';
+import '../utils/constants.dart';
 import '../utils/seat_layout.dart';
+import 'countdown.dart';
 import 'game/empty_seat.dart';
 import 'game/seat_played_cards.dart';
-import 'game/turn_hint.dart';
 import 'player_widget.dart';
 
 class GameTableWidget extends StatelessWidget {
@@ -35,39 +36,10 @@ class GameTableWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = context.ui;
-    final seatCfg = ui.config.seatLayout;
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: GameTheme.tableGradient,
-          ),
-        ),
-        Center(
-          child: FractionallySizedBox(
-            widthFactor: seatCfg.tableWidthFactor + seatCfg.tableExtraWidthFactor,
-            heightFactor: seatCfg.tableHeightFactor + seatCfg.tableExtraHeightFactor,
-            child: Container(
-              decoration: BoxDecoration(
-                color: GameTheme.tableBlueMid.withValues(alpha: 0.45),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  width: ui.r(2),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: ui.r(24),
-                    spreadRadius: ui.r(2),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
         Center(
           child: isWaitingLobby ? _buildWaitingCenter(ui) : _buildPlayingCenter(ui),
         ),
@@ -111,24 +83,15 @@ class GameTableWidget extends StatelessWidget {
   }
 
   Widget _buildPlayingCenter(UiScale ui) {
-    final currentPlayer = _currentPlayer();
+    if (_currentPlayer() != null) return const SizedBox.shrink();
 
-    if (currentPlayer == null) {
-      return Container(
-        padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.xxl, vertical: ui.config.spacing.xl),
-        decoration: GameTheme.panelDecoration(ui),
-        child: Text(
-          '等待出牌',
-          style: TextStyle(color: GameTheme.textSecondary, fontSize: ui.sp(ui.config.font.md2)),
-        ),
-      );
-    }
-
-    return TurnHintWidget(
-      key: ValueKey(gameState.turnId),
-      playerName: currentPlayer.nickname,
-      isMyTurn: gameState.isMyTurn,
-      seconds: 30,
+    return Container(
+      padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.xxl, vertical: ui.config.spacing.xl),
+      decoration: GameTheme.panelDecoration(ui),
+      child: Text(
+        '等待出牌',
+        style: TextStyle(color: GameTheme.textSecondary, fontSize: ui.sp(ui.config.font.md2)),
+      ),
     );
   }
 
@@ -207,40 +170,98 @@ class GameTableWidget extends StatelessWidget {
         play: seatPlay,
         currentLevel: gameState.currentLevel,
       );
+      final isCurrentTurn = gameState.currentPlayerIndex == player.seatIndex;
+      final playBefore = SeatLayout.playBeforePlayer(localSeat, maxPlayers);
+      final horizontal = SeatLayout.playHorizontal(localSeat, maxPlayers);
+      final hasPlayed = !seatPlay.isEmpty;
+      // 本人轮次时倒计时显示在出牌按钮旁，此处不再重复。
+      final countdown = isCurrentTurn && !isSelf ? _turnCountdown() : null;
+
+      if (isSelf) {
+        if (!isCurrentTurn && !hasPlayed) return const SizedBox.shrink();
+        return Align(
+          alignment: alignment,
+          child: Padding(
+            padding: SeatLayout.seatPadding(ui),
+            child: _buildSeatLayout(
+              ui: ui,
+              playBefore: playBefore,
+              horizontal: horizontal,
+              playedCards: hasPlayed ? playedCards : null,
+            ),
+          ),
+        );
+      }
+
       final playerWidget = PlayerWidget(
         player: player,
-        isCurrentTurn: gameState.currentPlayerIndex == player.seatIndex,
+        isCurrentTurn: isCurrentTurn,
         compact: isSelf,
         cardCountOverride: isSelf ? gameState.myCards.length : null,
       );
-      final playBefore = SeatLayout.playBeforePlayer(localSeat, maxPlayers);
-      final horizontal = SeatLayout.playHorizontal(localSeat, maxPlayers);
-
-      Widget seatContent;
-      if (horizontal) {
-        seatContent = Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: playBefore
-              ? [playedCards, SizedBox(width: ui.w(ui.config.spacing.sm)), playerWidget]
-              : [playerWidget, SizedBox(width: ui.w(ui.config.spacing.sm)), playedCards],
-        );
-      } else {
-        seatContent = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: playBefore
-              ? [playedCards, SizedBox(height: ui.h(ui.config.spacing.sm)), playerWidget]
-              : [playerWidget, SizedBox(height: ui.h(ui.config.spacing.sm)), playedCards],
-        );
-      }
 
       return Align(
         alignment: alignment,
         child: Padding(
           padding: SeatLayout.seatPadding(ui),
-          child: seatContent,
+          child: _buildSeatLayout(
+            ui: ui,
+            playBefore: playBefore,
+            horizontal: horizontal,
+            playerWidget: playerWidget,
+            playedCards: hasPlayed ? playedCards : null,
+            countdown: countdown,
+          ),
         ),
       );
     }).toList();
+  }
+
+  Widget _turnCountdown() {
+    return CountdownWidget(
+      key: ValueKey('turn_${gameState.turnId}'),
+      seconds: Constants.turnTimeoutSeconds,
+      circular: true,
+    );
+  }
+
+  Widget _buildSeatLayout({
+    required UiScale ui,
+    required bool playBefore,
+    required bool horizontal,
+    Widget? playerWidget,
+    Widget? playedCards,
+    Widget? countdown,
+  }) {
+    final gapW = SizedBox(width: ui.w(ui.config.spacing.sm));
+    final gapH = SizedBox(height: ui.h(ui.config.spacing.sm));
+    final items = <Widget>[];
+
+    void addIf(Widget? widget) {
+      if (widget == null) return;
+      if (items.isNotEmpty) items.add(horizontal ? gapW : gapH);
+      items.add(widget);
+    }
+
+    if (playBefore) {
+      addIf(playedCards);
+      addIf(countdown);
+      addIf(playerWidget);
+    } else {
+      addIf(playerWidget);
+      addIf(countdown);
+      addIf(playedCards);
+    }
+
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    if (horizontal) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: items,
+      );
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: items);
   }
 }
