@@ -4,6 +4,7 @@
 #include "utils/sha1.h"
 
 #include <atomic>
+#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <sstream>
@@ -86,9 +87,16 @@ static bool handleWebSocketHandshake(SocketHandle sock) {
     std::string wsKey;
     std::string line;
     while (recvLine(sock, line) && !line.empty()) {
-        if (line.find("Sec-WebSocket-Key:") == 0) {
-            wsKey = line.substr(19);
-            while (!wsKey.empty() && wsKey[0] == ' ') wsKey.erase(0, 1);
+        const auto colon = line.find(':');
+        if (colon != std::string::npos) {
+            std::string headerName = line.substr(0, colon);
+            for (char& c : headerName) {
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+            if (headerName == "sec-websocket-key") {
+                wsKey = line.substr(colon + 1);
+                while (!wsKey.empty() && wsKey[0] == ' ') wsKey.erase(0, 1);
+            }
         }
     }
 
