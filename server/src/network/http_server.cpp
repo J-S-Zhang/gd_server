@@ -153,11 +153,18 @@ void handleClient(SocketHandle sock, AuthService* authService) {
     int contentLength = 0;
     std::string line;
     while (recvLine(sock, line) && !line.empty()) {
-        if (line.find("Content-Length:") == 0) {
-            try {
-                contentLength = std::stoi(extractHeaderValue(line));
-            } catch (...) {
-                contentLength = 0;
+        const auto colon = line.find(':');
+        if (colon != std::string::npos) {
+            std::string headerName = line.substr(0, colon);
+            for (char& c : headerName) {
+                c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+            }
+            if (headerName == "content-length") {
+                try {
+                    contentLength = std::stoi(extractHeaderValue(line));
+                } catch (...) {
+                    contentLength = 0;
+                }
             }
         }
     }

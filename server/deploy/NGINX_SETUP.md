@@ -7,12 +7,15 @@
 | **80** | HTTP | `127.0.0.1:8080` | 登录 / 注册 API |
 | **443** | WebSocket（TCP 转发） | `127.0.0.1:9001` | 大厅 / 对局长连接 |
 
-移动端 App 默认连接：
+移动端 App 默认连接（直连模式，不用 Nginx）：
 
 ```text
-http://121.43.35.218/api/login
-ws://121.43.35.218:443
+http://121.43.35.218/api/login      ← 服务器监听 80
+ws://121.43.35.218:9001             ← 服务器监听 9001
+./guandan_server 9001 80 ...
 ```
+
+> 勿用 `ws://host:443`（非 TLS），手机 4G 会因 443 期望 HTTPS 而 reset。
 
 ---
 
@@ -74,20 +77,24 @@ curl -X POST http://127.0.0.1/api/login \
 
 Nginx 的 `stream` 块需写在 **`nginx.conf` 顶层**（与 `http { }` 同级）。
 
-编辑 `/etc/nginx/nginx.conf`，在文件末尾、`http { }` 块之外添加：
+> **重要**：不要把 `guandan-ws-stream.conf` 放在 `conf.d/` 下！  
+> `http { include /etc/nginx/conf.d/*.conf; }` 会把它当 HTTP 配置加载，导致 `proxy_pass` 报错。
+
+创建独立目录并复制 stream 配置：
+
+```bash
+sudo mkdir -p /etc/nginx/stream-conf.d
+sudo cp server/deploy/nginx/guandan-ws-stream.conf /etc/nginx/stream-conf.d/guandan-ws-stream.conf
+# 若之前误放到 conf.d，务必删除：
+sudo rm -f /etc/nginx/conf.d/guandan-ws-stream.conf
+```
+
+编辑 `/etc/nginx/nginx.conf`，在 `http { }` 块**之外**添加：
 
 ```nginx
 stream {
-    include /etc/nginx/conf.d/guandan-ws-stream.conf;
+    include /etc/nginx/stream-conf.d/*.conf;
 }
-```
-
-复制 stream 配置：
-
-```bash
-sudo cp server/deploy/nginx/guandan-ws-stream.conf /etc/nginx/conf.d/guandan-ws-stream.conf
-sudo nginx -t
-sudo systemctl reload nginx
 ```
 
 > **说明**：此处为 **TCP 四层转发**，客户端使用 `ws://`（非 `wss://`），仅借用 443 端口穿透运营商限制。若后续有域名与证书，可改为 HTTPS + WSS 终止。
@@ -152,7 +159,7 @@ http {
 }
 
 stream {
-    include /etc/nginx/conf.d/guandan-ws-stream.conf;
+    include /etc/nginx/stream-conf.d/*.conf;
 }
 ```
 
