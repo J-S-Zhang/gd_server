@@ -59,6 +59,9 @@ private:
     void handleReconnect(uint64_t sessionId, const Message& msg, SendFn send);
     void handleRequestDismiss(uint64_t sessionId, const Message& msg, SendFn send);
     void handleVoteDismiss(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleVoiceState(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleSeatChat(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleVoiceSignal(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePing(SendFn send);
 
     bool validateTurn(const std::shared_ptr<Room>& room, const Message& msg);

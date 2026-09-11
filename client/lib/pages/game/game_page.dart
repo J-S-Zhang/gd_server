@@ -6,6 +6,7 @@ import '../../controller/auth_controller.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/room_controller.dart';
 import '../../controller/seat_chat_controller.dart';
+import '../../controller/voice_chat_controller.dart';
 import '../../models/game_state.dart';
 import '../../models/player.dart';
 import '../../models/room.dart' as room_model;
@@ -27,6 +28,7 @@ import '../../widgets/game/waiting_action_bar.dart';
 import '../../widgets/game_table.dart';
 import '../../widgets/game/spectate_teammate_bar.dart';
 import '../../widgets/hand_cards.dart';
+import '../../widgets/player_widget.dart';
 
 class GamePage extends ConsumerStatefulWidget {
   final String roomId;
@@ -46,9 +48,16 @@ class _GamePageState extends ConsumerState<GamePage> {
   void initState() {
     super.initState();
     ref.read(gameControllerProvider).listen();
+    ref.read(voiceChatProvider.notifier).listen(roomId: widget.roomId);
     Future.microtask(() {
       ref.read(wsClientProvider).reconnect(widget.roomId);
     });
+  }
+
+  @override
+  void dispose() {
+    ref.read(voiceChatProvider.notifier).reset();
+    super.dispose();
   }
 
   bool _isPlaying(room_model.Room? room, ClientGameState gameState) {
@@ -180,10 +189,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                       elementId: 'social_right',
                       defaultRight: layout.gameSocialSide,
                       defaultTop: layout.gameSocialTop,
-                      child: SocialToolbar(
-                        side: SocialSide.right,
-                        onMore: () => _showMoreMenu(context),
-                      ),
+                      child: GameVoiceToolbar(roomId: widget.roomId),
                     ),
                     if (isPlaying) ..._buildPlayingOverlays(
                       ui: ui,
@@ -258,9 +264,9 @@ class _GamePageState extends ConsumerState<GamePage> {
     );
   }
 
-  void _sendSeatChat(int seatIndex, String content, {bool isEmoji = false}) {
-    ref.read(seatChatProvider.notifier).show(
-          seatIndex,
+  void _sendSeatChat(String content, {bool isEmoji = false}) {
+    ref.read(gameControllerProvider).sendSeatChat(
+          widget.roomId,
           content,
           isEmoji: isEmoji,
         );
@@ -302,6 +308,36 @@ class _GamePageState extends ConsumerState<GamePage> {
     );
   }
 
+  Player _selfSeatPlayer({
+    required bool isSpectating,
+    required Player? viewPlayer,
+    required Player? me,
+    required User? user,
+    required int mySeatIndex,
+  }) {
+    if (isSpectating && viewPlayer != null) {
+      return Player(
+        id: viewPlayer.id,
+        nickname: '${viewPlayer.nickname}（观战）',
+        seatIndex: viewPlayer.seatIndex,
+        team: viewPlayer.team,
+        cardCount: viewPlayer.cardCount,
+        hasFinished: viewPlayer.hasFinished,
+        finishRank: viewPlayer.finishRank,
+        isReady: viewPlayer.isReady,
+        isBot: viewPlayer.isBot,
+        status: viewPlayer.status,
+      );
+    }
+    if (me != null) return me;
+    return Player(
+      id: user?.id ?? 0,
+      nickname: user?.nickname ?? '玩家',
+      seatIndex: mySeatIndex,
+      team: mySeatIndex % 2,
+    );
+  }
+
   Player? _playerAtSeat(List<Player> players, int seatIndex) {
     for (final p in players) {
       if (p.seatIndex == seatIndex) return p;
@@ -323,7 +359,6 @@ class _GamePageState extends ConsumerState<GamePage> {
     final selfFinished = me?.hasFinished ?? false;
     final isSpectating = gameState.isSpectating;
     final viewSeatIndex = isSpectating ? gameState.mySeatIndex : mySeatIndex;
-    final chatSeatIndex = isSpectating ? gameState.ownSeatIndex : mySeatIndex;
     final mergedPlayers = <int, Player>{};
     for (final p in [...?room?.players, ...gameState.players]) {
       mergedPlayers[p.id] = p;
@@ -337,6 +372,13 @@ class _GamePageState extends ConsumerState<GamePage> {
         ? SeatLayout.finishRankLabel(me!.finishRank, maxPlayers)
         : '';
     final showHandCards = !selfFinished || isSpectating;
+    final selfSeatPlayer = _selfSeatPlayer(
+      isSpectating: isSpectating,
+      viewPlayer: viewPlayer,
+      me: me,
+      user: user,
+      mySeatIndex: mySeatIndex,
+    );
 
     return [
       if (gameState.isMyTurn)
@@ -382,6 +424,19 @@ class _GamePageState extends ConsumerState<GamePage> {
           ),
         ),
       GameLayoutPositioned(
+        elementId: 'self_seat',
+        child: PlayerWidget(
+          player: selfSeatPlayer,
+          isCurrentTurn: gameState.isMyTurn,
+          cardCountOverride: isSpectating ? null : gameState.myCards.length,
+          chatBubble: selfChat?.content,
+          chatIsEmoji: selfChat?.isEmoji ?? false,
+          chatBubblePlacement: SeatLayout.chatBubblePlacement(0, maxPlayers),
+          maxPlayers: maxPlayers,
+          layoutElementId: 'self_seat',
+        ),
+      ),
+      GameLayoutPositioned(
         elementId: 'hand_toolbar',
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -398,9 +453,6 @@ class _GamePageState extends ConsumerState<GamePage> {
                 ),
               ),
             HandToolbar(
-              nickname: isSpectating
-                  ? '${viewPlayer?.nickname ?? '队友'}（观战）'
-                  : (user?.nickname ?? '玩家'),
               straightFlushSuits: isSpectating
                   ? const {}
                   : detectStraightFlushSuits(
@@ -410,14 +462,11 @@ class _GamePageState extends ConsumerState<GamePage> {
               onSuitTap: isSpectating ? null : controller.cycleStraightFlushSelection,
               onRestore: isSpectating ? null : controller.restoreHand,
               onSort: isSpectating ? null : () => controller.sortHand(context),
-              chatBubble: selfChat?.content,
-              chatIsEmoji: selfChat?.isEmoji ?? false,
               externalChatPanel: true,
               showChatPanel: _showChatPanel,
               onShowChatPanelChanged: (v) => setState(() => _showChatPanel = v),
-              onQuickMessage: (message) => _sendSeatChat(chatSeatIndex, message),
-              onEmoji: (emoji) =>
-                  _sendSeatChat(chatSeatIndex, emoji, isEmoji: true),
+              onQuickMessage: (message) => _sendSeatChat(message),
+              onEmoji: (emoji) => _sendSeatChat(emoji, isEmoji: true),
             ),
           ],
         ),
@@ -429,11 +478,11 @@ class _GamePageState extends ConsumerState<GamePage> {
             selectedTab: _chatTab,
             onTabChanged: (tab) => setState(() => _chatTab = tab),
             onQuickMessageSelected: (message) {
-              _sendSeatChat(mySeatIndex, message);
+              _sendSeatChat(message);
               setState(() => _showChatPanel = false);
             },
             onEmojiSelected: (emoji) {
-              _sendSeatChat(mySeatIndex, emoji, isEmoji: true);
+              _sendSeatChat(emoji, isEmoji: true);
               setState(() => _showChatPanel = false);
             },
           ),
@@ -445,41 +494,4 @@ class _GamePageState extends ConsumerState<GamePage> {
     GameSettingsSheet.show(context, roomId: widget.roomId);
   }
 
-  void _showMoreMenu(BuildContext context) {
-    final ui = context.ui;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: GameTheme.tableBlueDark,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(ui.r(ui.config.radius.xl))),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.help_outline, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
-              title: Text('游戏帮助', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
-              onTap: () => Navigator.pop(ctx),
-            ),
-            ListTile(
-              leading: Icon(Icons.settings, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
-              title: Text('设置', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
-              onTap: () => Navigator.pop(ctx),
-            ),
-            ListTile(
-              leading: Icon(Icons.exit_to_app, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
-              title: Text('退出房间', style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2))),
-              onTap: () {
-                Navigator.pop(ctx);
-                ref.read(roomControllerProvider).leaveRoom(widget.roomId);
-                ref.read(gameStateProvider.notifier).state = const ClientGameState();
-                context.go('/lobby');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

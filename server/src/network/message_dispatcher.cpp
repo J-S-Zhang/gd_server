@@ -790,6 +790,152 @@ void MessageDispatcher::handleReconnect(uint64_t sessionId, const Message& msg, 
     }
 }
 
+void MessageDispatcher::handleSeatChat(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    const std::string content = extractJsonStringFromData(msg.dataJson, "content");
+    if (content.empty() || content.size() > 64) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_MESSAGE);
+        return;
+    }
+
+    int seatIndex = -1;
+    for (const auto& p : room->players()) {
+        if (p.id == playerId) {
+            seatIndex = p.seatIndex;
+            break;
+        }
+    }
+    if (seatIndex < 0) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    const bool isEmoji = extractJsonBoolFromData(msg.dataJson, "is_emoji");
+
+    Message broadcast;
+    broadcast.type = "seat_chat";
+    broadcast.roomId = room->id();
+    broadcast.dataJson = std::string("{\"player_id\":") + std::to_string(playerId) +
+                         ",\"seat_index\":" + std::to_string(seatIndex) +
+                         ",\"content\":\"" + jsonEscape(content) + "\"" +
+                         ",\"is_emoji\":" + (isEmoji ? "true" : "false") + "}";
+    broadcastToRoom(room, broadcast);
+
+    Message resp;
+    resp.type = "seat_chat_ack";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    sendResponse(send, resp);
+}
+
+void MessageDispatcher::handleVoiceSignal(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId fromId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(fromId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    const PlayerId targetId =
+        static_cast<PlayerId>(extractJsonUintFromData(msg.dataJson, "target_player_id"));
+    if (targetId == 0 || targetId == fromId) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_MESSAGE);
+        return;
+    }
+
+    bool targetInRoom = false;
+    for (const auto& p : room->players()) {
+        if (p.id == targetId) {
+            targetInRoom = true;
+            break;
+        }
+    }
+    if (!targetInRoom) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    const std::string signalType = extractJsonStringFromData(msg.dataJson, "signal_type");
+    if (signalType.empty()) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_MESSAGE);
+        return;
+    }
+
+    std::ostringstream oss;
+    oss << "{\"from_player_id\":" << fromId;
+    oss << ",\"signal_type\":\"" << jsonEscape(signalType) << "\"";
+
+    if (signalType == "offer" || signalType == "answer") {
+        const std::string sdp = extractJsonStringFromData(msg.dataJson, "sdp");
+        const std::string sdpType = extractJsonStringFromData(msg.dataJson, "type");
+        if (sdp.empty() || sdpType.empty()) {
+            sendError(send, msg.requestId, ErrorCode::INVALID_MESSAGE);
+            return;
+        }
+        oss << ",\"sdp\":\"" << jsonEscape(sdp) << "\"";
+        oss << ",\"type\":\"" << jsonEscape(sdpType) << "\"";
+    } else if (signalType == "ice") {
+        const std::string candidate = extractJsonStringFromData(msg.dataJson, "candidate");
+        const std::string sdpMid = extractJsonStringFromData(msg.dataJson, "sdp_mid");
+        const uint64_t mline = extractJsonUintFromData(msg.dataJson, "sdp_mline_index");
+        if (candidate.empty()) {
+            sendError(send, msg.requestId, ErrorCode::INVALID_MESSAGE);
+            return;
+        }
+        oss << ",\"candidate\":\"" << jsonEscape(candidate) << "\"";
+        oss << ",\"sdp_mid\":\"" << jsonEscape(sdpMid) << "\"";
+        oss << ",\"sdp_mline_index\":" << mline;
+    } else {
+        sendError(send, msg.requestId, ErrorCode::INVALID_MESSAGE);
+        return;
+    }
+    oss << "}";
+
+    Message forward;
+    forward.type = "voice_signal";
+    forward.roomId = room->id();
+    forward.dataJson = oss.str();
+    sessionManager_.sendToPlayer(targetId, messageToJson(forward));
+
+    Message resp;
+    resp.type = "voice_signal_ack";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    sendResponse(send, resp);
+}
+
+void MessageDispatcher::handleVoiceState(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    const bool micEnabled = extractJsonBoolFromData(msg.dataJson, "mic_enabled");
+    const bool speakerEnabled = extractJsonBoolFromData(msg.dataJson, "speaker_enabled");
+
+    Message broadcast;
+    broadcast.type = "voice_state";
+    broadcast.roomId = room->id();
+    broadcast.dataJson = std::string("{\"player_id\":") + std::to_string(playerId) +
+                         ",\"mic_enabled\":" + (micEnabled ? "true" : "false") +
+                         ",\"speaker_enabled\":" + (speakerEnabled ? "true" : "false") + "}";
+    broadcastToRoom(room, broadcast);
+
+    Message resp;
+    resp.type = "voice_state_ack";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    sendResponse(send, resp);
+}
+
 void MessageDispatcher::handlePing(SendFn send) {
     Message msg;
     msg.type = "pong";
@@ -912,6 +1058,9 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "reconnect") handleReconnect(sessionId, msg, send);
     else if (msg.type == "request_dismiss") handleRequestDismiss(sessionId, msg, send);
     else if (msg.type == "vote_dismiss") handleVoteDismiss(sessionId, msg, send);
+    else if (msg.type == "voice_state") handleVoiceState(sessionId, msg, send);
+    else if (msg.type == "seat_chat") handleSeatChat(sessionId, msg, send);
+    else if (msg.type == "voice_signal") handleVoiceSignal(sessionId, msg, send);
     else if (msg.type == "ping") handlePing(send);
     else sendError(send, msg.requestId, ErrorCode::UNKNOWN_TYPE);
 }

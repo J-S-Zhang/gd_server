@@ -43,12 +43,8 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
       await ws.connect(token: user.token);
       _reconnectManager?.dispose();
       _reconnectManager = ReconnectManager(client: ws, token: user.token);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('连接服务器失败: $e')),
-        );
-      }
+    } catch (_) {
+      // 连接失败时由 connection_error 区域的重新连接按钮提示即可。
     } finally {
       if (mounted) setState(() => _connecting = false);
     }
@@ -182,21 +178,12 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     return Container(
       padding: EdgeInsets.all(pad),
       decoration: GameTheme.panelDecoration(ui, radius: region?.height != null ? region!.height * 0.12 : null),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '无法连接服务器，请确认服务端已启动且端口已放行',
-            style: TextStyle(color: Colors.red.shade200, fontSize: fontSize),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: region != null ? region.height * 0.12 : ui.h(ui.config.spacing.md)),
-          OutlinedButton.icon(
-            onPressed: _connectWebSocket,
-            icon: Icon(Icons.refresh, color: Colors.white70, size: fontSize * 1.2),
-            label: Text('重新连接', style: TextStyle(color: Colors.white70, fontSize: fontSize)),
-          ),
-        ],
+      child: Center(
+        child: OutlinedButton.icon(
+          onPressed: _connectWebSocket,
+          icon: Icon(Icons.refresh, color: Colors.white70, size: fontSize * 1.2),
+          label: Text('重新连接', style: TextStyle(color: Colors.white70, fontSize: fontSize)),
+        ),
       ),
     );
   }

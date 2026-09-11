@@ -34,28 +34,44 @@
         "y": 0.95,
         "w": 0.1,
         "h": 0.14,
-        "aspectRatio": 1.55
+        "aspectRatio": 1.55,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.95,
         "y": 0.5,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.5,
         "y": 0.08,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.05,
         "y": 0.5,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       }
     ],
     "sixPlayerSeats": [
@@ -64,42 +80,66 @@
         "y": 0.95,
         "w": 0.1,
         "h": 0.14,
-        "aspectRatio": 1.55
+        "aspectRatio": 1.55,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.05,
         "y": 0.6,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.05,
         "y": 0.3,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.5,
         "y": 0.05,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 1.8
+        "aspectRatio": 1.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.95,
         "y": 0.3,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       },
       {
         "x": 0.95,
         "y": 0.6,
         "w": 0.1,
         "h": 0.15,
-        "aspectRatio": 0.8
+        "aspectRatio": 0.8,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
       }
     ]
   },
@@ -427,42 +467,47 @@
           }
         }
       },
+      "self_seat": {
+        "x": 0.12,
+        "y": 0.93,
+        "w": 0.12,
+        "h": 0.14,
+        "aspectRatio": 0.85,
+        "children": {
+          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
+          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+        }
+      },
       "hand_toolbar": {
-        "x": 0.5,
+        "x": 0.55,
         "y": 0.95,
-        "w": 0.92,
+        "w": 0.78,
         "h": 0.1,
         "aspectRatio": 20,
         "children": {
-          "profile": {
-            "x": 0.17,
-            "y": 0.5,
-            "w": 0.3,
-            "h": 0.95
-          },
           "suit_panel": {
-            "x": 0.5,
+            "x": 0.38,
             "y": 0.6,
             "w": 0.26,
             "h": 0.8,
             "aspectRatio": 4
           },
           "restore_btn": {
-            "x": 0.75,
+            "x": 0.58,
             "y": 0.6,
             "w": 0.1,
             "h": 0.8,
             "aspectRatio": 2
           },
           "sort_btn": {
-            "x": 0.85,
+            "x": 0.72,
             "y": 0.6,
             "w": 0.1,
             "h": 0.8,
             "aspectRatio": 2
           },
           "chat_btn": {
-            "x": 0.95,
+            "x": 0.86,
             "y": 0.6,
             "w": 0.1,
             "h": 0.8,

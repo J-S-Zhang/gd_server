@@ -18,6 +18,8 @@ dependencies:
   audioplayers: ^6.1.0
   package_info_plus: ^8.0.0
   ota_update: ^6.0.0
+  permission_handler: ^11.3.1
+  flutter_webrtc: ^0.12.12
 
 dev_dependencies:
   flutter_test:

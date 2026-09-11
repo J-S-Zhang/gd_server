@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../config/ui_config.dart';
 import '../config/ui_scale.dart';
 import 'game/game_layout_positioned.dart';
+import 'game/region_child_stack.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
 import '../utils/seat_layout.dart';
@@ -50,6 +52,28 @@ class PlayerWidget extends StatelessWidget {
 
   bool get _inGameInfoOnly => !showLobbyState && !compact;
 
+  GamePageElementLayout? _layoutElement(UiScale ui) {
+    if (layoutElementId == null) return null;
+    final seatMatch = RegExp(r'^seat_(\d+)$').firstMatch(layoutElementId!);
+    if (seatMatch != null) {
+      return ui.seatLayoutElement(int.parse(seatMatch.group(1)!), maxPlayers);
+    }
+    return ui.config.gamePageLayout.element(layoutElementId!);
+  }
+
+  GameLayoutRect? _layoutRegion(UiScale ui) {
+    if (layoutElementId == null) return null;
+    if (RegExp(r'^seat_\d+$').hasMatch(layoutElementId!)) {
+      return ui.layoutRegionRect(layoutElementId!, maxPlayers: maxPlayers);
+    }
+    return ui.elementRect(layoutElementId!);
+  }
+
+  bool _usesChildRegions(UiScale ui) {
+    final element = _layoutElement(ui);
+    return element?.child('avatar') != null && element?.child('nickname') != null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ui = context.ui;
@@ -61,9 +85,10 @@ class PlayerWidget extends StatelessWidget {
 
   Widget _buildInGameInfo(UiScale ui) {
     final cfg = ui.config.player;
-    final region = layoutElementId != null
-        ? ui.layoutRegionRect(layoutElementId!, maxPlayers: maxPlayers)
-        : null;
+    final region = _layoutRegion(ui);
+    if (region != null && _usesChildRegions(ui)) {
+      return _buildConfiguredInGame(ui, region);
+    }
     final avatarRadius = region != null
         ? region.height * 0.34
         : ui.r(cfg.compactAvatarRadius);
@@ -253,11 +278,227 @@ class PlayerWidget extends StatelessWidget {
     }
   }
 
+  Widget _buildConfiguredInGame(UiScale ui, GameLayoutRect region) {
+    final parentId = layoutElementId!;
+    final borderRadius = region.height * 0.12;
+    final avatarRect = ui.elementChildRect(parentId, 'avatar', maxPlayers: maxPlayers);
+    final nicknameRect = ui.elementChildRect(parentId, 'nickname', maxPlayers: maxPlayers);
+    final avatarRadius = avatarRect != null
+        ? (avatarRect.width < avatarRect.height ? avatarRect.width : avatarRect.height) * 0.42
+        : ui.r(ui.config.player.compactAvatarRadius);
+    final nicknameFontSize = nicknameRect?.height != null
+        ? nicknameRect!.height * 0.42
+        : ui.sp(ui.config.font.sm2);
+    final finishLabel = player.hasFinished
+        ? SeatLayout.finishRankLabel(player.finishRank, maxPlayers)
+        : '';
+
+    final avatar = _buildAvatarCircle(ui, avatarRadius);
+    final avatarBlock = _wrapAvatarWithChatBubble(
+      avatar: avatar,
+      gapW: SizedBox(width: ui.w(ui.config.spacing.sm)),
+      gapH: SizedBox(height: ui.h(ui.config.spacing.xs)),
+      chatMaxWidth: avatarRect?.width ?? region.width * 0.95,
+    );
+
+    return SizedBox(
+      width: region.width,
+      height: region.height,
+      child: DecoratedBox(
+        decoration: _seatDecoration(ui, borderRadius),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            RegionChildPositioned(
+              parentId: parentId,
+              childId: 'avatar',
+              maxPlayers: maxPlayers,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Center(child: avatarBlock),
+                  if (finishLabel.isNotEmpty)
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: FinishRankBadge(label: finishLabel),
+                    ),
+                ],
+              ),
+            ),
+            RegionChildPositioned(
+              parentId: parentId,
+              childId: 'nickname',
+              maxPlayers: maxPlayers,
+              child: Center(
+                child: Text(
+                  player.nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: GameTheme.textPrimary,
+                    fontSize: nicknameFontSize,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfiguredLobby(UiScale ui, GameLayoutRect region) {
+    final parentId = layoutElementId!;
+    final borderRadius = region.height * 0.12;
+    final avatarRect = ui.elementChildRect(parentId, 'avatar', maxPlayers: maxPlayers);
+    final nicknameRect = ui.elementChildRect(parentId, 'nickname', maxPlayers: maxPlayers);
+    final avatarRadius = avatarRect != null
+        ? (avatarRect.width < avatarRect.height ? avatarRect.width : avatarRect.height) * 0.42
+        : ui.r(compact ? ui.config.player.compactAvatarRadius : ui.config.player.avatarRadius);
+    final nicknameFontSize = nicknameRect?.height != null
+        ? nicknameRect!.height * 0.28
+        : ui.sp(ui.config.font.sm2);
+    final statusText = _buildStatusText();
+
+    return SizedBox(
+      width: region.width,
+      height: region.height,
+      child: DecoratedBox(
+        decoration: _seatDecoration(ui, borderRadius),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            RegionChildPositioned(
+              parentId: parentId,
+              childId: 'avatar',
+              maxPlayers: maxPlayers,
+              child: Center(child: _buildAvatarCircle(ui, avatarRadius)),
+            ),
+            RegionChildPositioned(
+              parentId: parentId,
+              childId: 'nickname',
+              maxPlayers: maxPlayers,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      player.nickname,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: GameTheme.textPrimary,
+                        fontSize: nicknameFontSize,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (player.isBot)
+                      Text(
+                        '机器人',
+                        style: TextStyle(
+                          color: Colors.cyanAccent,
+                          fontSize: nicknameFontSize * 0.75,
+                        ),
+                      ),
+                    if (statusText != null)
+                      Text(
+                        statusText,
+                        style: TextStyle(
+                          color: player.hasFinished
+                              ? GameTheme.accentGold
+                              : showLobbyState && player.isReady
+                                  ? Colors.greenAccent
+                                  : GameTheme.textSecondary,
+                          fontSize: nicknameFontSize * 0.8,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _seatDecoration(UiScale ui, double borderRadius) {
+    return BoxDecoration(
+      color: isCurrentTurn
+          ? GameTheme.accentGold.withValues(alpha: 0.25)
+          : Colors.black.withValues(alpha: 0.35),
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: isCurrentTurn ? GameTheme.accentGold : Colors.white.withValues(alpha: 0.15),
+        width: isCurrentTurn ? ui.r(2) : ui.r(1),
+      ),
+      boxShadow: isCurrentTurn
+          ? [
+              BoxShadow(
+                color: GameTheme.accentGold.withValues(alpha: 0.35),
+                blurRadius: ui.r(8),
+              ),
+            ]
+          : null,
+    );
+  }
+
+  Widget _buildAvatarCircle(UiScale ui, double avatarRadius) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircleAvatar(
+          radius: avatarRadius,
+          backgroundColor:
+              player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935),
+          child: Text(
+            player.nickname.isNotEmpty ? player.nickname[0] : '?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: avatarRadius * 0.85,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        if (_showCardCountBadge)
+          Positioned(
+            right: -avatarRadius * 0.25,
+            bottom: -avatarRadius * 0.25,
+            child: _CardCountBadge(
+              count: _effectiveCardCount,
+              ui: ui,
+              compact: true,
+              badgeSize: avatarRadius * 0.75,
+            ),
+          ),
+        if (isCurrentTurn)
+          Positioned(
+            right: -avatarRadius * 0.15,
+            top: -avatarRadius * 0.15,
+            child: Container(
+              width: avatarRadius * 0.35,
+              height: avatarRadius * 0.35,
+              decoration: const BoxDecoration(
+                color: GameTheme.accentGold,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildLobbyInfo(UiScale ui) {
     final cfg = ui.config.player;
-    final region = layoutElementId != null
-        ? ui.layoutRegionRect(layoutElementId!, maxPlayers: maxPlayers)
-        : null;
+    final region = _layoutRegion(ui);
+    if (region != null && _usesChildRegions(ui)) {
+      return _buildConfiguredLobby(ui, region);
+    }
     final level = (player.id % 15) + 5;
     final coins = _formatCoins((player.id * 1379) % 99999 + 1000);
     final width = region?.width ?? ui.w(compact ? cfg.compactWidth : cfg.width);

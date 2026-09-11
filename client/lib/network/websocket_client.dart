@@ -115,6 +115,43 @@ class WebSocketClient {
       send('vote_dismiss', data: {'agree': agree}, roomId: roomId);
   bool setRoomOptions(String roomId, {required bool enableTribute}) =>
       send('set_room_options', data: {'enable_tribute': enableTribute}, roomId: roomId);
+  bool sendVoiceState(
+    String roomId, {
+    required bool micEnabled,
+    required bool speakerEnabled,
+  }) =>
+      send(
+        'voice_state',
+        data: {
+          'mic_enabled': micEnabled,
+          'speaker_enabled': speakerEnabled,
+        },
+        roomId: roomId,
+      );
+  bool sendSeatChat(String roomId, String content, {bool isEmoji = false}) =>
+      send(
+        'seat_chat',
+        data: {
+          'content': content,
+          'is_emoji': isEmoji,
+        },
+        roomId: roomId,
+      );
+  bool sendVoiceSignal(
+    String roomId, {
+    required int targetPlayerId,
+    required String signalType,
+    required Map<String, dynamic> payload,
+  }) =>
+      send(
+        'voice_signal',
+        data: {
+          'target_player_id': targetPlayerId,
+          'signal_type': signalType,
+          ...payload,
+        },
+        roomId: roomId,
+      );
 
   void _handleMessage(dynamic raw) {
     try {

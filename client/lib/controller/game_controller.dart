@@ -104,6 +104,11 @@ class GameController {
     _ws.spectateTeammate(roomId, targetSeatIndex);
   }
 
+  void sendSeatChat(String roomId, String content, {bool isEmoji = false}) {
+    if (content.isEmpty) return;
+    _ws.sendSeatChat(roomId, content, isEmoji: isEmoji);
+  }
+
   void toggleCardSelection(int cardId) {
     _resetStraightFlushCycleIfHandChanged(_ref.read(gameStateProvider).myCards);
     final state = _ref.read(gameStateProvider);
@@ -291,6 +296,9 @@ class GameController {
       case 'player_passed':
         _applyPlayerPassed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
+      case 'seat_chat':
+        _applySeatChat(msg['data'] as Map<String, dynamic>? ?? {});
+        break;
       case 'settlement':
         final data = msg['data'] as Map<String, dynamic>? ?? {};
         final matchWon = data['match_won'] == true;
@@ -426,6 +434,19 @@ class GameController {
       turnId: data['turn_id'] as int? ?? state.turnId,
       currentPlayerIndex: nextPlayer,
     );
+  }
+
+  void _applySeatChat(Map<String, dynamic> data) {
+    final seatIndex = data['seat_index'] as int?;
+    final content = data['content'] as String?;
+    if (seatIndex == null || seatIndex < 0 || content == null || content.isEmpty) {
+      return;
+    }
+    _ref.read(seatChatProvider.notifier).show(
+          seatIndex,
+          content,
+          isEmoji: data['is_emoji'] == true,
+        );
   }
 
   void _playPassVoiceIfNeeded(Map<String, dynamic> data) {
