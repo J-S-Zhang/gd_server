@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
+import 'game/game_layout_positioned.dart';
 import '../models/card.dart';
 import '../utils/hand_layout.dart';
 import 'poker_card.dart';
@@ -10,6 +11,7 @@ class HandCardsWidget extends StatefulWidget {
   final List<Set<int>> organizedGroups;
   final void Function(int cardId) onCardTap;
   final ValueChanged<double>? onRowHeightChanged;
+  final bool readOnly;
 
   const HandCardsWidget({
     super.key,
@@ -18,6 +20,7 @@ class HandCardsWidget extends StatefulWidget {
     this.organizedGroups = const [],
     required this.onCardTap,
     this.onRowHeightChanged,
+    this.readOnly = false,
   });
 
   @override
@@ -37,13 +40,31 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
   Widget build(BuildContext context) {
     final ui = context.ui;
     final handCfg = ui.config.handCards;
-    final cardSize = ui.handCardSize(handCfg);
-    final cardWidth = cardSize.width;
-    final cardHeight = cardSize.height;
+    final region = ui.elementRect('hand_cards');
+    const parentId = 'hand_cards';
+    final cardRect = ui.elementChildRect(parentId, 'card_sample');
+    final double cardHeight;
+    final double cardWidth;
+    if (cardRect != null) {
+      cardWidth = cardRect.width;
+      cardHeight = cardRect.height;
+    } else if (region != null) {
+      final cardAspect = handCfg.width / handCfg.height;
+      cardHeight = region.height * 0.92;
+      cardWidth = cardHeight * cardAspect;
+    } else {
+      final cardSize = ui.handCardSize(handCfg);
+      cardWidth = cardSize.width;
+      cardHeight = cardSize.height;
+    }
     final hStep = cardWidth * (1 - handCfg.horizontalOverlap);
     final vStep = cardHeight * (1 - handCfg.verticalOverlap);
-    final selectionLift = ui.h(handCfg.selectionLift);
-    final extraPadding = ui.h(handCfg.extraPadding);
+    final selectionLift = region != null
+        ? region.height * (handCfg.selectionLift / handCfg.height)
+        : ui.h(handCfg.selectionLift);
+    final extraPadding = region != null
+        ? region.height * (handCfg.extraPadding / handCfg.height)
+        : ui.h(handCfg.extraPadding);
 
     final rowHeight = computeHandCardsRowHeight(
       cards: widget.cards,
@@ -52,7 +73,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
       cardHeight: cardHeight,
       verticalOverlap: handCfg.verticalOverlap,
       selectionLift: selectionLift,
-      emptyPlaceholderHeight: ui.h(handCfg.emptyPlaceholderHeight),
+      emptyPlaceholderHeight: region?.height ?? ui.h(handCfg.emptyPlaceholderHeight),
       extraPadding: extraPadding,
     );
 
@@ -95,7 +116,9 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
                   width: cardWidth,
                   height: cardHeight,
                   currentLevel: widget.currentLevel,
-                  onTap: () => widget.onCardTap(groups[gi][i].id),
+                  onTap: widget.readOnly
+                      ? null
+                      : () => widget.onCardTap(groups[gi][i].id),
                 ),
               ),
         ],
@@ -103,7 +126,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     );
 
     return SizedBox(
-      height: rowHeight,
+      height: region?.height ?? rowHeight,
       child: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(

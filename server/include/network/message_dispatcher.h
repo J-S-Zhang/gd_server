@@ -33,6 +33,9 @@ private:
     PlayerId resolvePlayerId(uint64_t sessionId);
     void broadcastToRoom(const std::shared_ptr<Room>& room, const Message& msg);
     void sendSnapshotToPlayer(const std::shared_ptr<Room>& room, PlayerId playerId);
+    void sendPlayerView(const std::shared_ptr<Room>& room, PlayerId playerId,
+                        const std::string& messageType);
+    void sendSpectateUpdatesToFinishedPlayers(const std::shared_ptr<Room>& room);
     void scheduleTurnTimer(const std::shared_ptr<Room>& room);
     void cancelTurnTimer(const RoomId& roomId);
     void executeBotTurn(const std::shared_ptr<Room>& room, PlayerId botId);
@@ -52,6 +55,7 @@ private:
     void handleStartGame(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePlayCards(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePass(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleSpectateTeammate(uint64_t sessionId, const Message& msg, SendFn send);
     void handleReconnect(uint64_t sessionId, const Message& msg, SendFn send);
     void handleRequestDismiss(uint64_t sessionId, const Message& msg, SendFn send);
     void handleVoteDismiss(uint64_t sessionId, const Message& msg, SendFn send);

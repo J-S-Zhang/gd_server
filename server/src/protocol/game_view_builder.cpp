@@ -48,6 +48,14 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) 
     oss << ",\"current_player_index\":" << view.currentPlayerIndex;
     oss << ",\"first_player_index\":" << view.firstPlayerIndex;
     oss << ",\"my_seat_index\":" << view.mySeatIndex;
+    oss << ",\"viewer_seat_index\":" << view.viewerSeatIndex;
+    oss << ",\"is_spectating\":" << (view.isSpectating ? "true" : "false");
+    oss << ",\"spectatable_teammates\":[";
+    for (size_t i = 0; i < view.spectatableTeammates.size(); ++i) {
+        if (i > 0) oss << ",";
+        oss << view.spectatableTeammates[i];
+    }
+    oss << "]";
     oss << ",\"my_cards\":" << cardIdsToJsonArray(view.myCards);
     oss << ",\"last_played_cards\":" << cardIdsToJsonArray(view.lastPlayedCards);
     oss << ",\"last_played_player_index\":" << view.lastPlayedPlayerIndex;

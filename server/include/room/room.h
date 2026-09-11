@@ -7,6 +7,7 @@
 #include "game/types.h"
 #include <functional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace guandan {
@@ -63,6 +64,12 @@ public:
     int firstEmptySeat() const;
     bool isSeatTaken(int seatIndex, PlayerId exceptId = 0) const;
 
+    void clearSpectateTargets();
+    bool setSpectateTarget(PlayerId viewerId, int targetSeat);
+    int spectateTargetFor(PlayerId viewerId) const;
+    int resolveViewAnchor(PlayerId viewerId) const;
+    std::vector<int> spectatableTeammateSeats(PlayerId viewerId) const;
+
     using BroadcastFn = std::function<void(PlayerId, const std::string&)>;
     void setBroadcastCallback(BroadcastFn fn) { broadcast_ = std::move(fn); }
 
@@ -78,6 +85,7 @@ private:
     RoomTaskQueue taskQueue_;
     BroadcastFn broadcast_;
     DismissVote dismissVote_;
+    std::unordered_map<PlayerId, int> spectateTargets_;
 };
 
 }  // namespace guandan

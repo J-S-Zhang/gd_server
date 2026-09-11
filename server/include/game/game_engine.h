@@ -38,6 +38,9 @@ struct PlayerView {
     int currentPlayerIndex;
     int firstPlayerIndex;
     int mySeatIndex;
+    int viewerSeatIndex = -1;
+    bool isSpectating = false;
+    std::vector<int> spectatableTeammates;
     std::vector<CardId> myCards;
     std::vector<CardId> lastPlayedCards;
     int lastPlayedPlayerIndex;
@@ -76,7 +79,7 @@ public:
     const GameState& getState() const { return state_; }
     const TeamProgress& teamProgress() const { return progress_; }
     const TributeRoundResult& lastTributeResult() const { return lastTribute_; }
-    PlayerView buildViewFor(PlayerId viewerId) const;
+    PlayerView buildViewFor(PlayerId viewerId, int anchorSeatOverride = -1) const;
 
 private:
     GameRuleConfig config_;

@@ -19,7 +19,7 @@ struct RoomConfig {
     int deckCount = 3;
     int playersPerTeam = 3;
     std::string modeName = "six";
-    bool enableTribute = false;
+    bool enableTribute = true;
 
     static RoomConfig fromModeName(const std::string& mode);
 };

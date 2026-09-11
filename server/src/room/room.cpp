@@ -164,10 +164,81 @@ bool Room::setEnableTribute(PlayerId playerId, bool enabled) {
     return true;
 }
 
+void Room::clearSpectateTargets() {
+    spectateTargets_.clear();
+}
+
+int Room::spectateTargetFor(PlayerId viewerId) const {
+    const auto it = spectateTargets_.find(viewerId);
+    if (it == spectateTargets_.end()) return -1;
+    return it->second;
+}
+
+std::vector<int> Room::spectatableTeammateSeats(PlayerId viewerId) const {
+    const auto& state = engine_.getState();
+    int viewerSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == viewerId) {
+            viewerSeat = i;
+            break;
+        }
+    }
+    if (viewerSeat < 0 || !state.players[viewerSeat].hasFinished) {
+        return {};
+    }
+
+    const int team = state.players[viewerSeat].team;
+    std::vector<int> seats;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (i == viewerSeat) continue;
+        if (state.players[i].team == team && !state.players[i].hasFinished) {
+            seats.push_back(i);
+        }
+    }
+    return seats;
+}
+
+int Room::resolveViewAnchor(PlayerId viewerId) const {
+    const auto& state = engine_.getState();
+    int viewerSeat = -1;
+    for (int i = 0; i < state.playerCount; ++i) {
+        if (state.players[i].id == viewerId) {
+            viewerSeat = i;
+            break;
+        }
+    }
+    if (viewerSeat < 0) return -1;
+    if (!state.players[viewerSeat].hasFinished) return viewerSeat;
+
+    const auto teammates = spectatableTeammateSeats(viewerId);
+    if (teammates.empty()) return viewerSeat;
+
+    const int target = spectateTargetFor(viewerId);
+    if (target >= 0 &&
+        std::find(teammates.begin(), teammates.end(), target) != teammates.end()) {
+        return target;
+    }
+    return teammates.front();
+}
+
+bool Room::setSpectateTarget(PlayerId viewerId, int targetSeat) {
+    const auto teammates = spectatableTeammateSeats(viewerId);
+    if (teammates.empty()) return false;
+    if (std::find(teammates.begin(), teammates.end(), targetSeat) == teammates.end()) {
+        return false;
+    }
+    spectateTargets_[viewerId] = targetSeat;
+    return true;
+}
+
 bool Room::startNextRound() {
     if (phase_ != RoomPhase::PLAYING) return false;
     auto result = engine_.startNextRound();
-    return result.code == ErrorCode::OK;
+    if (result.code == ErrorCode::OK) {
+        clearSpectateTargets();
+        return true;
+    }
+    return false;
 }
 
 void Room::finishMatch() {
@@ -195,6 +266,7 @@ bool Room::startGame() {
     }
     auto result = engine_.startGame();
     if (result.code == ErrorCode::OK) {
+        clearSpectateTargets();
         phase_ = RoomPhase::PLAYING;
         return true;
     }

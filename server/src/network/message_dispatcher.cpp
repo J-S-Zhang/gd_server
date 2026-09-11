@@ -120,14 +120,39 @@ void MessageDispatcher::setupRoomBroadcast(const std::shared_ptr<Room>& room) {
     });
 }
 
-void MessageDispatcher::sendSnapshotToPlayer(const std::shared_ptr<Room>& room,
-                                             PlayerId playerId) {
-    auto view = room->engine().buildViewFor(playerId);
+void MessageDispatcher::sendPlayerView(const std::shared_ptr<Room>& room,
+                                     PlayerId playerId,
+                                     const std::string& messageType) {
+    const int anchor = room->resolveViewAnchor(playerId);
+    auto view = room->engine().buildViewFor(playerId, anchor);
     Message msg;
-    msg.type = "game_snapshot";
+    msg.type = messageType;
     msg.roomId = room->id();
     msg.dataJson = buildGameSnapshotJson(view, room->id());
     sessionManager_.sendToPlayer(playerId, messageToJson(msg));
+}
+
+void MessageDispatcher::sendSnapshotToPlayer(const std::shared_ptr<Room>& room,
+                                             PlayerId playerId) {
+    sendPlayerView(room, playerId, "game_snapshot");
+}
+
+void MessageDispatcher::sendSpectateUpdatesToFinishedPlayers(
+    const std::shared_ptr<Room>& room) {
+    const auto& state = room->engine().getState();
+    if (state.phase != GamePhase::PLAYING) return;
+
+    for (const auto& p : room->players()) {
+        int viewerSeat = -1;
+        for (int i = 0; i < state.playerCount; ++i) {
+            if (state.players[i].id == p.id) {
+                viewerSeat = i;
+                break;
+            }
+        }
+        if (viewerSeat < 0 || !state.players[viewerSeat].hasFinished) continue;
+        sendPlayerView(room, p.id, "spectate_update");
+    }
 }
 
 void MessageDispatcher::cancelTurnTimer(const RoomId& roomId) {
@@ -178,6 +203,7 @@ void MessageDispatcher::broadcastPlayerPlayed(
         state.currentPlayerIndex,
         state.stateVersion, state.turnId);
     broadcastToRoom(room, played);
+    sendSpectateUpdatesToFinishedPlayers(room);
 }
 
 void MessageDispatcher::broadcastPlayerPassed(
@@ -203,6 +229,7 @@ void MessageDispatcher::broadcastPlayerPassed(
         playerId, passedSeat, state.currentPlayerIndex,
         roundReset, state.stateVersion, state.turnId);
     broadcastToRoom(room, passed);
+    sendSpectateUpdatesToFinishedPlayers(room);
 }
 
 void MessageDispatcher::executeBotTurn(const std::shared_ptr<Room>& room, PlayerId botId) {
@@ -502,12 +529,7 @@ void MessageDispatcher::onRoundStarted(const std::shared_ptr<Room>& room) {
     }
 
     for (const auto& p : room->players()) {
-        auto view = room->engine().buildViewFor(p.id);
-        Message dealt;
-        dealt.type = "cards_dealt";
-        dealt.roomId = room->id();
-        dealt.dataJson = buildGameSnapshotJson(view, room->id());
-        sessionManager_.sendToPlayer(p.id, messageToJson(dealt));
+        sendPlayerView(room, p.id, "cards_dealt");
     }
     scheduleTurnTimer(room);
 }
@@ -715,6 +737,34 @@ void MessageDispatcher::handlePass(uint64_t sessionId, const Message& msg, SendF
     sendResponse(send, resp);
 }
 
+void MessageDispatcher::handleSpectateTeammate(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+    if (room->phase() != RoomPhase::PLAYING) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    const int targetSeat = static_cast<int>(extractJsonUintFromData(msg.dataJson, "target_seat_index"));
+    if (!room->setSpectateTarget(playerId, targetSeat)) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_STATE);
+        return;
+    }
+
+    Message resp;
+    resp.type = "spectate_changed";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    const int anchor = room->resolveViewAnchor(playerId);
+    auto view = room->engine().buildViewFor(playerId, anchor);
+    resp.dataJson = buildGameSnapshotJson(view, room->id());
+    sendResponse(send, resp);
+}
+
 void MessageDispatcher::handleReconnect(uint64_t sessionId, const Message& msg, SendFn send) {
     PlayerId playerId = resolvePlayerId(sessionId);
     auto room = roomManager_.findRoomByPlayer(playerId);
@@ -858,6 +908,7 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "start_game") handleStartGame(sessionId, msg, send);
     else if (msg.type == "play_cards") handlePlayCards(sessionId, msg, send);
     else if (msg.type == "pass") handlePass(sessionId, msg, send);
+    else if (msg.type == "spectate_teammate") handleSpectateTeammate(sessionId, msg, send);
     else if (msg.type == "reconnect") handleReconnect(sessionId, msg, send);
     else if (msg.type == "request_dismiss") handleRequestDismiss(sessionId, msg, send);
     else if (msg.type == "vote_dismiss") handleVoteDismiss(sessionId, msg, send);

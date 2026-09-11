@@ -39,6 +39,9 @@ class ClientGameState {
   final List<int> passAFailCounts;
   final int currentPlayerIndex;
   final int mySeatIndex;
+  final int ownSeatIndex;
+  final bool isSpectating;
+  final List<int> spectatableTeammates;
   final List<GameCard> myCards;
   final List<int> lastPlayedCards;
   final int lastPlayedPlayerId;
@@ -60,6 +63,9 @@ class ClientGameState {
     this.passAFailCounts = const [0, 0],
     this.currentPlayerIndex = 0,
     this.mySeatIndex = 0,
+    this.ownSeatIndex = 0,
+    this.isSpectating = false,
+    this.spectatableTeammates = const [],
     this.myCards = const [],
     this.lastPlayedCards = const [],
     this.lastPlayedPlayerId = -1,
@@ -69,7 +75,8 @@ class ClientGameState {
     this.handOrganizedGroups = const [],
   });
 
-  bool get isMyTurn => currentPlayerIndex == mySeatIndex;
+  bool get isMyTurn =>
+      !isSpectating && currentPlayerIndex == ownSeatIndex;
 
   /// 本墩其他玩家均已不要，轮到自己重新领出（可出任意牌型）。
   bool canLeadFreely(int? myUserId) {
@@ -109,6 +116,9 @@ class ClientGameState {
     List<int>? passAFailCounts,
     int? currentPlayerIndex,
     int? mySeatIndex,
+    int? ownSeatIndex,
+    bool? isSpectating,
+    List<int>? spectatableTeammates,
     List<GameCard>? myCards,
     List<int>? lastPlayedCards,
     int? lastPlayedPlayerId,
@@ -130,6 +140,9 @@ class ClientGameState {
       passAFailCounts: passAFailCounts ?? this.passAFailCounts,
       currentPlayerIndex: currentPlayerIndex ?? this.currentPlayerIndex,
       mySeatIndex: mySeatIndex ?? this.mySeatIndex,
+      ownSeatIndex: ownSeatIndex ?? this.ownSeatIndex,
+      isSpectating: isSpectating ?? this.isSpectating,
+      spectatableTeammates: spectatableTeammates ?? this.spectatableTeammates,
       myCards: myCards ?? this.myCards,
       lastPlayedCards: lastPlayedCards ?? this.lastPlayedCards,
       lastPlayedPlayerId: lastPlayedPlayerId ?? this.lastPlayedPlayerId,
@@ -183,6 +196,11 @@ class ClientGameState {
         [];
 
     final mySeatIndex = json['my_seat_index'] as int? ?? 0;
+    final ownSeatIndex = json['viewer_seat_index'] as int? ?? mySeatIndex;
+    final spectatableTeammates = (json['spectatable_teammates'] as List<dynamic>?)
+            ?.map((e) => e as int)
+            .toList() ??
+        const <int>[];
     final lastPlayedSeatIndex = json['last_played_player_index'] as int? ?? -1;
 
     return ClientGameState(
@@ -198,6 +216,9 @@ class ClientGameState {
       passAFailCounts: _parseIntList(json['pass_a_fail_counts'], const [0, 0]),
       currentPlayerIndex: json['current_player_index'] as int? ?? 0,
       mySeatIndex: mySeatIndex,
+      ownSeatIndex: ownSeatIndex,
+      isSpectating: json['is_spectating'] == true,
+      spectatableTeammates: spectatableTeammates,
       myCards: myCards,
       lastPlayedCards: (json['last_played_cards'] as List<dynamic>?)
               ?.map((c) => c as int)

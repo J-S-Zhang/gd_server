@@ -5,6 +5,7 @@ import '../utils/hand_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
+import 'seat_chat_controller.dart';
 import '../models/player.dart';
 import '../models/room.dart';
 import '../models/seat_round_play.dart';
@@ -97,6 +98,10 @@ class GameController {
     final state = _ref.read(gameStateProvider);
     GameSoundService.instance.playPassVoice();
     _ws.pass(roomId, state.turnId);
+  }
+
+  void spectateTeammate(String roomId, int targetSeatIndex) {
+    _ws.spectateTeammate(roomId, targetSeatIndex);
   }
 
   void toggleCardSelection(int cardId) {
@@ -276,6 +281,10 @@ class GameController {
         _ref.read(gameStateProvider.notifier).state = newState;
         _resetStraightFlushCycleIfHandChanged(newState.myCards);
         break;
+      case 'spectate_update':
+      case 'spectate_changed':
+        _applySpectateUpdate(msg['data'] as Map<String, dynamic>? ?? {});
+        break;
       case 'player_played':
         _applyPlayerPlayed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
@@ -302,6 +311,7 @@ class GameController {
             state.copyWith(phase: GamePhase.finished);
         break;
       case 'room_dismissed':
+        _ref.read(seatChatProvider.notifier).clearAll();
         _ref.read(gameStateProvider.notifier).state = const ClientGameState();
         break;
     }
@@ -317,10 +327,6 @@ class GameController {
     final myUserId = _ref.read(userProvider)?.id;
 
     List<GameCard> myCards = state.myCards;
-    if (myUserId != null && playerId == myUserId && playedIds.isNotEmpty) {
-      final removeSet = playedIds.toSet();
-      myCards = state.myCards.where((c) => !removeSet.contains(c.id)).toList();
-    }
 
     final serverCardCount = data['card_count'] as int?;
     final serverHasFinished = data['has_finished'] as bool?;
@@ -357,6 +363,16 @@ class GameController {
           lastPlayedSeatIndex = p.seatIndex;
           break;
         }
+      }
+    }
+
+    if (playedIds.isNotEmpty) {
+      if (myUserId != null && playerId == myUserId && !state.isSpectating) {
+        final removeSet = playedIds.toSet();
+        myCards = state.myCards.where((c) => !removeSet.contains(c.id)).toList();
+      } else if (state.isSpectating && lastPlayedSeatIndex == state.mySeatIndex) {
+        final removeSet = playedIds.toSet();
+        myCards = state.myCards.where((c) => !removeSet.contains(c.id)).toList();
       }
     }
 
@@ -512,6 +528,32 @@ class GameController {
   List<int> _parseIntList(dynamic raw, List<int> fallback) {
     if (raw is! List) return fallback;
     return raw.map((e) => e as int).toList();
+  }
+
+  void _applySpectateUpdate(Map<String, dynamic> data) {
+    final state = _ref.read(gameStateProvider);
+    var newState = ClientGameState.fromSnapshot(data);
+    newState = _mergeRoomPlayerInfo(newState);
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      mySeatIndex: newState.mySeatIndex,
+      ownSeatIndex: newState.ownSeatIndex,
+      isSpectating: newState.isSpectating,
+      spectatableTeammates: newState.spectatableTeammates,
+      myCards: newState.myCards,
+      players: newState.players,
+      currentLevel: newState.currentLevel,
+      attackingTeam: newState.attackingTeam,
+      isPassARound: newState.isPassARound,
+      isPlayingOwnRound: newState.isPlayingOwnRound,
+      teamLevels: newState.teamLevels,
+      inPassAPhase: newState.inPassAPhase,
+      passAFailCounts: newState.passAFailCounts,
+      currentPlayerIndex: newState.currentPlayerIndex,
+      stateVersion: newState.stateVersion,
+      turnId: newState.turnId,
+      handOrganizedGroups: const [],
+    );
+    _resetStraightFlushCycleIfHandChanged(newState.myCards);
   }
 
   ClientGameState _mergeRoomPlayerInfo(ClientGameState state) {

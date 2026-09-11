@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
+import 'game/game_layout_positioned.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
 import '../utils/seat_layout.dart';
 import 'game/finish_rank_badge.dart';
+import 'game/seat_chat_bubble.dart';
 
 const int kCardCountRevealThreshold = 10;
 
@@ -15,7 +17,12 @@ class PlayerWidget extends StatelessWidget {
   final int? cardCountOverride;
   final PlayerNicknamePlacement nicknamePlacement;
   final FinishRankPlacement finishRankPlacement;
+  final ChatBubblePlacement chatBubblePlacement;
+  final String? chatBubble;
+  final bool chatIsEmoji;
   final int maxPlayers;
+  /// 对应 [seatLayout] 中当前人数档位的 seat_N，用于 w/h 比例定尺寸。
+  final String? layoutElementId;
 
   const PlayerWidget({
     super.key,
@@ -26,7 +33,11 @@ class PlayerWidget extends StatelessWidget {
     this.cardCountOverride,
     this.nicknamePlacement = PlayerNicknamePlacement.below,
     this.finishRankPlacement = FinishRankPlacement.below,
+    this.chatBubblePlacement = ChatBubblePlacement.above,
+    this.chatBubble,
+    this.chatIsEmoji = false,
     this.maxPlayers = 6,
+    this.layoutElementId,
   });
 
   int get _effectiveCardCount => cardCountOverride ?? player.cardCount;
@@ -50,8 +61,13 @@ class PlayerWidget extends StatelessWidget {
 
   Widget _buildInGameInfo(UiScale ui) {
     final cfg = ui.config.player;
-    final avatarRadius = ui.r(cfg.compactAvatarRadius);
-    final borderRadius = ui.r(cfg.borderRadius);
+    final region = layoutElementId != null
+        ? ui.layoutRegionRect(layoutElementId!, maxPlayers: maxPlayers)
+        : null;
+    final avatarRadius = region != null
+        ? region.height * 0.34
+        : ui.r(cfg.compactAvatarRadius);
+    final borderRadius = region != null ? region.height * 0.12 : ui.r(cfg.borderRadius);
     final nicknameStyle = TextStyle(
       color: GameTheme.textPrimary,
       fontSize: ui.sp(ui.config.font.sm2),
@@ -71,24 +87,29 @@ class PlayerWidget extends StatelessWidget {
             player.nickname.isNotEmpty ? player.nickname[0] : '?',
             style: TextStyle(
               color: Colors.white,
-              fontSize: ui.sp(ui.config.font.lg),
+              fontSize: avatarRadius * 0.85,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         if (_showCardCountBadge)
           Positioned(
-            right: ui.w(-6),
-            bottom: ui.h(-6),
-            child: _CardCountBadge(count: _effectiveCardCount, ui: ui, compact: true),
+            right: -avatarRadius * 0.25,
+            bottom: -avatarRadius * 0.25,
+            child: _CardCountBadge(
+              count: _effectiveCardCount,
+              ui: ui,
+              compact: true,
+              badgeSize: avatarRadius * 0.75,
+            ),
           ),
         if (isCurrentTurn)
           Positioned(
-            right: ui.w(-4),
-            top: ui.h(-4),
+            right: -avatarRadius * 0.15,
+            top: -avatarRadius * 0.15,
             child: Container(
-              width: ui.w(10),
-              height: ui.h(10),
+              width: avatarRadius * 0.35,
+              height: avatarRadius * 0.35,
               decoration: const BoxDecoration(
                 color: GameTheme.accentGold,
                 shape: BoxShape.circle,
@@ -99,10 +120,12 @@ class PlayerWidget extends StatelessWidget {
     );
 
     final nickname = ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: ui.w(cfg.width)),
+      constraints: BoxConstraints(maxWidth: region?.width ?? ui.w(cfg.width)),
       child: Text(
         player.nickname,
-        style: nicknameStyle,
+        style: nicknameStyle.copyWith(
+          fontSize: region != null ? region.height * 0.16 : nicknameStyle.fontSize,
+        ),
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
         textAlign:
@@ -114,6 +137,13 @@ class PlayerWidget extends StatelessWidget {
     final gapH = SizedBox(height: ui.h(ui.config.spacing.xs));
     final rankBadge = finishLabel.isNotEmpty ? FinishRankBadge(label: finishLabel) : null;
 
+    final avatarBlock = _wrapAvatarWithChatBubble(
+      avatar: avatar,
+      gapW: gapW,
+      gapH: gapH,
+      chatMaxWidth: region != null ? region.width * 0.95 : null,
+    );
+
     Widget content;
     if (rankBadge != null) {
       switch (finishRankPlacement) {
@@ -121,26 +151,26 @@ class PlayerWidget extends StatelessWidget {
           content = Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [rankBadge, gapW, avatar],
+            children: [rankBadge, gapW, avatarBlock],
           );
           break;
         case FinishRankPlacement.trailing:
           content = Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [avatar, gapW, rankBadge],
+            children: [avatarBlock, gapW, rankBadge],
           );
           break;
         case FinishRankPlacement.above:
           content = Column(
             mainAxisSize: MainAxisSize.min,
-            children: [rankBadge, gapH, avatar],
+            children: [rankBadge, gapH, avatarBlock],
           );
           break;
         case FinishRankPlacement.below:
           content = Column(
             mainAxisSize: MainAxisSize.min,
-            children: [avatar, gapH, rankBadge],
+            children: [avatarBlock, gapH, rankBadge],
           );
           break;
       }
@@ -148,12 +178,12 @@ class PlayerWidget extends StatelessWidget {
       content = Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
-        children: [avatar, gapW, nickname],
+        children: [avatarBlock, gapW, nickname],
       );
     } else {
       content = Column(
         mainAxisSize: MainAxisSize.min,
-        children: [avatar, gapH, nickname],
+        children: [avatarBlock, gapH, nickname],
       );
     }
 
@@ -181,13 +211,60 @@ class PlayerWidget extends StatelessWidget {
     );
   }
 
+  Widget _wrapAvatarWithChatBubble({
+    required Widget avatar,
+    required Widget gapW,
+    required Widget gapH,
+    double? chatMaxWidth,
+  }) {
+    final bubbleText = chatBubble;
+    if (bubbleText == null || bubbleText.isEmpty) return avatar;
+
+    final bubble = SeatChatBubbleWidget(
+      content: bubbleText,
+      placement: chatBubblePlacement,
+      isEmoji: chatIsEmoji,
+      maxWidth: chatMaxWidth,
+    );
+
+    switch (chatBubblePlacement) {
+      case ChatBubblePlacement.leading:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [bubble, gapW, avatar],
+        );
+      case ChatBubblePlacement.trailing:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [avatar, gapW, bubble],
+        );
+      case ChatBubblePlacement.above:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [bubble, gapH, avatar],
+        );
+      case ChatBubblePlacement.below:
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [avatar, gapH, bubble],
+        );
+    }
+  }
+
   Widget _buildLobbyInfo(UiScale ui) {
     final cfg = ui.config.player;
+    final region = layoutElementId != null
+        ? ui.layoutRegionRect(layoutElementId!, maxPlayers: maxPlayers)
+        : null;
     final level = (player.id % 15) + 5;
     final coins = _formatCoins((player.id * 1379) % 99999 + 1000);
-    final width = ui.w(compact ? cfg.compactWidth : cfg.width);
-    final avatarRadius = ui.r(compact ? cfg.compactAvatarRadius : cfg.avatarRadius);
-    final borderRadius = ui.r(cfg.borderRadius);
+    final width = region?.width ?? ui.w(compact ? cfg.compactWidth : cfg.width);
+    final avatarRadius = region != null
+        ? region.height * (compact ? 0.34 : 0.3)
+        : ui.r(compact ? cfg.compactAvatarRadius : cfg.avatarRadius);
+    final borderRadius = region != null ? region.height * 0.12 : ui.r(cfg.borderRadius);
     final statusText = _buildStatusText();
 
     return Container(
@@ -316,16 +393,18 @@ class _CardCountBadge extends StatelessWidget {
   final int count;
   final UiScale ui;
   final bool compact;
+  final double? badgeSize;
 
   const _CardCountBadge({
     required this.count,
     required this.ui,
     required this.compact,
+    this.badgeSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    final size = ui.r(compact ? 18 : 22);
+    final size = badgeSize ?? ui.r(compact ? 18 : 22);
     return Container(
       width: size,
       height: size,

@@ -278,7 +278,7 @@ PlayResult GameEngine::pass(PlayerId playerId) {
     return result;
 }
 
-PlayerView GameEngine::buildViewFor(PlayerId viewerId) const {
+PlayerView GameEngine::buildViewFor(PlayerId viewerId, int anchorSeatOverride) const {
     PlayerView view;
     view.phase = state_.phase;
     view.stateVersion = state_.stateVersion;
@@ -295,17 +295,35 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId) const {
     view.lastPlayedPlayerIndex = state_.lastPlayedPlayerIndex;
     view.lastPattern = state_.lastPattern;
 
-    int viewerSeat = seatOf(viewerId);
-    view.mySeatIndex = viewerSeat;
+    const int viewerSeat = seatOf(viewerId);
+    view.viewerSeatIndex = viewerSeat;
 
-    if (viewerSeat >= 0) {
-        view.myCards = state_.players[viewerSeat].hand.cards();
-        const int myTeam = state_.players[viewerSeat].team;
-        view.isPlayingOwnRound = progress_.isPlayingOwnRound(myTeam);
+    int anchorSeat = viewerSeat;
+    if (anchorSeatOverride >= 0 && anchorSeatOverride < state_.playerCount) {
+        anchorSeat = anchorSeatOverride;
+    }
+
+    view.mySeatIndex = anchorSeat;
+    view.isSpectating = viewerSeat >= 0 && anchorSeat != viewerSeat;
+
+    if (viewerSeat >= 0 && state_.players[viewerSeat].hasFinished) {
+        const int team = state_.players[viewerSeat].team;
+        for (int i = 0; i < state_.playerCount; ++i) {
+            if (i == viewerSeat) continue;
+            if (state_.players[i].team == team && !state_.players[i].hasFinished) {
+                view.spectatableTeammates.push_back(i);
+            }
+        }
+    }
+
+    if (anchorSeat >= 0) {
+        view.myCards = state_.players[anchorSeat].hand.cards();
+        const int anchorTeam = state_.players[anchorSeat].team;
+        view.isPlayingOwnRound = progress_.isPlayingOwnRound(anchorTeam);
     }
 
     for (int i = 0; i < state_.playerCount; ++i) {
-        if (i == viewerSeat) continue;
+        if (i == anchorSeat) continue;
         PlayerView::OtherPlayer op;
         op.id = state_.players[i].id;
         op.seatIndex = i;

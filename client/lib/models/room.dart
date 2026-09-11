@@ -27,7 +27,7 @@ class Room {
     this.phase = GamePhase.waiting,
     this.mode = GameMode.six,
     this.maxPlayers = 6,
-    this.enableTribute = false,
+    this.enableTribute = true,
   });
 
   bool get isFull => players.length >= maxPlayers;
@@ -76,7 +76,7 @@ class Room {
       phase: phase,
       mode: mode,
       maxPlayers: maxPlayers,
-      enableTribute: data['enable_tribute'] == true,
+      enableTribute: data['enable_tribute'] is bool ? data['enable_tribute'] as bool : true,
     );
   }
 }

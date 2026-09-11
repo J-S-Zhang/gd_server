@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
+import '../controller/seat_chat_controller.dart';
 import '../models/game_state.dart';
 import '../models/player.dart';
 import '../models/seat_round_play.dart';
@@ -20,6 +21,7 @@ class GameTableWidget extends StatelessWidget {
   final bool isSoloMode;
   final bool isWaitingLobby;
   final void Function(int serverSeatIndex)? onEmptySeatTap;
+  final Map<int, SeatChatDisplay> seatChats;
 
   const GameTableWidget({
     super.key,
@@ -31,6 +33,7 @@ class GameTableWidget extends StatelessWidget {
     this.isSoloMode = false,
     this.isWaitingLobby = false,
     this.onEmptySeatTap,
+    this.seatChats = const {},
   });
 
   @override
@@ -116,14 +119,19 @@ class GameTableWidget extends StatelessWidget {
   }
 
   List<Widget> _positionLobbySeats(UiScale ui) {
+    final seatElements = ui.config.seatLayout.seatElementsFor(maxPlayers);
     final widgets = <Widget>[];
     for (var serverSeat = 0; serverSeat < maxPlayers; serverSeat++) {
       final localSeat =
           SeatLayout.toLocalSeat(serverSeat, lobbyMySeatIndex, maxPlayers);
-      final alignment =
-          SeatLayout.alignmentForLocalSeat(localSeat, maxPlayers);
+      final alignment = SeatLayout.alignmentForLocalSeat(
+        localSeat,
+        maxPlayers,
+        seatElements: seatElements,
+      );
+      if (localSeat == 0) continue;
+
       final player = _playerAtSeat(serverSeat);
-      final isSelf = localSeat == 0;
 
       widgets.add(
         Align(
@@ -133,12 +141,14 @@ class GameTableWidget extends StatelessWidget {
             child: player != null
                 ? PlayerWidget(
                     player: player,
-                    compact: isSelf,
                     showLobbyState: true,
+                    layoutElementId: 'seat_$localSeat',
+                    maxPlayers: maxPlayers,
                   )
                 : EmptySeatWidget(
                     seatIndex: serverSeat,
-                    compact: isSelf,
+                    layoutElementId: 'seat_$localSeat',
+                    maxPlayers: maxPlayers,
                     onTap: onEmptySeatTap != null
                         ? () => onEmptySeatTap!(serverSeat)
                         : null,
@@ -158,22 +168,29 @@ class GameTableWidget extends StatelessWidget {
   }
 
   List<Widget> _positionPlayers(UiScale ui, List<Player> players, int mySeatIndex) {
+    final seatElements = ui.config.seatLayout.seatElementsFor(maxPlayers);
     return players.map((player) {
       final localSeat =
           SeatLayout.toLocalSeat(player.seatIndex, mySeatIndex, maxPlayers);
-      final alignment =
-          SeatLayout.alignmentForLocalSeat(localSeat, maxPlayers);
+      final alignment = SeatLayout.alignmentForLocalSeat(
+        localSeat,
+        maxPlayers,
+        seatElements: seatElements,
+      );
       final isSelf = localSeat == 0;
       final seatPlay = gameState.seatRoundPlays[player.seatIndex] ?? const SeatRoundPlay();
       final playedCards = SeatPlayedCards(
         key: ValueKey('seat_play_${player.seatIndex}_${seatPlay.passed}_${seatPlay.cardIds.join(',')}'),
         play: seatPlay,
         currentLevel: gameState.currentLevel,
+        layoutElementId: 'seat_$localSeat',
+        maxPlayers: maxPlayers,
       );
       final isCurrentTurn = gameState.currentPlayerIndex == player.seatIndex;
       final playBefore = SeatLayout.playBeforePlayer(localSeat, maxPlayers);
       final horizontal = SeatLayout.playHorizontal(localSeat, maxPlayers);
       final hasPlayed = !seatPlay.isEmpty;
+      final seatChat = seatChats[player.seatIndex];
       // 本人轮次时倒计时显示在出牌按钮旁，此处不再重复。
       final countdown = isCurrentTurn && !isSelf ? _turnCountdown() : null;
 
@@ -187,7 +204,11 @@ class GameTableWidget extends StatelessWidget {
         cardCountOverride: isSelf ? gameState.myCards.length : null,
         nicknamePlacement: SeatLayout.nicknamePlacement(localSeat, maxPlayers),
         finishRankPlacement: SeatLayout.finishRankPlacement(localSeat, maxPlayers),
+        chatBubblePlacement: SeatLayout.chatBubblePlacement(localSeat, maxPlayers),
+        chatBubble: seatChat?.content,
+        chatIsEmoji: seatChat?.isEmoji ?? false,
         maxPlayers: maxPlayers,
+        layoutElementId: 'seat_$localSeat',
       );
 
       return Align(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/ui_scale.dart';
 import '../../controller/room_controller.dart';
 import '../../controller/game_controller.dart';
@@ -9,6 +8,9 @@ import '../../models/game_mode.dart';
 import '../../network/websocket_client.dart';
 import '../../network/reconnect_manager.dart';
 import '../../theme/game_theme.dart';
+import '../../widgets/game/game_layout_positioned.dart';
+import '../../utils/region_layout.dart';
+import '../../widgets/game/region_child_stack.dart';
 import '../../widgets/lobby_user_header.dart';
 
 class LobbyPage extends ConsumerStatefulWidget {
@@ -72,134 +74,38 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
         child: SafeArea(
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
             children: [
-              _buildHeader(ui, user, wsState),
-              Expanded(
-                child: Padding(
-                  padding: ui.edgeInsetsAll(ui.config.spacing.xxl),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxWidth: ui.w(ui.config.layout.lobbyMaxWidth)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (_connecting)
-                            const LinearProgressIndicator(color: GameTheme.accentGold),
-                          if (!isConnected && !_connecting) ...[
-                            Container(
-                              padding: ui.edgeInsetsAll(ui.config.spacing.lg),
-                              decoration: GameTheme.panelDecoration(ui),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '无法连接服务器，请确认服务端已启动且端口已放行',
-                                    style: TextStyle(
-                                      color: Colors.red.shade200,
-                                      fontSize: ui.sp(ui.config.font.md),
-                                    ),
-                                  ),
-                                  SizedBox(height: ui.h(ui.config.spacing.md)),
-                                  OutlinedButton.icon(
-                                    onPressed: _connectWebSocket,
-                                    icon: Icon(Icons.refresh, color: Colors.white70, size: ui.sp(ui.config.font.lg)),
-                                    label: Text(
-                                      '重新连接',
-                                      style: TextStyle(color: Colors.white70, fontSize: ui.sp(ui.config.font.md2)),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: ui.h(ui.config.spacing.xl)),
-                          ],
-                          _lobbyCard(
-                            ui,
-                            title: '快速开始',
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  '选择游戏模式',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: ui.sp(ui.config.font.md),
-                                  ),
-                                ),
-                                SizedBox(height: ui.h(ui.config.spacing.md + 2)),
-                                _buildModeSelector(ui),
-                                SizedBox(height: ui.h(ui.config.spacing.xl)),
-                                ElevatedButton.icon(
-                                  onPressed: isConnected ? _createRoom : null,
-                                  icon: Icon(Icons.add, size: ui.sp(ui.config.font.lg)),
-                                  label: Text(
-                                    _selectedMode == GameMode.solo
-                                        ? '创建单人测试房'
-                                        : '创建${_selectedMode.label}',
-                                    style: TextStyle(fontSize: ui.sp(ui.config.font.xl)),
-                                  ),
-                                  style: GameTheme.playButtonStyle(ui).copyWith(
-                                    minimumSize: WidgetStateProperty.all(
-                                      Size(double.infinity, ui.h(ui.config.button.largeHeight)),
-                                    ),
-                                  ),
-                                ),
-                                if (_selectedMode == GameMode.solo) ...[
-                                  SizedBox(height: ui.h(ui.config.spacing.md)),
-                                  Text(
-                                    '自动填充 3 名机器人，每人随机发 10 张测试牌',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.45),
-                                      fontSize: ui.sp(ui.config.font.sm2),
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: ui.h(ui.config.spacing.xl)),
-                          _lobbyCard(
-                            ui,
-                            title: '加入房间',
-                            child: Column(
-                              children: [
-                                TextField(
-                                  controller: _roomIdController,
-                                  keyboardType: TextInputType.number,
-                                  maxLength: 6,
-                                  style: TextStyle(color: Colors.white, fontSize: ui.sp(ui.config.font.md2)),
-                                  decoration: InputDecoration(
-                                    counterStyle: TextStyle(color: Colors.white38, fontSize: ui.sp(ui.config.font.sm)),
-                                    labelText: '输入6位房间号',
-                                    labelStyle: TextStyle(color: Colors.white70, fontSize: ui.sp(ui.config.font.md2)),
-                                    prefixIcon: Icon(Icons.meeting_room, color: Colors.white70, size: ui.sp(ui.config.font.xl)),
-                                    filled: true,
-                                    fillColor: Colors.white.withValues(alpha: 0.08),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(ui.r(ui.config.radius.lg)),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: ui.h(ui.config.spacing.lg)),
-                                ElevatedButton.icon(
-                                  onPressed: isConnected ? _joinRoom : null,
-                                  icon: Icon(Icons.login, size: ui.sp(ui.config.font.lg)),
-                                  label: Text('加入房间', style: TextStyle(fontSize: ui.sp(ui.config.font.xl))),
-                                  style: GameTheme.hintButtonStyle(ui).copyWith(
-                                    minimumSize: WidgetStateProperty.all(
-                                      Size(double.infinity, ui.h(ui.config.button.largeHeight)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.lobby,
+                elementId: 'header',
+                alignment: Alignment.center,
+                child: _buildHeader(ui, user, wsState),
+              ),
+              if (_connecting)
+                PageLayoutPositioned(
+                  page: PageLayoutKind.lobby,
+                  elementId: 'header',
+                  alignment: Alignment.bottomCenter,
+                  child: const LinearProgressIndicator(color: GameTheme.accentGold),
                 ),
+              if (!isConnected && !_connecting)
+                PageLayoutPositioned(
+                  page: PageLayoutKind.lobby,
+                  elementId: 'connection_error',
+                  child: _buildConnectionError(ui),
+                ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.lobby,
+                elementId: 'quick_start',
+                child: _buildQuickStart(ui, isConnected),
+              ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.lobby,
+                elementId: 'join_room',
+                child: _buildJoinRoom(ui, isConnected),
               ),
             ],
           ),
@@ -209,51 +115,268 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
   }
 
   Widget _buildHeader(UiScale ui, user, WsConnectionState wsState) {
-    return Container(
-      padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.xl, vertical: ui.config.spacing.md + 2),
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2)),
-      child: Row(
-        children: [
-          if (user != null) LobbyUserHeader(user: user),
-          const Spacer(),
-          Text(
-            '游戏大厅',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: ui.sp(ui.config.font.xl),
-              fontWeight: FontWeight.bold,
+    const parentId = 'header';
+    const page = PageLayoutKind.lobby;
+    final region = ui.layoutRect(page, parentId);
+    if (region == null) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      width: region.width,
+      height: region.height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.2)),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (user != null)
+              RegionChildPositioned(
+                page: page,
+                parentId: parentId,
+                childId: 'user_profile',
+                child: LobbyUserHeader(
+                  user: user,
+                  regionHeight: ui.elementChildRect(parentId, 'user_profile', page: page)?.height,
+                ),
+              ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'title',
+              child: _buildChildText(
+                ui,
+                parentId: parentId,
+                childId: 'title',
+                page: page,
+                text: '游戏大厅',
+                fontFactor: 0.42,
+                fallbackFont: ui.config.font.xl,
+                fontWeight: FontWeight.bold,
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
             ),
-          ),
-          const Spacer(),
-          _buildConnectionIndicator(ui, wsState),
-        ],
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'connection_status',
+              child: Center(
+                child: _buildConnectionIndicator(
+                  ui,
+                  wsState,
+                  ui.elementChildRect(parentId, 'connection_status', page: page),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _lobbyCard(UiScale ui, {required String title, required Widget child}) {
+  Widget _buildConnectionError(UiScale ui) {
+    final region = ui.layoutRect(PageLayoutKind.lobby, 'connection_error');
+    final pad = region != null ? region.width * 0.04 : ui.w(ui.config.spacing.lg);
+    final fontSize = region != null ? region.height * 0.22 : ui.sp(ui.config.font.md);
+
     return Container(
-      padding: ui.edgeInsetsAll(ui.config.spacing.xl),
-      decoration: GameTheme.panelDecoration(ui),
+      padding: EdgeInsets.all(pad),
+      decoration: GameTheme.panelDecoration(ui, radius: region?.height != null ? region!.height * 0.12 : null),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            title,
-            style: TextStyle(
-              color: GameTheme.accentGold,
-              fontSize: ui.sp(ui.config.font.lg),
-              fontWeight: FontWeight.bold,
-            ),
+            '无法连接服务器，请确认服务端已启动且端口已放行',
+            style: TextStyle(color: Colors.red.shade200, fontSize: fontSize),
+            textAlign: TextAlign.center,
           ),
-          SizedBox(height: ui.h(ui.config.spacing.xl)),
-          child,
+          SizedBox(height: region != null ? region.height * 0.12 : ui.h(ui.config.spacing.md)),
+          OutlinedButton.icon(
+            onPressed: _connectWebSocket,
+            icon: Icon(Icons.refresh, color: Colors.white70, size: fontSize * 1.2),
+            label: Text('重新连接', style: TextStyle(color: Colors.white70, fontSize: fontSize)),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildConnectionIndicator(UiScale ui, WsConnectionState state) {
+  Widget _buildQuickStart(UiScale ui, bool isConnected) {
+    const page = PageLayoutKind.lobby;
+    const parentId = 'quick_start';
+    final region = ui.layoutRect(page, parentId);
+    if (region == null) {
+      return const SizedBox.shrink();
+    }
+
+    final btnRect = ui.elementChildRect(parentId, 'create_button', page: page);
+    final btnSize = btnRect != null
+        ? Size(btnRect.width, btnRect.height)
+        : Size(region.width * 0.92, region.height * 0.18);
+    final btnFont = btnSize.height * 0.38;
+
+    return SizedBox(
+      width: region.width,
+      height: region.height,
+      child: DecoratedBox(
+        decoration: GameTheme.panelDecoration(ui, radius: region.height * 0.05),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'section_title',
+              child: _buildChildText(
+                ui,
+                parentId: parentId,
+                childId: 'section_title',
+                page: page,
+                text: '快速开始',
+                fontFactor: 0.55,
+                fallbackFont: ui.config.font.lg,
+                fontWeight: FontWeight.bold,
+                color: GameTheme.accentGold,
+              ),
+            ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'mode_selector',
+              child: _buildModeSelector(ui, parentId: parentId, page: page),
+            ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'create_button',
+              child: ElevatedButton.icon(
+                onPressed: isConnected ? _createRoom : null,
+                icon: Icon(Icons.add, size: btnFont),
+                label: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _selectedMode == GameMode.solo
+                        ? '创建单人测试房'
+                        : '创建${_selectedMode.label}',
+                    style: TextStyle(fontSize: btnFont),
+                  ),
+                ),
+                style: GameTheme.playButtonStyle(ui, minSize: btnSize),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJoinRoom(UiScale ui, bool isConnected) {
+    const page = PageLayoutKind.lobby;
+    const parentId = 'join_room';
+    final region = ui.layoutRect(page, parentId);
+    if (region == null) {
+      return const SizedBox.shrink();
+    }
+
+    final inputRect = ui.elementChildRect(parentId, 'room_input', page: page);
+    final btnRect = ui.elementChildRect(parentId, 'join_button', page: page);
+    final fieldFont = inputRect != null
+        ? inputRect.height * 0.28
+        : ui.sp(ui.config.font.md2);
+    final btnSize = btnRect != null
+        ? Size(btnRect.width, btnRect.height)
+        : Size(region.width * 0.92, region.height * 0.22);
+    final btnFont = btnSize.height * 0.38;
+
+    return SizedBox(
+      width: region.width,
+      height: region.height,
+      child: DecoratedBox(
+        decoration: GameTheme.panelDecoration(ui, radius: region.height * 0.05),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'section_title',
+              child: _buildChildText(
+                ui,
+                parentId: parentId,
+                childId: 'section_title',
+                page: page,
+                text: '加入房间',
+                fontFactor: 0.55,
+                fallbackFont: ui.config.font.lg,
+                fontWeight: FontWeight.bold,
+                color: GameTheme.accentGold,
+              ),
+            ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'room_input',
+              child: TextField(
+                controller: _roomIdController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                maxLines: 1,
+                style: TextStyle(color: Colors.white, fontSize: fieldFont),
+                decoration: InputDecoration(
+                  counterStyle: TextStyle(color: Colors.white38, fontSize: fieldFont * 0.7),
+                  labelText: '输入6位房间号',
+                  labelStyle: TextStyle(color: Colors.white70, fontSize: fieldFont),
+                  prefixIcon: Icon(Icons.meeting_room, color: Colors.white70, size: fieldFont * 1.2),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.08),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      (inputRect?.height ?? region.height * 0.5) * 0.12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'join_button',
+              child: ElevatedButton.icon(
+                onPressed: isConnected ? _joinRoom : null,
+                icon: Icon(Icons.login, size: btnFont),
+                label: Text('加入房间', style: TextStyle(fontSize: btnFont)),
+                style: GameTheme.hintButtonStyle(ui, minSize: btnSize),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChildText(
+    UiScale ui, {
+    required String parentId,
+    required String childId,
+    required PageLayoutKind page,
+    required String text,
+    required double fontFactor,
+    required double fallbackFont,
+    FontWeight fontWeight = FontWeight.normal,
+    required Color color,
+  }) {
+    final rect = ui.elementChildRect(parentId, childId, page: page);
+    final fontSize = rect != null ? rect.height * fontFactor : ui.sp(fallbackFont);
+    return Center(
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: fontSize, fontWeight: fontWeight),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildConnectionIndicator(UiScale ui, WsConnectionState state, RegionChildRect? region) {
     Color color;
     String label;
     switch (state) {
@@ -270,23 +393,36 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
         color = Colors.redAccent;
         label = '离线';
     }
+    final fontSize = region != null ? region.height * 0.28 : ui.sp(ui.config.font.sm2 + 1);
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.circle, color: color, size: ui.sp(ui.config.font.sm)),
-        SizedBox(width: ui.w(ui.config.spacing.sm)),
-        Text(label, style: TextStyle(color: color, fontSize: ui.sp(ui.config.font.sm2 + 1))),
+        Icon(Icons.circle, color: color, size: fontSize * 0.8),
+        SizedBox(width: region != null ? region.width * 0.01 : ui.w(ui.config.spacing.sm)),
+        Text(label, style: TextStyle(color: color, fontSize: fontSize)),
       ],
     );
   }
 
-  Widget _buildModeSelector(UiScale ui) {
-    return Wrap(
-      spacing: ui.w(ui.config.spacing.md),
-      runSpacing: ui.h(ui.config.spacing.md),
-      children: GameMode.values.map((mode) {
+  Widget _buildModeSelector(
+    UiScale ui, {
+    required String parentId,
+    required PageLayoutKind page,
+  }) {
+    final rect = ui.elementChildRect(parentId, 'mode_selector', page: page);
+    final spacing = rect != null ? rect.width * 0.02 : ui.w(ui.config.spacing.md);
+    final chipFont = rect != null ? rect.height * 0.22 : ui.sp(ui.config.font.md2);
+
+    return Align(
+      alignment: Alignment.center,
+      child: Wrap(
+        spacing: spacing,
+        runSpacing: spacing,
+        alignment: WrapAlignment.center,
+        children: GameMode.values.map((mode) {
         final selected = _selectedMode == mode;
         return ChoiceChip(
-          label: Text(mode.label, style: TextStyle(fontSize: ui.sp(ui.config.font.md2))),
+          label: Text(mode.label, style: TextStyle(fontSize: chipFont)),
           selected: selected,
           onSelected: (_) => setState(() => _selectedMode = mode),
           selectedColor: GameTheme.accentGold.withValues(alpha: 0.35),
@@ -295,11 +431,10 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
             color: selected ? Colors.white : Colors.white70,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           ),
-          side: BorderSide(
-            color: selected ? GameTheme.accentGold : Colors.white24,
-          ),
+          side: BorderSide(color: selected ? GameTheme.accentGold : Colors.white24),
         );
       }).toList(),
+      ),
     );
   }
 

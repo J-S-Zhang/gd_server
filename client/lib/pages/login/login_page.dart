@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,80 +6,7 @@ import '../../controller/auth_controller.dart';
 import '../../services/app_update_service.dart';
 import '../../theme/game_theme.dart';
 import '../../widgets/app_update_dialog.dart';
-
-/// 登录页按可用区域比例分配尺寸，保证一屏完整显示、无需滚动。
-class _LoginLayoutMetrics {
-  const _LoginLayoutMetrics({
-    required this.formWidth,
-    required this.iconSize,
-    required this.iconPadding,
-    required this.titleSize,
-    required this.subtitleSize,
-    required this.tabFontSize,
-    required this.fieldFontSize,
-    required this.fieldIconSize,
-    required this.buttonFontSize,
-    required this.buttonHeight,
-    required this.radius,
-    required this.flexHeader,
-    required this.flexTab,
-    required this.flexField,
-    required this.flexButton,
-  });
-
-  final double formWidth;
-  final double iconSize;
-  final double iconPadding;
-  final double titleSize;
-  final double subtitleSize;
-  final double tabFontSize;
-  final double fieldFontSize;
-  final double fieldIconSize;
-  final double buttonFontSize;
-  final double buttonHeight;
-  final double radius;
-  final int flexHeader;
-  final int flexTab;
-  final int flexField;
-  final int flexButton;
-
-  factory _LoginLayoutMetrics.fromSize(Size size, bool isRegister) {
-    final w = size.width;
-    final h = size.height;
-    final shortSide = size.shortestSide;
-    final scale = math.min(w / 844, h / 390);
-
-    const flexHeader = 24;
-    const flexTab = 8;
-    const flexField = 10;
-    const flexButton = 10;
-    final fitScale = scale.clamp(0.75, 1.25);
-
-    final formWidthFactor = shortSide < 600
-        ? 0.86
-        : shortSide < 900
-            ? 0.52
-            : 0.42;
-
-    return _LoginLayoutMetrics(
-      formWidth: w * formWidthFactor,
-      iconSize: h * 0.11 * fitScale,
-      iconPadding: h * 0.018 * fitScale,
-      titleSize: (h * 0.062 * fitScale).clamp(18.0, 40.0),
-      subtitleSize: (h * 0.032 * fitScale).clamp(11.0, 18.0),
-      tabFontSize: (h * 0.034 * fitScale).clamp(12.0, 18.0),
-      fieldFontSize: (h * 0.034 * fitScale).clamp(12.0, 18.0),
-      fieldIconSize: (h * 0.042 * fitScale).clamp(14.0, 22.0),
-      buttonFontSize: (h * 0.038 * fitScale).clamp(13.0, 20.0),
-      buttonHeight: h * 0.095 * fitScale,
-      radius: 12 * fitScale,
-      flexHeader: flexHeader,
-      flexTab: flexTab,
-      flexField: flexField,
-      flexButton: flexButton,
-    );
-  }
-}
+import '../../widgets/game/game_layout_positioned.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -179,60 +104,137 @@ class _LoginPageState extends ConsumerState<LoginPage>
     );
   }
 
+  double _regionFont(GameLayoutRect? region, double factor, UiScale ui, double fallback) {
+    if (region != null) return region.height * factor;
+    return ui.sp(fallback);
+  }
+
+  double _regionRadius(GameLayoutRect? region, UiScale ui) {
+    if (region != null) return region.height * 0.14;
+    return ui.r(ui.config.radius.lg);
+  }
+
   InputDecoration _fieldDecoration(
-    _LoginLayoutMetrics metrics,
+    UiScale ui,
+    GameLayoutRect? region,
     String label,
     IconData icon,
   ) {
+    final fieldFont = _regionFont(region, 0.38, ui, ui.config.font.md2);
+    final iconSize = _regionFont(region, 0.48, ui, ui.config.font.lg);
+    final radius = _regionRadius(region, ui);
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.white70, fontSize: metrics.fieldFontSize),
-      prefixIcon: Icon(icon, color: Colors.white70, size: metrics.fieldIconSize),
+      labelStyle: TextStyle(color: Colors.white70, fontSize: fieldFont),
+      prefixIcon: Icon(icon, color: Colors.white70, size: iconSize),
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.12),
       isDense: true,
       contentPadding: EdgeInsets.symmetric(
-        horizontal: metrics.fieldFontSize,
-        vertical: metrics.fieldFontSize * 0.55,
+        horizontal: fieldFont,
+        vertical: fieldFont * 0.55,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(metrics.radius),
+        borderRadius: BorderRadius.circular(radius),
         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(metrics.radius),
-        borderSide: BorderSide(color: GameTheme.accentGold, width: metrics.radius * 0.15),
+        borderRadius: BorderRadius.circular(radius),
+        borderSide: BorderSide(color: GameTheme.accentGold, width: radius * 0.15),
       ),
     );
   }
 
-  Widget _buildField({
-    required _LoginLayoutMetrics metrics,
+  Widget _buildTitleHeader(UiScale ui) {
+    final region = ui.layoutRect(PageLayoutKind.login, 'logo_header');
+    final titleSize = _regionFont(region, 0.55, ui, ui.config.font.title);
+
+    return Center(
+      child: Text(
+        ui.config.login.title,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: titleSize,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildTabBar(UiScale ui) {
+    final region = ui.layoutRect(PageLayoutKind.login, 'tab_bar');
+    final tabFont = _regionFont(region, 0.55, ui, ui.config.font.md2);
+    final radius = _regionRadius(region, ui);
+
+    return Container(
+      width: double.infinity,
+      decoration: GameTheme.panelDecoration(ui, radius: radius),
+      child: TabBar(
+        controller: _tabController,
+        indicatorColor: GameTheme.accentGold,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white54,
+        labelStyle: TextStyle(fontSize: tabFont),
+        unselectedLabelStyle: TextStyle(fontSize: tabFont),
+        onTap: (_) => setState(() {}),
+        tabs: const [
+          Tab(text: '登录'),
+          Tab(text: '注册'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required UiScale ui,
+    required String elementId,
     required TextEditingController controller,
     required String label,
     required IconData icon,
     bool obscure = false,
   }) {
-    return Expanded(
-      flex: metrics.flexField,
-      child: LayoutBuilder(
-        builder: (context, fieldConstraints) {
-          return Align(
-            alignment: Alignment.center,
-            child: SizedBox(
-              height: fieldConstraints.maxHeight * 0.88,
-              child: TextField(
-                controller: controller,
-                obscureText: obscure,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: metrics.fieldFontSize,
+    final region = ui.layoutRect(PageLayoutKind.login, elementId);
+    final fieldFont = _regionFont(region, 0.38, ui, ui.config.font.md2);
+
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      maxLines: 1,
+      style: TextStyle(color: Colors.white, fontSize: fieldFont),
+      decoration: _fieldDecoration(ui, region, label, icon),
+    );
+  }
+
+  Widget _buildSubmitButton(UiScale ui, bool isRegister) {
+    final region = ui.layoutRect(PageLayoutKind.login, 'submit_button');
+    final btnH = region?.height ?? ui.h(ui.config.layout.loginButtonHeight);
+    final btnFont = _regionFont(region, 0.38, ui, ui.config.font.lg);
+
+    return SizedBox(
+      width: double.infinity,
+      height: btnH,
+      child: ElevatedButton(
+        onPressed: _loading ? null : (isRegister ? _submitRegister : _submitLogin),
+        style: GameTheme.playButtonStyle(ui).copyWith(
+          minimumSize: WidgetStateProperty.all(Size(double.infinity, btnH)),
+          padding: WidgetStateProperty.all(
+            EdgeInsets.symmetric(vertical: btnFont * 0.3),
+          ),
+        ),
+        child: _loading
+            ? SizedBox(
+                width: btnFont * 1.4,
+                height: btnFont * 1.4,
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              )
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  isRegister ? '注册' : '登录',
+                  style: TextStyle(fontSize: btnFont),
                 ),
-                decoration: _fieldDecoration(metrics, label, icon),
               ),
-            ),
-          );
-        },
       ),
     );
   }
@@ -247,162 +249,62 @@ class _LoginPageState extends ConsumerState<LoginPage>
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
         child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final metrics = _LoginLayoutMetrics.fromSize(
-                constraints.biggest,
-                isRegister,
-              );
-
-              return Center(
-                child: SizedBox(
-                  width: metrics.formWidth,
-                  height: constraints.maxHeight,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        flex: metrics.flexHeader,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(metrics.iconPadding),
-                                decoration: GameTheme.panelDecoration(
-                                  ui,
-                                  radius: metrics.radius,
-                                ),
-                                child: Icon(
-                                  Icons.style,
-                                  size: metrics.iconSize,
-                                  color: GameTheme.accentGold,
-                                ),
-                              ),
-                              SizedBox(height: metrics.subtitleSize * 0.6),
-                              Text(
-                                '六人掼蛋',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: metrics.titleSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: metrics.subtitleSize * 0.35),
-                              Text(
-                                '经典棋牌 · 六人实时对战',
-                                style: TextStyle(
-                                  color: GameTheme.textSecondary,
-                                  fontSize: metrics.subtitleSize,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: metrics.flexTab,
-                        child: LayoutBuilder(
-                          builder: (context, tabConstraints) {
-                            return Center(
-                              child: SizedBox(
-                                height: tabConstraints.maxHeight * 0.9,
-                                child: Container(
-                                  decoration: GameTheme.panelDecoration(
-                                    ui,
-                                    radius: metrics.radius,
-                                  ),
-                                  child: TabBar(
-                                    controller: _tabController,
-                                    indicatorColor: GameTheme.accentGold,
-                                    labelColor: Colors.white,
-                                    unselectedLabelColor: Colors.white54,
-                                    labelStyle:
-                                        TextStyle(fontSize: metrics.tabFontSize),
-                                    unselectedLabelStyle:
-                                        TextStyle(fontSize: metrics.tabFontSize),
-                                    onTap: (_) => setState(() {}),
-                                    tabs: const [
-                                      Tab(text: '登录'),
-                                      Tab(text: '注册'),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      _buildField(
-                        metrics: metrics,
-                        controller: _nicknameController,
-                        label: '昵称',
-                        icon: Icons.person,
-                      ),
-                      _buildField(
-                        metrics: metrics,
-                        controller: _passwordController,
-                        label: '密码',
-                        icon: Icons.lock,
-                        obscure: true,
-                      ),
-                      if (isRegister)
-                        _buildField(
-                          metrics: metrics,
-                          controller: _confirmPasswordController,
-                          label: '确认密码',
-                          icon: Icons.lock_outline,
-                          obscure: true,
-                        ),
-                      Expanded(
-                        flex: metrics.flexButton,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            vertical: metrics.fieldFontSize * 0.15,
-                          ),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: metrics.buttonHeight,
-                            child: ElevatedButton(
-                              onPressed: _loading
-                                  ? null
-                                  : (isRegister ? _submitRegister : _submitLogin),
-                              style: GameTheme.playButtonStyle(ui).copyWith(
-                                minimumSize: WidgetStateProperty.all(
-                                  Size(double.infinity, metrics.buttonHeight),
-                                ),
-                                padding: WidgetStateProperty.all(
-                                  EdgeInsets.symmetric(
-                                    vertical: metrics.buttonFontSize * 0.3,
-                                  ),
-                                ),
-                              ),
-                              child: _loading
-                                  ? SizedBox(
-                                      width: metrics.buttonFontSize * 1.4,
-                                      height: metrics.buttonFontSize * 1.4,
-                                      child: const CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        isRegister ? '注册' : '登录',
-                                        style: TextStyle(
-                                          fontSize: metrics.buttonFontSize,
-                                        ),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+          child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
+            children: [
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
+                elementId: 'logo_header',
+                child: _buildTitleHeader(ui),
+              ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
+                elementId: 'tab_bar',
+                child: _buildTabBar(ui),
+              ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
+                elementId: 'nickname_field',
+                child: _buildTextField(
+                  ui: ui,
+                  elementId: 'nickname_field',
+                  controller: _nicknameController,
+                  label: '昵称',
+                  icon: Icons.person,
+                ),
+              ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
+                elementId: 'password_field',
+                child: _buildTextField(
+                  ui: ui,
+                  elementId: 'password_field',
+                  controller: _passwordController,
+                  label: '密码',
+                  icon: Icons.lock,
+                  obscure: true,
+                ),
+              ),
+              if (isRegister)
+                PageLayoutPositioned(
+                  page: PageLayoutKind.login,
+                  elementId: 'confirm_field',
+                  child: _buildTextField(
+                    ui: ui,
+                    elementId: 'confirm_field',
+                    controller: _confirmPasswordController,
+                    label: '确认密码',
+                    icon: Icons.lock_outline,
+                    obscure: true,
                   ),
                 ),
-              );
-            },
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
+                elementId: 'submit_button',
+                child: _buildSubmitButton(ui, isRegister),
+              ),
+            ],
           ),
         ),
       ),
