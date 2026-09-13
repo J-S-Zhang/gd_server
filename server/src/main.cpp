@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
     int wsPort = 9001;
     int httpPort = 8080;
     std::string dbPath = "users.json";
-    std::string appVersionPath = "config/app_version.json";
+    std::string appVersionPath = "server/config/app_version.json";
     if (argc > 1) {
         wsPort = std::atoi(argv[1]);
     }

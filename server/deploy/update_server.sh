@@ -6,6 +6,7 @@ ROOT="${1:-/home/gd_server}"
 WS_PORT="${2:-9001}"
 HTTP_PORT="${3:-8080}"
 USERS_JSON="${4:-$ROOT/server/data/users.json}"
+APP_VERSION_JSON="${5:-$ROOT/server/config/app_version.json}"
 BINARY="$ROOT/build/guandan_server"
 
 echo "==> 工作目录: $ROOT"
@@ -40,8 +41,8 @@ echo "==> 停止旧进程..."
 pkill -f guandan_server || true
 sleep 1
 
-echo "==> 启动: $BINARY $WS_PORT $HTTP_PORT $USERS_JSON"
-nohup "$BINARY" "$WS_PORT" "$HTTP_PORT" "$USERS_JSON" > "$ROOT/logs/server.log" 2>&1 &
+echo "==> 启动: $BINARY $WS_PORT $HTTP_PORT $USERS_JSON $APP_VERSION_JSON"
+nohup "$BINARY" "$WS_PORT" "$HTTP_PORT" "$USERS_JSON" "$APP_VERSION_JSON" > "$ROOT/logs/server.log" 2>&1 &
 sleep 1
 
 if ss -tlnp 2>/dev/null | grep -q ":$WS_PORT"; then
