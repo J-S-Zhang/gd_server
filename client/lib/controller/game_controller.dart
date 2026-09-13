@@ -69,7 +69,6 @@ class GameController {
       state.seatRoundPlays,
       state.mySeatIndex,
       cards,
-      newTrick: state.canLeadFreely(myUserId),
     );
 
     final nextCards = state.myCards.where((c) => !removeSet.contains(c.id)).toList();
@@ -387,8 +386,10 @@ class GameController {
       state.seatRoundPlays,
       lastPlayedSeatIndex,
       playedIds,
-      newTrick: state.lastPlayedCards.isEmpty && playedIds.isNotEmpty,
     );
+
+    final nextPlayer = data['next_player'] as int? ?? state.currentPlayerIndex;
+    final playsForTurn = _clearSeatForTurn(seatRoundPlays, nextPlayer);
 
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       phase: GamePhase.playing,
@@ -397,15 +398,59 @@ class GameController {
       lastPlayedSeatIndex: lastPlayedSeatIndex,
       myCards: myCards,
       players: players,
-      seatRoundPlays: seatRoundPlays,
+      seatRoundPlays: playsForTurn,
       handOrganizedGroups: filterOrganizedGroups(
         state.handOrganizedGroups,
         myCards.map((c) => c.id).toSet(),
       ),
       stateVersion: data['state_version'] as int? ?? state.stateVersion,
       turnId: data['turn_id'] as int? ?? state.turnId,
-      currentPlayerIndex: data['next_player'] as int? ?? state.currentPlayerIndex,
+      currentPlayerIndex: nextPlayer,
     );
+
+    if (myUserId != null &&
+        playerId == myUserId &&
+        serverHasFinished == true) {
+      _autoSpectateTeammateIfFinished();
+    }
+  }
+
+  /// 本人出完牌后自动切到仍在场的队友视角（不再停留在自己视角）。
+  void _autoSpectateTeammateIfFinished() {
+    final state = _ref.read(gameStateProvider);
+    if (state.isSpectating) return;
+
+    final roomId = _ref.read(roomProvider)?.roomId;
+    if (roomId == null || roomId.isEmpty) return;
+
+    final myUserId = _ref.read(userProvider)?.id;
+    if (myUserId == null) return;
+
+    Player? me;
+    for (final p in state.players) {
+      if (p.id == myUserId) {
+        me = p;
+        break;
+      }
+    }
+    if (me == null || !me.hasFinished) return;
+
+    int? targetSeat;
+    if (state.spectatableTeammates.isNotEmpty) {
+      targetSeat = state.spectatableTeammates.first;
+    } else {
+      for (final p in state.players) {
+        if (p.seatIndex == me.seatIndex) continue;
+        if (p.team == me.team && !p.hasFinished) {
+          targetSeat = p.seatIndex;
+          break;
+        }
+      }
+    }
+
+    if (targetSeat != null) {
+      spectateTeammate(roomId, targetSeat);
+    }
   }
 
   void _applyPlayerPassed(Map<String, dynamic> data) {
@@ -420,12 +465,15 @@ class GameController {
         nextPlayer == state.lastPlayedSeatIndex;
     final clearTrick = roundReset || leadAgain;
 
+    var seatRoundPlays = _applyPassToSeats(
+      state.seatRoundPlays,
+      passSeat,
+      roundReset: clearTrick,
+    );
+    seatRoundPlays = _clearSeatForTurn(seatRoundPlays, nextPlayer);
+
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
-      seatRoundPlays: _applyPassToSeats(
-        state.seatRoundPlays,
-        passSeat,
-        roundReset: clearTrick,
-      ),
+      seatRoundPlays: seatRoundPlays,
       lastPlayedCards: clearTrick ? const [] : null,
       lastPlayedPlayerId: clearTrick ? -1 : null,
       lastPlayedSeatIndex: clearTrick ? -1 : null,
@@ -477,18 +525,25 @@ class GameController {
     return -1;
   }
 
+  /// 轮到 [seatIndex] 出牌时，清空该座位出牌区（不保留上一手）。
+  Map<int, SeatRoundPlay> _clearSeatForTurn(
+    Map<int, SeatRoundPlay> current,
+    int seatIndex,
+  ) {
+    if (seatIndex < 0 || !current.containsKey(seatIndex)) return current;
+    final next = Map<int, SeatRoundPlay>.from(current);
+    next.remove(seatIndex);
+    return next;
+  }
+
+  /// 仅展示最新一手出牌；新出牌时取消上一出牌玩家的显示。
   Map<int, SeatRoundPlay> _applyPlayToSeats(
     Map<int, SeatRoundPlay> current,
     int seatIndex,
-    List<int> cardIds, {
-    required bool newTrick,
-  }) {
+    List<int> cardIds,
+  ) {
     if (seatIndex < 0 || cardIds.isEmpty) return current;
-    final next = newTrick
-        ? <int, SeatRoundPlay>{}
-        : Map<int, SeatRoundPlay>.from(current);
-    next[seatIndex] = SeatRoundPlay(cardIds: cardIds);
-    return next;
+    return {seatIndex: SeatRoundPlay(cardIds: cardIds)};
   }
 
   Map<int, SeatRoundPlay> _applyPassToSeats(

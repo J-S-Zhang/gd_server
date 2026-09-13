@@ -1447,19 +1447,6 @@
             }
           }
         }
-      },
-      "action_buttons": {
-        "h": 0.12,
-        "aspectRatio": 10
-      },
-      "top_bar": {
-        "children": {
-          "action_icons": {
-            "x": 0.94,
-            "w": 0.1,
-            "aspectRatio": 2.5
-          }
-        }
       }
     }
   },

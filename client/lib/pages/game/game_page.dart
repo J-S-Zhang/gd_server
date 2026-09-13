@@ -316,11 +316,14 @@ class _GamePageState extends ConsumerState<GamePage> {
     final viewPlayer = _playerAtSeat(allPlayers, viewSeatIndex);
     final viewPlay =
         gameState.seatRoundPlays[viewSeatIndex] ?? const SeatRoundPlay();
-    final hasViewPlay = !viewPlay.isEmpty;
+    final isViewSeatTurn = gameState.currentPlayerIndex == viewSeatIndex;
+    final hasViewPlay = !viewPlay.isEmpty && !isViewSeatTurn;
     final selfFinishLabel = selfFinished && !isSpectating
         ? SeatLayout.finishRankLabel(me!.finishRank, maxPlayers)
         : '';
-    final showHandCards = !selfFinished || isSpectating;
+    // 本人出完牌后手牌为空，避免显示「等待发牌」；切到队友视角后再显示队友手牌。
+    final showHandCards =
+        gameState.myCards.isNotEmpty && (isSpectating || !selfFinished);
     if (!showHandCards && ref.read(handCardsMaxHeightProvider) != 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ref.read(handCardsMaxHeightProvider.notifier).state = 0;

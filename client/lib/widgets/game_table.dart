@@ -281,13 +281,22 @@ class GameTableWidget extends StatelessWidget {
     return null;
   }
 
+  SeatRoundPlay _visibleSeatPlay(int seatIndex) {
+    final play =
+        gameState.seatRoundPlays[seatIndex] ?? const SeatRoundPlay();
+    if (gameState.currentPlayerIndex == seatIndex) {
+      return const SeatRoundPlay();
+    }
+    return play;
+  }
+
   List<Widget> _positionPlayers(UiScale ui, List<Player> players, int mySeatIndex) {
     final seatElements = ui.config.seatLayout.seatElementsFor(maxPlayers);
     return players.map((player) {
       final localSeat =
           SeatLayout.toLocalSeat(player.seatIndex, mySeatIndex, maxPlayers);
       final isSelf = localSeat == 0;
-      final seatPlay = gameState.seatRoundPlays[player.seatIndex] ?? const SeatRoundPlay();
+      final seatPlay = _visibleSeatPlay(player.seatIndex);
       final isCurrentTurn = gameState.currentPlayerIndex == player.seatIndex;
       final playBefore = SeatLayout.playBeforePlayer(localSeat, maxPlayers);
       final horizontal = SeatLayout.playHorizontal(localSeat, maxPlayers);
@@ -361,8 +370,7 @@ class GameTableWidget extends StatelessWidget {
         return const SizedBox.shrink();
       }
 
-      final seatPlay =
-          gameState.seatRoundPlays[player.seatIndex] ?? const SeatRoundPlay();
+      final seatPlay = _visibleSeatPlay(player.seatIndex);
       final isCurrentTurn = gameState.currentPlayerIndex == player.seatIndex;
       if (seatPlay.isEmpty && !isCurrentTurn) {
         return const SizedBox.shrink();

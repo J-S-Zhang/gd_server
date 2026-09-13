@@ -71,15 +71,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportRowHeight(rowHeight));
 
     if (widget.cards.isEmpty) {
-      return SizedBox(
-        height: rowHeight,
-        child: Center(
-          child: Text(
-            '等待发牌...',
-            style: TextStyle(color: Colors.white54, fontSize: ui.sp(ui.config.font.md)),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     final groups = buildHandDisplayGroups(
