@@ -5,6 +5,7 @@ import '../utils/hand_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
+import 'game_notice_controller.dart';
 import 'seat_chat_controller.dart';
 import '../models/player.dart';
 import '../models/room.dart';
@@ -58,11 +59,7 @@ class GameController {
       lastPlayedCards: lastPlayed,
     );
     if (error != null) {
-      if (context != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
-      }
+      showGameNotice(_ref, error);
       return false;
     }
 
@@ -104,8 +101,18 @@ class GameController {
     _ws.spectateTeammate(roomId, targetSeatIndex);
   }
 
-  void sendSeatChat(String roomId, String content, {bool isEmoji = false}) {
-    if (content.isEmpty) return;
+  void sendSeatChat(
+    String roomId,
+    int seatIndex,
+    String content, {
+    bool isEmoji = false,
+  }) {
+    if (content.isEmpty || seatIndex < 0) return;
+    _ref.read(seatChatProvider.notifier).show(
+          seatIndex,
+          content,
+          isEmoji: isEmoji,
+        );
     _ws.sendSeatChat(roomId, content, isEmoji: isEmoji);
   }
 
@@ -194,11 +201,7 @@ class GameController {
       existingGroups: state.handOrganizedGroups,
     );
     if (result.message != null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.message!)),
-        );
-      }
+      showGameNotice(_ref, result.message!);
       return;
     }
 
@@ -242,9 +245,7 @@ class GameController {
   void hint(BuildContext context) {
     final state = _ref.read(gameStateProvider);
     if (!state.isMyTurn || state.myCards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('当前无法提示')),
-      );
+      showGameNotice(_ref, '当前无法提示');
       return;
     }
 
@@ -261,9 +262,7 @@ class GameController {
         )
         .toList();
     _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('提示：可出 ${target.displayName}')),
-    );
+    showGameNotice(_ref, '提示：可出 ${target.displayName}');
   }
 
   void _handleGameMessage(Map<String, dynamic> msg) {

@@ -7,6 +7,7 @@ import '../models/player.dart';
 import '../theme/game_theme.dart';
 import '../utils/seat_layout.dart';
 import 'game/finish_rank_badge.dart';
+import 'game/region_fit_text.dart';
 import 'game/seat_chat_bubble.dart';
 
 const int kCardCountRevealThreshold = 10;
@@ -144,18 +145,15 @@ class PlayerWidget extends StatelessWidget {
       ],
     );
 
-    final nickname = ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: region?.width ?? ui.w(cfg.width)),
-      child: Text(
-        player.nickname,
-        style: nicknameStyle.copyWith(
-          fontSize: region != null ? region.height * 0.16 : nicknameStyle.fontSize,
-        ),
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
-        textAlign:
-            nicknamePlacement == PlayerNicknamePlacement.trailing ? TextAlign.left : TextAlign.center,
-      ),
+    final nickname = RegionFitText(
+      text: player.nickname,
+      width: region?.width ?? ui.w(cfg.width),
+      fontSize: region != null ? region.height * 0.16 : nicknameStyle.fontSize,
+      color: nicknameStyle.color,
+      fontWeight: nicknameStyle.fontWeight,
+      overflowMode: RegionTextOverflow.ellipsis,
+      textAlign:
+          nicknamePlacement == PlayerNicknamePlacement.trailing ? TextAlign.left : TextAlign.center,
     );
 
     final gapW = SizedBox(width: ui.w(ui.config.spacing.sm));
@@ -282,13 +280,9 @@ class PlayerWidget extends StatelessWidget {
     final parentId = layoutElementId!;
     final borderRadius = region.height * 0.12;
     final avatarRect = ui.elementChildRect(parentId, 'avatar', maxPlayers: maxPlayers);
-    final nicknameRect = ui.elementChildRect(parentId, 'nickname', maxPlayers: maxPlayers);
     final avatarRadius = avatarRect != null
         ? (avatarRect.width < avatarRect.height ? avatarRect.width : avatarRect.height) * 0.42
         : ui.r(ui.config.player.compactAvatarRadius);
-    final nicknameFontSize = nicknameRect?.height != null
-        ? nicknameRect!.height * 0.42
-        : ui.sp(ui.config.font.sm2);
     final finishLabel = player.hasFinished
         ? SeatLayout.finishRankLabel(player.finishRank, maxPlayers)
         : '';
@@ -330,18 +324,16 @@ class PlayerWidget extends StatelessWidget {
               parentId: parentId,
               childId: 'nickname',
               maxPlayers: maxPlayers,
-              child: Center(
-                child: Text(
-                  player.nickname,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: GameTheme.textPrimary,
-                    fontSize: nicknameFontSize,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              child: RegionFitText(
+                text: player.nickname,
+                layoutParentId: parentId,
+                layoutChildId: 'nickname',
+                layoutMaxPlayers: maxPlayers,
+                heightRatio: 0.42,
+                color: GameTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+                overflowMode: RegionTextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
             ),
           ],
@@ -381,7 +373,10 @@ class PlayerWidget extends StatelessWidget {
               parentId: parentId,
               childId: 'nickname',
               maxPlayers: maxPlayers,
-              child: Center(
+              child: RegionFitTextBlock(
+                layoutParentId: parentId,
+                layoutChildId: 'nickname',
+                layoutMaxPlayers: maxPlayers,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -573,16 +568,19 @@ class PlayerWidget extends StatelessWidget {
             ],
           ),
           SizedBox(height: ui.h(compact ? 2 : 4)),
-          Text(
-            player.nickname,
-            style: TextStyle(color: GameTheme.textPrimary, fontSize: ui.sp(ui.config.font.sm2)),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+          RegionFitText(
+            text: player.nickname,
+            width: ui.w(compact ? ui.config.player.compactWidth : ui.config.player.width),
+            fontSize: ui.sp(ui.config.font.sm2),
+            color: GameTheme.textPrimary,
+            overflowMode: RegionTextOverflow.ellipsis,
           ),
           if (player.isBot)
-            Text(
-              '机器人',
-              style: TextStyle(color: Colors.cyanAccent, fontSize: ui.sp(ui.config.font.xs)),
+            RegionFitText(
+              text: '机器人',
+              width: ui.w(compact ? ui.config.player.compactWidth : ui.config.player.width),
+              fontSize: ui.sp(ui.config.font.xs),
+              color: Colors.cyanAccent,
             ),
           if (!compact) ...[
             Text(
@@ -661,7 +659,7 @@ class _CardCountBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Text(
+      child: fitTextInRegion(
         '$count',
         style: TextStyle(
           color: Colors.white,

@@ -3,18 +3,29 @@
     "tabletMinShortSide": 600,
     "largeTabletMinShortSide": 900
   },
+  "layoutCanvas": {
+    "aspectRatio": 2.2222222222222223,
+    "elementId": "canvas"
+  },
   "designWidth": 844,
   "designHeight": 390,
   "fontScaleMode": "min",
   "card": {
-    "playedWidth": 38.02,
-    "playedHeight": 52.8,
-    "aspectRatio": 0.716
+    "playedWidth": 23.33,
+    "playedHeight": 33.33,
+    "aspectRatio": 0.7,
+    "playedOverlap": 0.38,
+    "borderRadius": 6,
+    "clipRadius": 5,
+    "selectedBorderWidth": 2.5,
+    "labelFontRatio": 0.22,
+    "cornerMarkCharWidthRatio": 0.3,
+    "cornerMarkFontScale": 0.88
   },
   "handCards": {
-    "width": 37.62,
-    "height": 52.99,
-    "aspectRatio": 0.714,
+    "width": 24.92,
+    "height": 35.6,
+    "aspectRatio": 0.7,
     "horizontalOverlap": 0.1,
     "verticalOverlap": 0.7,
     "selectionLift": 14,
@@ -36,41 +47,89 @@
         "h": 0.14,
         "aspectRatio": 1.55,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.5,
+            "y": 0.38,
+            "w": 0.55,
+            "h": 0.55,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.5,
+            "y": 0.82,
+            "w": 0.92,
+            "h": 0.28,
+            "aspectRatio": 3.2
+          }
         }
       },
       {
-        "x": 0.95,
+        "x": 0.97,
         "y": 0.5,
-        "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "w": 0.05,
+        "h": 0.24,
+        "aspectRatio": 0.5,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.5,
+            "y": 0.25,
+            "w": 1,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.5,
+            "y": 0.75,
+            "w": 1,
+            "h": 0.5,
+            "aspectRatio": 1
+          }
         }
       },
       {
         "x": 0.5,
-        "y": 0.08,
+        "y": 0.06,
         "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "h": 0.12,
+        "aspectRatio": 2,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
         }
       },
       {
-        "x": 0.05,
+        "x": 0.03,
         "y": 0.5,
-        "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "w": 0.05,
+        "h": 0.24,
+        "aspectRatio": 0.5,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.5,
+            "y": 0.25,
+            "w": 1,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.5,
+            "y": 0.75,
+            "w": 1,
+            "h": 0.5,
+            "aspectRatio": 1
+          }
         }
       }
     ],
@@ -82,63 +141,603 @@
         "h": 0.14,
         "aspectRatio": 1.55,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.5,
+            "y": 0.38,
+            "w": 0.55,
+            "h": 0.55,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.5,
+            "y": 0.82,
+            "w": 0.92,
+            "h": 0.28,
+            "aspectRatio": 3.2
+          }
         }
       },
       {
         "x": 0.05,
-        "y": 0.6,
+        "y": 0.5,
         "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "h": 0.12,
+        "aspectRatio": 2,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
         }
       },
       {
         "x": 0.05,
-        "y": 0.3,
+        "y": 0.2,
         "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "h": 0.12,
+        "aspectRatio": 2,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
         }
       },
       {
         "x": 0.5,
         "y": 0.05,
         "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 1.8,
+        "h": 0.12,
+        "aspectRatio": 2,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
         }
       },
       {
         "x": 0.95,
-        "y": 0.3,
+        "y": 0.2,
         "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "h": 0.11,
+        "aspectRatio": 2,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
         }
       },
       {
         "x": 0.95,
-        "y": 0.6,
+        "y": 0.5,
         "w": 0.1,
-        "h": 0.15,
-        "aspectRatio": 0.8,
+        "h": 0.12,
+        "aspectRatio": 2,
         "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
+          "avatar": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      }
+    ],
+    "fourPlayerPlayAreas": [
+      {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 0.01,
+        "h": 0.01,
+        "aspectRatio": 1,
+        "children": {
+          "countdown": {
+            "x": 0.5,
+            "y": 0.28,
+            "w": 0.32,
+            "h": 0.55,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.5,
+            "y": 0.72,
+            "w": 0.95,
+            "h": 0.55,
+            "aspectRatio": 3.38
+          }
+        }
+      },
+      {
+        "x": 0.72,
+        "y": 0.5,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.95,
+            "y": 0.5,
+            "w": 0.1,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.93,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      },
+      {
+        "x": 0.5,
+        "y": 0.22,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.5,
+            "y": 0.28,
+            "w": 0.32,
+            "h": 0.55,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      },
+      {
+        "x": 0.28,
+        "y": 0.5,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.05,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.07,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      }
+    ],
+    "sixPlayerPlayAreas": [
+      {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 0.01,
+        "h": 0.01,
+        "aspectRatio": 1,
+        "children": {
+          "countdown": {
+            "x": 0.5,
+            "y": 0.28,
+            "w": 0.32,
+            "h": 0.55,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.5,
+            "y": 0.72,
+            "w": 0.95,
+            "h": 0.55,
+            "aspectRatio": 3.38
+          }
+        }
+      },
+      {
+        "x": 0.33,
+        "y": 0.5,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.05,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.07,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      },
+      {
+        "x": 0.33,
+        "y": 0.2,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.05,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.07,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      },
+      {
+        "x": 0.5,
+        "y": 0.21,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.5,
+            "y": 0.28,
+            "w": 0.32,
+            "h": 0.55,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      },
+      {
+        "x": 0.67,
+        "y": 0.2,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.95,
+            "y": 0.5,
+            "w": 0.1,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.93,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      },
+      {
+        "x": 0.67,
+        "y": 0.5,
+        "w": 0.45,
+        "h": 0.2,
+        "aspectRatio": 5,
+        "children": {
+          "countdown": {
+            "x": 0.95,
+            "y": 0.5,
+            "w": 0.1,
+            "h": 0.5,
+            "aspectRatio": 1
+          },
+          "played_cards": {
+            "x": 0.93,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 0.7
+          }
+        }
+      }
+    ],
+    "fourPlayerChatAreas": [
+      {
+        "x": 0.16,
+        "y": 0.82,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.88,
+        "y": 0.32,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.5,
+        "y": 0.18,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.12,
+        "y": 0.32,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      }
+    ],
+    "sixPlayerChatAreas": [
+      {
+        "x": 0.16,
+        "y": 0.82,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.16,
+        "y": 0.38,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.16,
+        "y": 0.2,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.5,
+        "y": 0.14,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.25,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.84,
+        "y": 0.2,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.84,
+        "y": 0.38,
+        "w": 0.14,
+        "h": 0.15,
+        "aspectRatio": 2,
+        "children": {
+          "message": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 1,
+            "h": 1,
+            "aspectRatio": 2
+          },
+          "emoji": {
+            "x": 0.75,
+            "y": 0.5,
+            "w": 0.5,
+            "h": 1,
+            "aspectRatio": 1
+          }
         }
       }
     ]
@@ -162,12 +761,19 @@
       "height": 390
     },
     "elements": {
+      "canvas": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 1,
+        "aspectRatio": 2.2222222222222223
+      },
       "logo_header": {
         "x": 0.5,
-        "y": 0.16,
-        "w": 0.86,
-        "h": 0.22,
-        "aspectRatio": 8.46
+        "y": 0.15,
+        "w": 0.54,
+        "h": 0.2,
+        "aspectRatio": 8.41
       },
       "tab_bar": {
         "x": 0.5,
@@ -213,6 +819,13 @@
       "height": 390
     },
     "elements": {
+      "canvas": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 1,
+        "aspectRatio": 2.2222222222222223
+      },
       "header": {
         "x": 0.5,
         "y": 0.05,
@@ -264,16 +877,16 @@
           "mode_selector": {
             "x": 0.5,
             "y": 0.5,
-            "w": 0.8,
+            "w": 0.9,
             "h": 0.4,
-            "aspectRatio": 10
+            "aspectRatio": 12
           },
           "create_button": {
             "x": 0.5,
-            "y": 0.9,
-            "w": 0.8,
-            "h": 0.2,
-            "aspectRatio": 10
+            "y": 0.8,
+            "w": 0.9,
+            "h": 0.4,
+            "aspectRatio": 12
           }
         }
       },
@@ -288,21 +901,22 @@
             "x": 0.5,
             "y": 0.12,
             "w": 0.9,
-            "h": 0.12,
-            "aspectRatio": 7.5
+            "h": 0.2,
+            "aspectRatio": 5
           },
           "room_input": {
             "x": 0.5,
-            "y": 0.52,
-            "w": 0.92,
-            "h": 0.5
+            "y": 0.4,
+            "w": 0.9,
+            "h": 0.4,
+            "aspectRatio": 12
           },
           "join_button": {
             "x": 0.5,
-            "y": 0.88,
-            "w": 0.92,
-            "h": 0.22,
-            "aspectRatio": 4.2
+            "y": 0.8,
+            "w": 0.9,
+            "h": 0.4,
+            "aspectRatio": 12
           }
         }
       }
@@ -315,6 +929,13 @@
       "height": 390
     },
     "elements": {
+      "canvas": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 1,
+        "aspectRatio": 2.2222222222222223
+      },
       "header": {
         "x": 0.5,
         "y": 0.07,
@@ -345,33 +966,40 @@
       "height": 390
     },
     "elements": {
+      "canvas": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 1,
+        "aspectRatio": 2.2222222222222223
+      },
       "panel": {
         "x": 0.5,
-        "y": 0.85,
-        "w": 1,
-        "h": 0.3,
-        "aspectRatio": 6,
+        "y": 0.5,
+        "w": 0.5,
+        "h": 0.8,
+        "aspectRatio": 1,
         "children": {
           "tribute_row": {
             "x": 0.5,
-            "y": 0.15,
+            "y": 0.1,
             "w": 1,
-            "h": 0.3,
-            "aspectRatio": 10
+            "h": 0.2,
+            "aspectRatio": 6
           },
           "dismiss_row": {
             "x": 0.5,
-            "y": 0.45,
+            "y": 0.3,
             "w": 1,
-            "h": 0.3,
-            "aspectRatio": 10
+            "h": 0.2,
+            "aspectRatio": 6
           },
           "exit_row": {
             "x": 0.5,
-            "y": 0.75,
+            "y": 0.5,
             "w": 1,
-            "h": 0.3,
-            "aspectRatio": 10
+            "h": 0.2,
+            "aspectRatio": 6
           }
         }
       }
@@ -380,290 +1008,456 @@
   "gamePageLayout": {
     "coordinateMode": "screenFraction",
     "referenceScreen": {
-      "width": 864,
-      "height": 300
+      "width": 400,
+      "height": 180
     },
     "elements": {
-      "social_left": {
-        "x": 0.03,
-        "y": 0.22,
-        "w": 0.06,
-        "h": 0.24,
-        "aspectRatio": 0.54
-      },
-      "social_right": {
-        "x": 0.9699303203741526,
-        "y": 0.20930691422794837,
-        "w": 0.06,
-        "h": 0.18,
-        "aspectRatio": 0.72
+      "canvas": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 1,
+        "aspectRatio": 2.2222222222222223,
+        "children": {
+          "top_bar": {
+            "x": 0.5,
+            "y": 0.05,
+            "w": 1,
+            "h": 0.1,
+            "children": {
+              "settings_btn": {
+                "x": 0.03,
+                "y": 0.5,
+                "w": 0.05,
+                "h": 1,
+                "aspectRatio": 1
+              },
+              "my_team_badge": {
+                "x": 0.1,
+                "y": 0.5,
+                "w": 0.04,
+                "h": 1,
+                "aspectRatio": 0.75
+              },
+              "opp_team_badge": {
+                "x": 0.14,
+                "y": 0.5,
+                "w": 0.04,
+                "h": 1,
+                "aspectRatio": 0.75
+              },
+              "room_info": {
+                "x": 0.75,
+                "y": 0.5,
+                "w": 0.3,
+                "h": 1,
+                "aspectRatio": 4
+              },
+              "action_icons": {
+                "x": 0.93,
+                "y": 0.5,
+                "w": 0.15,
+                "h": 1,
+                "aspectRatio": 3
+              }
+            }
+          },
+          "game_notice": {
+            "x": 0.5,
+            "y": 0.14,
+            "w": 0.55,
+            "h": 0.07,
+            "aspectRatio": 7.86
+          },
+          "table_center": {
+            "x": 0.5,
+            "y": 0.5,
+            "w": 0.2,
+            "h": 0.25,
+            "aspectRatio": 1,
+            "children": {
+              "title": {
+                "x": 0.5,
+                "y": 0.2,
+                "w": 1,
+                "h": 0.4,
+                "aspectRatio": 4
+              },
+              "subtitle": {
+                "x": 0.5,
+                "y": 0.55,
+                "w": 0.92,
+                "h": 0.25,
+                "aspectRatio": 8
+              },
+              "hint": {
+                "x": 0.5,
+                "y": 0.82,
+                "w": 0.92,
+                "h": 0.22,
+                "aspectRatio": 8
+              }
+            }
+          },
+          "waiting_action_bar": {
+            "x": 0.5,
+            "y": 0.75,
+            "w": 0.4,
+            "h": 0.1,
+            "aspectRatio": 8,
+            "children": {
+              "ready_btn": {
+                "x": 0.2,
+                "y": 0.5,
+                "w": 0.4,
+                "h": 1,
+                "aspectRatio": 3
+              },
+              "start_btn": {
+                "x": 0.8,
+                "y": 0.5,
+                "w": 0.4,
+                "h": 1,
+                "aspectRatio": 3
+              }
+            }
+          },
+          "spectate_bar": {
+            "x": 0.55,
+            "y": 0.84,
+            "w": 0.42,
+            "h": 0.07,
+            "aspectRatio": 6
+          },
+          "social_left": {
+            "x": 0.03,
+            "y": 0.22,
+            "w": 0.06,
+            "h": 0.24,
+            "aspectRatio": 0.54
+          },
+          "social_right": {
+            "x": 0.975,
+            "y": 0.8,
+            "w": 0.05,
+            "h": 0.2,
+            "aspectRatio": 0.5
+          },
+          "action_buttons": {
+            "x": 0.5,
+            "y": 0.6,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 8,
+            "children": {
+              "pass_btn": {
+                "x": 0.13,
+                "y": 0.5,
+                "w": 0.26,
+                "h": 1,
+                "aspectRatio": 2
+              },
+              "hint_btn": {
+                "x": 0.41,
+                "y": 0.5,
+                "w": 0.26,
+                "h": 1,
+                "aspectRatio": 2
+              },
+              "play_btn": {
+                "x": 0.69,
+                "y": 0.5,
+                "w": 0.26,
+                "h": 1,
+                "aspectRatio": 2
+              },
+              "countdown": {
+                "x": 0.91,
+                "y": 0.5,
+                "w": 0.13,
+                "h": 1,
+                "aspectRatio": 1
+              }
+            }
+          },
+          "self_play": {
+            "x": 0.5,
+            "y": 0.6,
+            "w": 0.5,
+            "h": 0.2,
+            "aspectRatio": 6,
+            "children": {
+              "card_sample": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0.13,
+                "h": 1,
+                "aspectRatio": 0.7
+              }
+            }
+          },
+          "hand_cards": {
+            "x": 0.5,
+            "y": 0.8,
+            "w": 0.89,
+            "h": 0.2,
+            "aspectRatio": 10,
+            "children": {
+              "card_sample": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0.7,
+                "h": 1,
+                "aspectRatio": 0.7
+              }
+            }
+          },
+          "self_seat": {
+            "x": 0.05,
+            "y": 0.94,
+            "w": 0.1,
+            "h": 0.12,
+            "aspectRatio": 2,
+            "children": {
+              "avatar": {
+                "x": 0.25,
+                "y": 0.5,
+                "w": 0.5,
+                "h": 1,
+                "aspectRatio": 1
+              },
+              "nickname": {
+                "x": 0.75,
+                "y": 0.5,
+                "w": 0.5,
+                "h": 1,
+                "aspectRatio": 1
+              }
+            }
+          },
+          "hand_toolbar": {
+            "x": 0.55,
+            "y": 0.95,
+            "w": 0.9,
+            "h": 0.1,
+            "aspectRatio": 20,
+            "children": {
+              "suit_panel": {
+                "x": 0.45,
+                "y": 0.5,
+                "w": 0.25,
+                "h": 0.8,
+                "aspectRatio": 4
+              },
+              "restore_btn": {
+                "x": 0.73,
+                "y": 0.5,
+                "w": 0.1,
+                "h": 0.72,
+                "aspectRatio": 2.2
+              },
+              "sort_btn": {
+                "x": 0.85,
+                "y": 0.5,
+                "w": 0.1,
+                "h": 0.72,
+                "aspectRatio": 2.2
+              },
+              "chat_btn": {
+                "x": 0.96,
+                "y": 0.5,
+                "w": 0.1,
+                "h": 0.72,
+                "aspectRatio": 2.2
+              }
+            }
+          },
+          "chat_popup": {
+            "x": 0.8,
+            "y": 0.5,
+            "w": 0.4,
+            "h": 0.8,
+            "aspectRatio": 1,
+            "children": {
+              "message_list": {
+                "x": 0.4,
+                "y": 0.5,
+                "w": 0.8,
+                "h": 1,
+                "aspectRatio": 0.9
+              },
+              "tab_quick": {
+                "x": 0.9,
+                "y": 0.25,
+                "w": 0.2,
+                "h": 0.5,
+                "aspectRatio": 0.45
+              },
+              "tab_emoji": {
+                "x": 0.9,
+                "y": 0.75,
+                "w": 0.2,
+                "h": 0.5,
+                "aspectRatio": 0.45
+              },
+              "quick_msg_item": {
+                "x": 0.4,
+                "y": 0.08,
+                "w": 0.8,
+                "h": 0.16,
+                "aspectRatio": 8
+              },
+              "quick_msg_gap": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0,
+                "h": 0.02,
+                "aspectRatio": 0
+              },
+              "list_padding": {
+                "x": 0.025,
+                "y": 0.025,
+                "w": 0.025,
+                "h": 0.025,
+                "aspectRatio": 2
+              },
+              "emoji_cell": {
+                "x": 0.2,
+                "y": 0.2,
+                "w": 0.4,
+                "h": 0.33,
+                "aspectRatio": 1
+              }
+            }
+          },
+          "chat_quick": {
+            "x": 0.8,
+            "y": 0.5,
+            "w": 0.4,
+            "h": 0.8,
+            "aspectRatio": 1,
+            "children": {
+              "message_list": {
+                "x": 0.4,
+                "y": 0.5,
+                "w": 0.8,
+                "h": 1,
+                "aspectRatio": 0.9
+              },
+              "tab_quick": {
+                "x": 0.9,
+                "y": 0.25,
+                "w": 0.2,
+                "h": 0.5,
+                "aspectRatio": 0.45
+              },
+              "tab_emoji": {
+                "x": 0.9,
+                "y": 0.75,
+                "w": 0.2,
+                "h": 0.5,
+                "aspectRatio": 0.45
+              },
+              "quick_msg_item": {
+                "x": 0.4,
+                "y": 0.08,
+                "w": 0.8,
+                "h": 0.16,
+                "aspectRatio": 8
+              },
+              "quick_msg_gap": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0,
+                "h": 0.02,
+                "aspectRatio": 0
+              },
+              "list_padding": {
+                "x": 0.025,
+                "y": 0.025,
+                "w": 0.025,
+                "h": 0.025,
+                "aspectRatio": 2
+              },
+              "emoji_cell": {
+                "x": 0.2,
+                "w": 0.4,
+                "h": 0.33,
+                "aspectRatio": 1,
+                "y": 0.2
+              }
+            }
+          },
+          "chat_emoji": {
+            "x": 0.8,
+            "y": 0.5,
+            "w": 0.4,
+            "h": 0.8,
+            "aspectRatio": 1,
+            "children": {
+              "message_list": {
+                "x": 0.4,
+                "y": 0.5,
+                "w": 0.8,
+                "h": 1,
+                "aspectRatio": 0.9
+              },
+              "tab_quick": {
+                "x": 0.9,
+                "y": 0.25,
+                "w": 0.2,
+                "h": 0.5,
+                "aspectRatio": 0.45
+              },
+              "tab_emoji": {
+                "x": 0.9,
+                "y": 0.75,
+                "w": 0.2,
+                "h": 0.5,
+                "aspectRatio": 0.45
+              },
+              "quick_msg_item": {
+                "x": 0.4,
+                "y": 0.08,
+                "w": 0.8,
+                "h": 0.16,
+                "aspectRatio": 8
+              },
+              "quick_msg_gap": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0,
+                "h": 0.02,
+                "aspectRatio": 0
+              },
+              "list_padding": {
+                "x": 0.025,
+                "y": 0.025,
+                "w": 0.025,
+                "h": 0.025,
+                "aspectRatio": 2
+              },
+              "emoji_cell": {
+                "x": 0.2,
+                "y": 0.2,
+                "w": 0.4,
+                "h": 0.33,
+                "aspectRatio": 1
+              }
+            }
+          }
+        }
       },
       "action_buttons": {
-        "x": 0.5,
-        "y": 0.65,
-        "w": 0.5,
-        "h": 0.1,
-        "aspectRatio": 8,
-        "children": {
-          "pass_btn": {
-            "x": 0.12,
-            "y": 0.5,
-            "w": 0.22,
-            "h": 0.9,
-            "aspectRatio": 2
-          },
-          "hint_btn": {
-            "x": 0.37,
-            "y": 0.5,
-            "w": 0.22,
-            "h": 0.9,
-            "aspectRatio": 2
-          },
-          "play_btn": {
-            "x": 0.62,
-            "y": 0.5,
-            "w": 0.22,
-            "h": 0.9,
-            "aspectRatio": 3
-          },
-          "countdown": {
-            "x": 0.88,
-            "y": 0.5,
-            "w": 0.12,
-            "h": 0.9,
-            "aspectRatio": 1
-          }
-        }
+        "h": 0.12,
+        "aspectRatio": 10
       },
-      "self_play": {
-        "x": 0.5,
-        "y": 0.6,
-        "w": 0.5,
-        "h": 0.2,
-        "aspectRatio": 6,
+      "top_bar": {
         "children": {
-          "card_sample": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0.164,
-            "h": 0.88,
-            "aspectRatio": 0.716
-          }
-        }
-      },
-      "hand_cards": {
-        "x": 0.5,
-        "y": 0.8,
-        "w": 0.8,
-        "h": 0.2,
-        "aspectRatio": 12,
-        "children": {
-          "card_sample": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0.055,
-            "h": 0.92,
-            "aspectRatio": 0.714
-          }
-        }
-      },
-      "self_seat": {
-        "x": 0.12,
-        "y": 0.93,
-        "w": 0.12,
-        "h": 0.14,
-        "aspectRatio": 0.85,
-        "children": {
-          "avatar": { "x": 0.5, "y": 0.38, "w": 0.55, "h": 0.55, "aspectRatio": 1 },
-          "nickname": { "x": 0.5, "y": 0.82, "w": 0.92, "h": 0.28, "aspectRatio": 3.2 }
-        }
-      },
-      "hand_toolbar": {
-        "x": 0.55,
-        "y": 0.95,
-        "w": 0.78,
-        "h": 0.1,
-        "aspectRatio": 20,
-        "children": {
-          "suit_panel": {
-            "x": 0.38,
-            "y": 0.6,
-            "w": 0.26,
-            "h": 0.8,
-            "aspectRatio": 4
-          },
-          "restore_btn": {
-            "x": 0.58,
-            "y": 0.6,
+          "action_icons": {
+            "x": 0.94,
             "w": 0.1,
-            "h": 0.8,
-            "aspectRatio": 2
-          },
-          "sort_btn": {
-            "x": 0.72,
-            "y": 0.6,
-            "w": 0.1,
-            "h": 0.8,
-            "aspectRatio": 2
-          },
-          "chat_btn": {
-            "x": 0.86,
-            "y": 0.6,
-            "w": 0.1,
-            "h": 0.8,
-            "aspectRatio": 2
-          }
-        }
-      },
-      "chat_popup": {
-        "x": 0.77,
-        "y": 0.6,
-        "w": 0.36,
-        "h": 0.6,
-        "aspectRatio": 0.6,
-        "children": {
-          "message_list": {
-            "x": 0.42,
-            "y": 0.5,
-            "w": 0.84,
-            "h": 0.96
-          },
-          "tab_quick": {
-            "x": 0.925,
-            "y": 0.25,
-            "w": 0.15,
-            "h": 0.5
-          },
-          "tab_emoji": {
-            "x": 0.925,
-            "y": 0.75,
-            "w": 0.15,
-            "h": 0.5
-          },
-          "quick_msg_item": {
-            "x": 0.42,
-            "y": 0.5,
-            "w": 0.78,
-            "h": 0.072,
-            "aspectRatio": 8
-          },
-          "quick_msg_gap": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0,
-            "h": 0.015
-          },
-          "list_padding": {
-            "x": 0.025,
-            "y": 0.025,
-            "w": 0.025,
-            "h": 0.025
-          },
-          "emoji_cell": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0.28,
-            "h": 0.2,
-            "aspectRatio": 1
-          }
-        }
-      },
-      "chat_quick": {
-        "x": 0.77,
-        "y": 0.6,
-        "w": 0.36,
-        "h": 0.6,
-        "aspectRatio": 0.6,
-        "children": {
-          "message_list": {
-            "x": 0.42,
-            "y": 0.5,
-            "w": 0.84,
-            "h": 0.96
-          },
-          "tab_quick": {
-            "x": 0.925,
-            "y": 0.25,
-            "w": 0.15,
-            "h": 0.5
-          },
-          "tab_emoji": {
-            "x": 0.925,
-            "y": 0.75,
-            "w": 0.15,
-            "h": 0.5
-          },
-          "quick_msg_item": {
-            "x": 0.42,
-            "y": 0.5,
-            "w": 0.78,
-            "h": 0.072,
-            "aspectRatio": 8
-          },
-          "quick_msg_gap": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0,
-            "h": 0.015
-          },
-          "list_padding": {
-            "x": 0.025,
-            "y": 0.025,
-            "w": 0.025,
-            "h": 0.025
-          }
-        }
-      },
-      "chat_emoji": {
-        "x": 0.77,
-        "y": 0.6,
-        "w": 0.36,
-        "h": 0.6,
-        "aspectRatio": 0.6,
-        "children": {
-          "message_list": {
-            "x": 0.42,
-            "y": 0.5,
-            "w": 0.84,
-            "h": 0.96
-          },
-          "tab_quick": {
-            "x": 0.925,
-            "y": 0.25,
-            "w": 0.15,
-            "h": 0.5
-          },
-          "tab_emoji": {
-            "x": 0.925,
-            "y": 0.75,
-            "w": 0.15,
-            "h": 0.5
-          },
-          "quick_msg_item": {
-            "x": 0.42,
-            "y": 0.5,
-            "w": 0.78,
-            "h": 0.072,
-            "aspectRatio": 8
-          },
-          "quick_msg_gap": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0,
-            "h": 0.015
-          },
-          "list_padding": {
-            "x": 0.025,
-            "y": 0.025,
-            "w": 0.025,
-            "h": 0.025
-          },
-          "emoji_cell": {
-            "x": 0.5,
-            "y": 0.5,
-            "w": 0.28,
-            "h": 0.2,
-            "aspectRatio": 1
+            "aspectRatio": 2.5
           }
         }
       }
@@ -673,7 +1467,7 @@
     "width": 88,
     "compactWidth": 72,
     "avatarRadius": 22,
-    "compactAvatarRadius": 30.24,
+    "compactAvatarRadius": 14,
     "borderRadius": 10,
     "avatarAspectRatio": 1,
     "aspectRatio": 2.2
@@ -687,19 +1481,19 @@
     "passHeight": 44,
     "hintWidth": 88,
     "hintHeight": 44,
-    "playWidth": 131.88,
-    "playHeight": 33.15,
+    "playWidth": 75,
+    "playHeight": 18.36,
     "largeHeight": 52,
     "borderRadius": 22,
     "aspectRatio": {
       "pass": 2,
       "hint": 2,
-      "play": 3.98,
+      "play": 4.08,
       "toolbarCompact": 2.2
     }
   },
   "socialToolbar": {
-    "width": 51.84,
+    "width": 43.2,
     "iconSize": 20,
     "borderRadius": 10,
     "aspectRatio": 1
@@ -733,8 +1527,8 @@
     "lobbyMaxWidth": 520,
     "roomSidePanelWidth": 200,
     "playedCardsMaxWidth": 420,
-    "gameSocialTop": 62.79,
-    "gameSocialSide": 25.98,
+    "gameSocialTop": 240,
+    "gameSocialSide": 21.6,
     "gameBottomBar": 8,
     "gameActionHandGap": 2,
     "topBarIconSize": 22,
@@ -742,7 +1536,7 @@
     "topBarLevelBadgeWidth": 28,
     "topBarLevelBadgeHeight": 38,
     "handToolbarAvatarRadius": 20,
-    "handToolbarHeight": 30,
+    "handToolbarHeight": 79.3,
     "handToolbarSuitPanelHeight": 34,
     "handToolbarSuitIconSize": 20,
     "handToolbarProfileFlex": 1,
@@ -756,18 +1550,18 @@
     "handToolbarButtonGap": 4,
     "handToolbarButtonIconLabelGap": 4,
     "handToolbarHandGap": 1,
-    "handToolbarBottomPadding": 5.25,
+    "handToolbarBottomPadding": 13.88,
     "handToolbarSuitPanelExtendBottom": 0,
     "handToolbarSortButtonHeight": 34,
     "handToolbarMessageSize": 40,
-    "chatPopupWidth": 303.84,
-    "chatPopupHeight": 234,
+    "chatPopupWidth": 160,
+    "chatPopupHeight": 144,
     "chatPopupTabWidth": 44,
     "chatPopupTabIconSize": 20,
     "chatPopupCellHeight": 36,
     "chatPopupEmojiCellSize": 52,
-    "chatPopupGapAboveToolbar": -19.5,
-    "chatPopupAspectRatio": 1.3,
+    "chatPopupGapAboveToolbar": -118.95,
+    "chatPopupAspectRatio": 1.11,
     "handToolbarAspectRatio": 20,
     "loginIconSize": 64,
     "loginButtonHeight": 48
@@ -891,6 +1685,14 @@
         "loginIconSize": 80,
         "loginButtonHeight": 56
       }
+    }
+  },
+  "layoutEditor": {
+    "hidden": {
+      "game": [
+        "chat_quick",
+        "chat_emoji"
+      ]
     }
   }
 }

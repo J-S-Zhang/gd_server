@@ -23,10 +23,11 @@ class PokerCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = context.ui;
+    final cardCfg = ui.config.card;
     final isWild = isWildCard(card, currentLevel);
     final isLevel = !isWild && isLevelCard(card, currentLevel);
     final selectionLift = ui.h(ui.config.handCards.selectionLift);
-    final radius = ui.r(6);
+    final radius = ui.r(cardCfg.borderRadius);
 
     return GestureDetector(
       onTap: onTap,
@@ -39,7 +40,7 @@ class PokerCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(
             color: card.selected ? const Color(0xFFFFC107) : Colors.transparent,
-            width: card.selected ? ui.r(2.5) : 0,
+            width: card.selected ? ui.r(cardCfg.selectedBorderWidth) : 0,
           ),
           boxShadow: [
             BoxShadow(
@@ -50,7 +51,7 @@ class PokerCardWidget extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(ui.r(5)),
+          borderRadius: BorderRadius.circular(ui.r(cardCfg.clipRadius)),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -67,7 +68,7 @@ class PokerCardWidget extends StatelessWidget {
                             ? const Color(0xFFD32F2F)
                             : const Color(0xFF212121),
                         fontWeight: FontWeight.bold,
-                        fontSize: width * 0.22,
+                        fontSize: width * cardCfg.labelFontRatio,
                       ),
                     ),
                   ),
@@ -77,12 +78,16 @@ class PokerCardWidget extends StatelessWidget {
                 _CardCornerMark.vertical(
                   text: '逢人配',
                   cardWidth: width,
+                  charWidthRatio: cardCfg.cornerMarkCharWidthRatio,
+                  fontScale: cardCfg.cornerMarkFontScale,
                   color: const Color(0xFFD32F2F),
                 )
               else if (isLevel)
                 _CardCornerMark.single(
                   text: '级',
                   cardWidth: width,
+                  charWidthRatio: cardCfg.cornerMarkCharWidthRatio,
+                  fontScale: cardCfg.cornerMarkFontScale,
                   color: const Color(0xFFFFC107),
                 ),
             ],
@@ -96,12 +101,16 @@ class PokerCardWidget extends StatelessWidget {
 class _CardCornerMark extends StatelessWidget {
   final String text;
   final double cardWidth;
+  final double charWidthRatio;
+  final double fontScale;
   final Color color;
   final bool vertical;
 
   const _CardCornerMark._({
     required this.text,
     required this.cardWidth,
+    required this.charWidthRatio,
+    required this.fontScale,
     required this.color,
     required this.vertical,
   });
@@ -109,11 +118,15 @@ class _CardCornerMark extends StatelessWidget {
   factory _CardCornerMark.single({
     required String text,
     required double cardWidth,
+    required double charWidthRatio,
+    required double fontScale,
     required Color color,
   }) {
     return _CardCornerMark._(
       text: text,
       cardWidth: cardWidth,
+      charWidthRatio: charWidthRatio,
+      fontScale: fontScale,
       color: color,
       vertical: false,
     );
@@ -122,22 +135,26 @@ class _CardCornerMark extends StatelessWidget {
   factory _CardCornerMark.vertical({
     required String text,
     required double cardWidth,
+    required double charWidthRatio,
+    required double fontScale,
     required Color color,
   }) {
     return _CardCornerMark._(
       text: text,
       cardWidth: cardWidth,
+      charWidthRatio: charWidthRatio,
+      fontScale: fontScale,
       color: color,
       vertical: true,
     );
   }
 
-  double get _charWidth => cardWidth * 0.3;
+  double get _charWidth => cardWidth * charWidthRatio;
 
   TextStyle _charStyle() {
     return TextStyle(
       color: color,
-      fontSize: _charWidth * 0.88,
+      fontSize: _charWidth * fontScale,
       fontWeight: FontWeight.bold,
       height: 1,
       shadows: const [

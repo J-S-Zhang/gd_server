@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'config/ui_scale.dart';
+import 'controller/game_notice_controller.dart';
 import 'controller/room_controller.dart';
 import 'router.dart';
 
@@ -45,8 +46,13 @@ class _GuandanAppState extends ConsumerState<GuandanApp> {
 
     ref.listen<String?>(wsErrorProvider, (prev, next) {
       if (next != null) {
-        final messenger = scaffoldMessengerKey.currentState;
-        messenger?.showSnackBar(SnackBar(content: Text(next)));
+        final path = appRouter.routerDelegate.currentConfiguration.uri.path;
+        if (path.startsWith('/game/')) {
+          ref.read(gameNoticeProvider.notifier).show(next);
+        } else {
+          final messenger = scaffoldMessengerKey.currentState;
+          messenger?.showSnackBar(SnackBar(content: Text(next)));
+        }
         ref.read(wsErrorProvider.notifier).state = null;
       }
     });

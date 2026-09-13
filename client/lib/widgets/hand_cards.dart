@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
 import 'game/game_layout_positioned.dart';
@@ -40,30 +42,18 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
   Widget build(BuildContext context) {
     final ui = context.ui;
     final handCfg = ui.config.handCards;
-    final region = ui.elementRect('hand_cards');
-    const parentId = 'hand_cards';
-    final cardRect = ui.elementChildRect(parentId, 'card_sample');
-    final double cardHeight;
-    final double cardWidth;
-    if (cardRect != null) {
-      cardWidth = cardRect.width;
-      cardHeight = cardRect.height;
-    } else if (region != null) {
-      final cardAspect = handCfg.width / handCfg.height;
-      cardHeight = region.height * 0.92;
-      cardWidth = cardHeight * cardAspect;
-    } else {
-      final cardSize = ui.handCardSize(handCfg);
-      cardWidth = cardSize.width;
-      cardHeight = cardSize.height;
-    }
+    final baseRegion = ui.elementRect('hand_cards');
+    final cardSize = ui.handCardSizePx();
+    final cardWidth = cardSize.width;
+    final cardHeight = cardSize.height;
     final hStep = cardWidth * (1 - handCfg.horizontalOverlap);
     final vStep = cardHeight * (1 - handCfg.verticalOverlap);
-    final selectionLift = region != null
-        ? region.height * (handCfg.selectionLift / handCfg.height)
+    final oneRowHeight = baseRegion?.height ?? ui.h(handCfg.height);
+    final selectionLift = baseRegion != null
+        ? baseRegion.height * (handCfg.selectionLift / handCfg.height)
         : ui.h(handCfg.selectionLift);
-    final extraPadding = region != null
-        ? region.height * (handCfg.extraPadding / handCfg.height)
+    final extraPadding = baseRegion != null
+        ? baseRegion.height * (handCfg.extraPadding / handCfg.height)
         : ui.h(handCfg.extraPadding);
 
     final rowHeight = computeHandCardsRowHeight(
@@ -73,10 +63,11 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
       cardHeight: cardHeight,
       verticalOverlap: handCfg.verticalOverlap,
       selectionLift: selectionLift,
-      emptyPlaceholderHeight: region?.height ?? ui.h(handCfg.emptyPlaceholderHeight),
+      emptyPlaceholderHeight: oneRowHeight,
       extraPadding: extraPadding,
     );
 
+    final regionHeight = math.max(oneRowHeight, rowHeight);
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportRowHeight(rowHeight));
 
     if (widget.cards.isEmpty) {
@@ -126,15 +117,21 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     );
 
     return SizedBox(
-      height: region?.height ?? rowHeight,
+      height: regionHeight,
       child: LayoutBuilder(
         builder: (context, constraints) {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: ui.edgeInsetsSymmetric(horizontal: handCfg.scrollPaddingHorizontal),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: Center(child: handStack),
+              constraints: BoxConstraints(
+                minWidth: constraints.maxWidth,
+                minHeight: constraints.maxHeight,
+              ),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: handStack,
+              ),
             ),
           );
         },

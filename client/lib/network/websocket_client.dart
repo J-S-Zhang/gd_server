@@ -13,8 +13,10 @@ class WebSocketClient {
   StreamSubscription? _subscription;
   Timer? _heartbeatTimer;
   int _requestId = 0;
+  final Map<int, String> _requestTypes = {};
   String? _token;
   bool _manualDisconnect = false;
+  Future<void>? _connectingFuture;
 
   WsConnectionState state = WsConnectionState.disconnected;
   MessageCallback? onMessage;
@@ -27,6 +29,22 @@ class WebSocketClient {
   }
 
   Future<void> connect({required String token}) async {
+    if (_connectingFuture != null) {
+      return _connectingFuture!;
+    }
+
+    final future = _connectInternal(token);
+    _connectingFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_connectingFuture, future)) {
+        _connectingFuture = null;
+      }
+    }
+  }
+
+  Future<void> _connectInternal(String token) async {
     _token = token;
     _manualDisconnect = false;
     await _cleanupChannel();
@@ -76,10 +94,16 @@ class WebSocketClient {
       debugPrint('[WS] send skipped ($type): not connected');
       return false;
     }
+    final requestId = ++_requestId;
+    _requestTypes[requestId] = type;
+    if (_requestTypes.length > 128) {
+      _requestTypes.remove(_requestTypes.keys.first);
+    }
+
     final msg = {
       'protocol_version': Constants.protocolVersion,
       'type': type,
-      'request_id': ++_requestId,
+      'request_id': requestId,
       if (roomId != null) 'room_id': roomId,
       if (turnId != null) 'turn_id': turnId,
       'data': data ?? {},
@@ -87,7 +111,7 @@ class WebSocketClient {
     final payload = jsonEncode(msg);
     try {
       _channel!.sink.add(payload);
-      debugPrint('[WS] sent: $type (#$_requestId)');
+      debugPrint('[WS] sent: $type (#$requestId)');
       return true;
     } catch (e) {
       debugPrint('[WS] send failed ($type): $e');
@@ -167,12 +191,19 @@ class WebSocketClient {
   void _handleError(Object error) {
     debugPrint('[WS] stream error: $error');
     if (_manualDisconnect) return;
-    _setState(WsConnectionState.reconnecting);
+    unawaited(_onConnectionLost());
   }
 
   void _handleDone() {
     debugPrint('[WS] stream closed');
     if (_manualDisconnect) return;
+    unawaited(_onConnectionLost());
+  }
+
+  Future<void> _onConnectionLost() async {
+    if (_manualDisconnect) return;
+    _setState(WsConnectionState.reconnecting);
+    await _cleanupChannel();
     _setState(WsConnectionState.disconnected);
   }
 
@@ -187,6 +218,11 @@ class WebSocketClient {
     _channel = null;
   }
 
+  String? requestTypeFor(dynamic requestId) {
+    if (requestId is! int) return null;
+    return _requestTypes[requestId];
+  }
+
   void _startHeartbeat() {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = Timer.periodic(
@@ -194,4 +230,10 @@ class WebSocketClient {
       (_) => send('ping'),
     );
   }
+}
+
+void unawaited(Future<void> future) {
+  future.catchError((Object e, StackTrace st) {
+    debugPrint('[WS] unawaited error: $e\n$st');
+  });
 }

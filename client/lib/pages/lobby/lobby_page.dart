@@ -29,19 +29,24 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
   @override
   void initState() {
     super.initState();
+    ref.read(roomControllerProvider).listen();
+    ref.read(gameControllerProvider).listen();
     _connectWebSocket();
   }
 
   Future<void> _connectWebSocket() async {
     final user = ref.read(userProvider);
     if (user == null) return;
+
+    _reconnectManager?.prepareManualReconnect();
+    _reconnectManager?.dispose();
+    _reconnectManager = null;
+
     setState(() => _connecting = true);
     try {
       final ws = ref.read(wsClientProvider);
-      ref.read(roomControllerProvider).listen();
-      ref.read(gameControllerProvider).listen();
+      await ws.disconnect();
       await ws.connect(token: user.token);
-      _reconnectManager?.dispose();
       _reconnectManager = ReconnectManager(client: ws, token: user.token);
     } catch (_) {
       // 连接失败时由 connection_error 区域的重新连接按钮提示即可。

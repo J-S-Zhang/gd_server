@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/dismiss_vote.dart';
 import '../models/room.dart';
@@ -212,6 +213,15 @@ class RoomController {
               '您已在房间中，正在为您自动进入...';
           return;
         }
+        if (code == 4002 || codeStr == '4002') {
+          final reqType = _ws.requestTypeFor(msg['request_id']);
+          if (reqType == 'seat_chat' ||
+              reqType == 'voice_state' ||
+              reqType == 'voice_signal') {
+            debugPrint('[WS] ignored $reqType unsupported on server (4002)');
+            return;
+          }
+        }
         _ref.read(wsErrorProvider.notifier).state =
             '操作失败${codeStr.isNotEmpty ? ' (错误码: $codeStr)' : ''}';
         break;
@@ -228,10 +238,13 @@ class RoomController {
     final phase = data['room_phase']?.toString() ?? 'WAITING';
     final isOwner = data['is_owner'] == true;
 
+    final mode = GameMode.fromString(data['mode'] as String?);
     _ref.read(roomProvider.notifier).state = Room(
       roomId: roomId,
       isOwner: isOwner,
       phase: _parseRoomPhase(phase),
+      mode: mode,
+      maxPlayers: mode.maxPlayers,
     );
 
     if (phase == 'PLAYING' || phase == 'SETTLEMENT') {
@@ -279,12 +292,13 @@ class RoomController {
   }
 
   Room _mergeRoomData(Room room, Map<String, dynamic> data) {
-    final mode = GameMode.fromString(data['mode'] as String?);
-    final maxPlayers = data['max_players'] as int? ?? room.maxPlayers;
+    final mode = data.containsKey('mode')
+        ? GameMode.fromString(data['mode'] as String?)
+        : room.mode;
     return room.copyWith(
       players: _parsePlayers(data),
-      mode: data.containsKey('mode') ? mode : room.mode,
-      maxPlayers: data.containsKey('max_players') ? maxPlayers : room.maxPlayers,
+      mode: mode,
+      maxPlayers: mode.maxPlayers,
       enableTribute: data.containsKey('enable_tribute')
           ? data['enable_tribute'] == true
           : room.enableTribute,

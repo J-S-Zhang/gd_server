@@ -306,6 +306,8 @@ void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, Send
         oss << ",\"in_room\":true";
         oss << ",\"room_id\":\"" << room->id() << "\"";
         oss << ",\"room_phase\":\"" << roomPhaseToString(room->phase()) << "\"";
+        oss << ",\"mode\":\"" << room->config().modeName << "\"";
+        oss << ",\"max_players\":" << room->config().maxPlayers;
         oss << ",\"is_owner\":" << (room->ownerId() == playerId ? "true" : "false");
     } else {
         oss << ",\"in_room\":false";

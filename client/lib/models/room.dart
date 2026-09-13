@@ -37,6 +37,9 @@ class Room {
 
   bool get isSoloMode => mode == GameMode.solo;
 
+  /// UI 布局使用的玩家数（solo 与四人局均走 fourPlayer* 配置）。
+  int get layoutPlayerCount => mode.layoutPlayerCount;
+
   Room copyWith({
     String? roomId,
     List<Player>? players,
@@ -64,7 +67,7 @@ class Room {
     GamePhase phase = GamePhase.waiting,
   }) {
     final mode = GameMode.fromString(data['mode'] as String?);
-    final maxPlayers = data['max_players'] as int? ?? mode.maxPlayers;
+    final maxPlayers = mode.maxPlayers;
     final players = (data['players'] as List<dynamic>?)
             ?.map((p) => Player.fromJson(p as Map<String, dynamic>))
             .toList() ??
