@@ -75,12 +75,25 @@ std::string extractHeaderValue(const std::string& line) {
 }
 
 std::string extractJsonStringValue(const std::string& json, const std::string& key) {
-    const std::string needle = "\"" + key + "\":\"";
+    const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
     if (pos == std::string::npos) return "";
     pos += needle.size();
-    auto end = json.find('"', pos);
-    if (end == std::string::npos) return "";
+    while (pos < json.size() && std::isspace(static_cast<unsigned char>(json[pos]))) {
+        ++pos;
+    }
+    if (pos >= json.size() || json[pos] != '"') return "";
+    ++pos;
+    auto end = pos;
+    while (end < json.size()) {
+        if (json[end] == '\\' && end + 1 < json.size()) {
+            end += 2;
+            continue;
+        }
+        if (json[end] == '"') break;
+        ++end;
+    }
+    if (end >= json.size()) return "";
     return json.substr(pos, end - pos);
 }
 

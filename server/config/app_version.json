@@ -1,7 +1,7 @@
 {
-  "version": "1.0.1",
-  "version_code": 2,
-  "download_url": "http://121.43.35.218/home/gd_server/downloads/guandan_client.apk",
-  "force_update": false,
-  "changelog": "初始版本"
+  "version":"1.0.1",
+  "version_code":2,
+  "download_url":"http://121.43.35.218/home/gd_server/downloads/guandan_client.apk",
+  "force_update":false,
+  "changelog":"初始版本"
 }
