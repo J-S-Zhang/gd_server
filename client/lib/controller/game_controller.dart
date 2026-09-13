@@ -19,9 +19,6 @@ final gameStateProvider = StateProvider<ClientGameState>((ref) {
   return const ClientGameState();
 });
 
-/// 当前自己手牌区域占用高度（随叠牌层数变化而更新）。
-final handCardsMaxHeightProvider = StateProvider<double>((ref) => 0);
-
 final gameControllerProvider = Provider((ref) {
   return GameController(ref);
 });

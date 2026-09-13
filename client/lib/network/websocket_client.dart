@@ -77,12 +77,21 @@ class WebSocketClient {
 
   Future<void> disconnect() async {
     _manualDisconnect = true;
+    _connectingFuture = null;
     await _cleanupChannel();
     _setState(WsConnectionState.disconnected);
   }
 
   void login(String token) {
+    _token = token;
     send('login', data: {'token': token});
+  }
+
+  /// 连接仍有效时仅重新 login，避免无谓断线重连。
+  void relogin() {
+    final token = _token;
+    if (token == null || token.isEmpty) return;
+    login(token);
   }
 
   void reconnect(String roomId) {

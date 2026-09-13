@@ -6,7 +6,6 @@ import '../../controller/game_controller.dart';
 import '../../controller/auth_controller.dart';
 import '../../models/game_mode.dart';
 import '../../network/websocket_client.dart';
-import '../../network/reconnect_manager.dart';
 import '../../theme/game_theme.dart';
 import '../../widgets/game/game_layout_positioned.dart';
 import '../../utils/region_layout.dart';
@@ -24,13 +23,13 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
   final _roomIdController = TextEditingController();
   bool _connecting = false;
   GameMode _selectedMode = GameMode.six;
-  ReconnectManager? _reconnectManager;
 
   @override
   void initState() {
     super.initState();
     ref.read(roomControllerProvider).listen();
     ref.read(gameControllerProvider).listen();
+    ref.read(wsReconnectManagerProvider);
     _connectWebSocket();
   }
 
@@ -38,16 +37,20 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     final user = ref.read(userProvider);
     if (user == null) return;
 
-    _reconnectManager?.prepareManualReconnect();
-    _reconnectManager?.dispose();
-    _reconnectManager = null;
+    ref.read(wsReconnectManagerProvider)?.prepareManualReconnect();
+
+    final ws = ref.read(wsClientProvider);
+    if (ws.state == WsConnectionState.connected) {
+      ws.login(user.token);
+      return;
+    }
 
     setState(() => _connecting = true);
     try {
-      final ws = ref.read(wsClientProvider);
-      await ws.disconnect();
+      if (ws.state != WsConnectionState.disconnected) {
+        await ws.disconnect();
+      }
       await ws.connect(token: user.token);
-      _reconnectManager = ReconnectManager(client: ws, token: user.token);
     } catch (_) {
       // 连接失败时由 connection_error 区域的重新连接按钮提示即可。
     } finally {
@@ -431,12 +434,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
   }
 
   void _createRoom() {
-    final sent = ref.read(roomControllerProvider).createRoom(_selectedMode);
-    if (sent && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('正在创建房间...')),
-      );
-    }
+    ref.read(roomControllerProvider).createRoom(_selectedMode);
   }
 
   void _joinRoom() {
@@ -452,7 +450,6 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
 
   @override
   void dispose() {
-    _reconnectManager?.dispose();
     _roomIdController.dispose();
     super.dispose();
   }

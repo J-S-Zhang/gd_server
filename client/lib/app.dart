@@ -65,17 +65,21 @@ class _GuandanAppState extends ConsumerState<GuandanApp> {
       useMaterial3: true,
     );
 
-    return UiScopeBuilder(
-      child: MaterialApp.router(
-        title: '六人掼蛋',
-        locale: const Locale('zh', 'CN'),
-        scaffoldMessengerKey: scaffoldMessengerKey,
-        theme: baseTheme.copyWith(
-          textTheme: GoogleFonts.notoSansScTextTheme(baseTheme.textTheme),
-          primaryTextTheme: GoogleFonts.notoSansScTextTheme(baseTheme.primaryTextTheme),
-        ),
-        routerConfig: appRouter,
+    return MaterialApp.router(
+      title: '六人掼蛋',
+      locale: const Locale('zh', 'CN'),
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      theme: baseTheme.copyWith(
+        textTheme: GoogleFonts.notoSansScTextTheme(baseTheme.textTheme),
+        primaryTextTheme: GoogleFonts.notoSansScTextTheme(baseTheme.primaryTextTheme),
       ),
+      routerConfig: appRouter,
+      builder: (context, child) {
+        return UiScope(
+          scale: UiScale.fromContext(context),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

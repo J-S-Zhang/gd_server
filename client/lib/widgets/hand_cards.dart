@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
 import 'game/game_layout_positioned.dart';
@@ -12,7 +10,6 @@ class HandCardsWidget extends StatefulWidget {
   final int currentLevel;
   final List<Set<int>> organizedGroups;
   final void Function(int cardId) onCardTap;
-  final ValueChanged<double>? onRowHeightChanged;
   final bool readOnly;
 
   const HandCardsWidget({
@@ -21,7 +18,6 @@ class HandCardsWidget extends StatefulWidget {
     required this.currentLevel,
     this.organizedGroups = const [],
     required this.onCardTap,
-    this.onRowHeightChanged,
     this.readOnly = false,
   });
 
@@ -30,13 +26,8 @@ class HandCardsWidget extends StatefulWidget {
 }
 
 class _HandCardsWidgetState extends State<HandCardsWidget> {
-  double? _lastReportedHeight;
-
-  void _reportRowHeight(double height) {
-    if (_lastReportedHeight == height) return;
-    _lastReportedHeight = height;
-    widget.onRowHeightChanged?.call(height);
-  }
+  static const _layoutAnimDuration = Duration(milliseconds: 220);
+  static const _layoutAnimCurve = Curves.easeOutCubic;
 
   @override
   Widget build(BuildContext context) {
@@ -48,27 +39,13 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final cardHeight = cardSize.height;
     final hStep = cardWidth * (1 - handCfg.horizontalOverlap);
     final vStep = cardHeight * (1 - handCfg.verticalOverlap);
-    final oneRowHeight = baseRegion?.height ?? ui.h(handCfg.height);
+    final regionHeight = baseRegion?.height ?? ui.h(handCfg.height);
     final selectionLift = baseRegion != null
         ? baseRegion.height * (handCfg.selectionLift / handCfg.height)
         : ui.h(handCfg.selectionLift);
     final extraPadding = baseRegion != null
         ? baseRegion.height * (handCfg.extraPadding / handCfg.height)
         : ui.h(handCfg.extraPadding);
-
-    final rowHeight = computeHandCardsRowHeight(
-      cards: widget.cards,
-      currentLevel: widget.currentLevel,
-      organizedGroups: widget.organizedGroups,
-      cardHeight: cardHeight,
-      verticalOverlap: handCfg.verticalOverlap,
-      selectionLift: selectionLift,
-      emptyPlaceholderHeight: oneRowHeight,
-      extraPadding: extraPadding,
-    );
-
-    final regionHeight = math.max(oneRowHeight, rowHeight);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reportRowHeight(rowHeight));
 
     if (widget.cards.isEmpty) {
       return const SizedBox.shrink();
@@ -81,32 +58,12 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     );
 
     final contentWidth = cardWidth + (groups.length - 1) * hStep;
-    final contentHeight = rowHeight - extraPadding;
-
-    final handStack = SizedBox(
-      width: contentWidth,
-      height: contentHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (var gi = 0; gi < groups.length; gi++)
-            for (var i = groups[gi].length - 1; i >= 0; i--)
-              Positioned(
-                left: gi * hStep,
-                bottom: i * vStep,
-                child: PokerCardWidget(
-                  card: groups[gi][i],
-                  width: cardWidth,
-                  height: cardHeight,
-                  currentLevel: widget.currentLevel,
-                  onTap: widget.readOnly
-                      ? null
-                      : () => widget.onCardTap(groups[gi][i].id),
-                ),
-              ),
-        ],
-      ),
+    final maxStackDepth = groups.fold<int>(
+      1,
+      (max, group) => group.length > max ? group.length : max,
     );
+    final contentHeight =
+        cardHeight + (maxStackDepth - 1) * vStep + selectionLift + extraPadding;
 
     return SizedBox(
       height: regionHeight,
@@ -114,7 +71,9 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
         builder: (context, constraints) {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: ui.edgeInsetsSymmetric(horizontal: handCfg.scrollPaddingHorizontal),
+            padding: ui.edgeInsetsSymmetric(
+              horizontal: handCfg.scrollPaddingHorizontal,
+            ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minWidth: constraints.maxWidth,
@@ -122,12 +81,56 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
               ),
               child: Align(
                 alignment: Alignment.bottomCenter,
-                child: handStack,
+                child: AnimatedContainer(
+                  duration: _layoutAnimDuration,
+                  curve: _layoutAnimCurve,
+                  width: contentWidth,
+                  height: contentHeight.clamp(0, constraints.maxHeight),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.bottomLeft,
+                    children: [
+                      for (var gi = 0; gi < groups.length; gi++)
+                        AnimatedPositioned(
+                          key: ValueKey(_groupKey(groups[gi])),
+                          duration: _layoutAnimDuration,
+                          curve: _layoutAnimCurve,
+                          left: gi * hStep,
+                          bottom: 0,
+                          width: cardWidth,
+                          height: cardHeight + (groups[gi].length - 1) * vStep,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              for (var i = 0; i < groups[gi].length; i++)
+                                Positioned(
+                                  bottom: i * vStep,
+                                  child: PokerCardWidget(
+                                    card: groups[gi][i],
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    currentLevel: widget.currentLevel,
+                                    onTap: widget.readOnly
+                                        ? null
+                                        : () => widget.onCardTap(groups[gi][i].id),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
         },
       ),
     );
+  }
+
+  String _groupKey(List<GameCard> group) {
+    return group.map((c) => c.id).join('_');
   }
 }

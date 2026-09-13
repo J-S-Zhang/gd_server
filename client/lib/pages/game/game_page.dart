@@ -32,6 +32,7 @@ import '../../widgets/game/waiting_action_bar.dart';
 import '../../widgets/game_table.dart';
 import '../../widgets/game/spectate_teammate_bar.dart';
 import '../../widgets/hand_cards.dart';
+import '../../widgets/layout_safe_area.dart';
 import '../../widgets/player_widget.dart';
 
 class GamePage extends ConsumerStatefulWidget {
@@ -60,7 +61,6 @@ class _GamePageState extends ConsumerState<GamePage> {
 
   @override
   void dispose() {
-    ref.read(handCardsMaxHeightProvider.notifier).state = 0;
     ref.read(gameNoticeProvider.notifier).clear();
     ref.read(voiceChatProvider.notifier).reset();
     super.dispose();
@@ -159,7 +159,7 @@ class _GamePageState extends ConsumerState<GamePage> {
 
     return Scaffold(
       body: GameTheme.gameBackground(
-        child: SafeArea(
+        child: LayoutSafeArea(
           child: Stack(
             fit: StackFit.expand,
             clipBehavior: Clip.hardEdge,
@@ -324,11 +324,6 @@ class _GamePageState extends ConsumerState<GamePage> {
     // 本人出完牌后手牌为空，避免显示「等待发牌」；切到队友视角后再显示队友手牌。
     final showHandCards =
         gameState.myCards.isNotEmpty && (isSpectating || !selfFinished);
-    if (!showHandCards && ref.read(handCardsMaxHeightProvider) != 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) ref.read(handCardsMaxHeightProvider.notifier).state = 0;
-      });
-    }
     final selfSeatPlayer = _selfSeatPlayer(
       isSpectating: isSpectating,
       viewPlayer: viewPlayer,
@@ -337,47 +332,56 @@ class _GamePageState extends ConsumerState<GamePage> {
       mySeatIndex: mySeatIndex,
     );
 
+    final showSelfPlay = hasViewPlay || (selfFinished && !isSpectating);
+
     return [
-      if (gameState.isMyTurn)
-        DynamicHandGameLayoutPositioned(
-          elementId: 'action_buttons',
-          child: GameActionButtons(
-            enabled: true,
-            canPlay: controller.selectedCardIds.isNotEmpty,
-            turnId: gameState.turnId,
-            onPass: gameState.mustRespondToTrick(user?.id)
-                ? () => controller.pass(widget.roomId)
-                : null,
-            onHint: () => controller.hint(context),
-            onPlay: () => controller.playCards(
-              widget.roomId,
-              controller.selectedCardIds,
-              context: context,
+      // 保持布局节点常驻，避免出牌/不要时挂载卸载导致手牌区 AnimatedPositioned 闪动。
+      DynamicHandGameLayoutPositioned(
+        elementId: 'action_buttons',
+        child: IgnorePointer(
+          ignoring: !gameState.isMyTurn,
+          child: Opacity(
+            opacity: gameState.isMyTurn ? 1 : 0,
+            child: GameActionButtons(
+              enabled: true,
+              canPlay: controller.selectedCardIds.isNotEmpty,
+              turnId: gameState.turnId,
+              onPass: gameState.mustRespondToTrick(user?.id)
+                  ? () => controller.pass(widget.roomId)
+                  : null,
+              onHint: () => controller.hint(context),
+              onPlay: () => controller.playCards(
+                widget.roomId,
+                controller.selectedCardIds,
+                context: context,
+              ),
             ),
           ),
         ),
-      if (hasViewPlay || (selfFinished && !isSpectating))
-        DynamicHandGameLayoutPositioned(
-          elementId: 'self_play',
-          child: SeatPlayedCards(
-            play: viewPlay,
-            currentLevel: gameState.currentLevel,
-            finishLabel: selfFinishLabel.isEmpty ? null : selfFinishLabel,
-            layoutElementId: 'self_play',
-          ),
-        ),
+      ),
+      DynamicHandGameLayoutPositioned(
+        elementId: 'self_play',
+        child: showSelfPlay
+            ? SeatPlayedCards(
+                play: viewPlay,
+                currentLevel: gameState.currentLevel,
+                finishLabel: selfFinishLabel.isEmpty ? null : selfFinishLabel,
+                layoutElementId: 'self_play',
+              )
+            : const SizedBox.shrink(),
+      ),
       if (showHandCards)
         DynamicHandGameLayoutPositioned(
           elementId: 'hand_cards',
-          child: HandCardsWidget(
-            cards: gameState.myCards,
-            currentLevel: gameState.currentLevel,
-            organizedGroups: isSpectating ? const [] : gameState.handOrganizedGroups,
-            readOnly: isSpectating,
-            onCardTap: controller.toggleCardSelection,
-            onRowHeightChanged: (height) {
-              ref.read(handCardsMaxHeightProvider.notifier).state = height;
-            },
+          child: RepaintBoundary(
+            child: HandCardsWidget(
+              cards: gameState.myCards,
+              currentLevel: gameState.currentLevel,
+              organizedGroups:
+                  isSpectating ? const [] : gameState.handOrganizedGroups,
+              readOnly: isSpectating,
+              onCardTap: controller.toggleCardSelection,
+            ),
           ),
         ),
       GameLayoutPositioned(

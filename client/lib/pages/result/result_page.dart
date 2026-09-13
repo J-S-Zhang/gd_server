@@ -10,13 +10,13 @@ import '../../theme/game_theme.dart';
 class ResultPage extends ConsumerWidget {
   const ResultPage({super.key});
 
-  void _returnToLobby(WidgetRef ref, BuildContext context) {
+  Future<void> _returnToLobby(WidgetRef ref, BuildContext context) async {
     final roomId = ref.read(roomProvider)?.roomId;
     if (roomId != null && roomId.isNotEmpty) {
-      ref.read(roomControllerProvider).leaveRoom(roomId);
+      await ref.read(roomControllerProvider).leaveRoom(roomId);
     }
     ref.read(gameStateProvider.notifier).state = const ClientGameState();
-    context.go('/lobby');
+    if (context.mounted) context.go('/lobby');
   }
 
   @override

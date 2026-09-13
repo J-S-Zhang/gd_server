@@ -4,6 +4,7 @@ import '../models/dismiss_vote.dart';
 import '../models/room.dart';
 import '../models/player.dart';
 import '../models/game_mode.dart';
+import '../network/reconnect_manager.dart';
 import '../network/websocket_client.dart';
 import 'auth_controller.dart';
 
@@ -19,6 +20,17 @@ final wsClientProvider = Provider((ref) {
     client.disconnect();
   });
   return client;
+});
+
+/// 全局 WS 自动重连（随登录态创建，不随大厅/牌局页面销毁）。
+final wsReconnectManagerProvider = Provider<ReconnectManager?>((ref) {
+  final user = ref.watch(userProvider);
+  if (user == null) return null;
+
+  final ws = ref.read(wsClientProvider);
+  final manager = ReconnectManager(client: ws, token: user.token);
+  ref.onDispose(manager.dispose);
+  return manager;
 });
 
 final roomProvider = StateProvider<Room?>((ref) => null);
@@ -81,8 +93,10 @@ class RoomController {
     _ws.startGame(roomId);
   }
 
-  void leaveRoom(String roomId) {
+  Future<void> leaveRoom(String roomId) async {
     _ws.leaveRoom(roomId);
+    // 给 leave_room 留出发送窗口，避免紧接着 disconnect/重连时服务器仍认为在房间内。
+    await Future<void>.delayed(const Duration(milliseconds: 120));
     _ref.read(roomProvider.notifier).state = null;
     _ref.read(dismissVoteProvider.notifier).state = null;
     _ref.read(pendingNavigationProvider.notifier).state = null;
