@@ -28,6 +28,18 @@ class AuthController {
     _ref.read(userProvider.notifier).state = user;
   }
 
+  Future<User> uploadAvatar(List<int> bytes, String format) async {
+    final client = _ref.read(httpClientProvider);
+    final updated = await client.uploadAvatar(bytes, format);
+    final current = _ref.read(userProvider);
+    final merged = updated.copyWith(
+      token: updated.token.isNotEmpty ? updated.token : current?.token ?? '',
+    );
+    client.setToken(merged.token);
+    _ref.read(userProvider.notifier).state = merged;
+    return merged;
+  }
+
   void logout() {
     _ref.read(userProvider.notifier).state = null;
   }

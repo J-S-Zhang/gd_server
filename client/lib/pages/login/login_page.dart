@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/login_credentials_store.dart';
+import '../../config/server_config.dart';
+import '../../config/server_config_store.dart';
 import '../../config/ui_scale.dart';
 import '../../controller/auth_controller.dart';
 import '../../services/app_update_service.dart';
@@ -18,31 +21,94 @@ class LoginPage extends ConsumerStatefulWidget {
 class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  final _serverHostController = TextEditingController();
   final _nicknameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _loading = false;
+  bool _checkingUpdate = false;
   final _updateService = AppUpdateService();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAppUpdate());
+    _loadSavedFields();
   }
 
-  Future<void> _checkAppUpdate() async {
-    final result = await _updateService.checkForUpdate();
-    if (!mounted || !result.hasUpdate || result.remote == null) return;
+  Future<void> _loadSavedFields() async {
+    final savedHost = await ServerConfigStore.load();
+    final savedCredentials = await LoginCredentialsStore.load();
+    if (!mounted) return;
+    _serverHostController.text = savedHost ?? ServerConfig.host;
+    final nickname = savedCredentials.nickname;
+    if (nickname != null && nickname.isNotEmpty) {
+      _nicknameController.text = nickname;
+    }
+    final password = savedCredentials.password;
+    if (password != null && password.isNotEmpty) {
+      _passwordController.text = password;
+    }
+  }
 
-    await showAppUpdateDialog(
-      context: context,
-      versionInfo: result.remote!,
-      updateService: _updateService,
-    );
+  Future<bool> _applyServerHost() async {
+    final host = _serverHostController.text.trim();
+    if (host.isEmpty) {
+      _showError('请输入服务器地址');
+      return false;
+    }
+    final normalized = ServerConfig.normalizeHost(host);
+    if (normalized.isEmpty) {
+      _showError('服务器地址格式无效');
+      return false;
+    }
+    await ServerConfigStore.save(normalized);
+    _serverHostController.text = normalized;
+    return true;
+  }
+
+  Future<void> _onCheckUpdatePressed() async {
+    if (_checkingUpdate) return;
+    if (!await _applyServerHost()) return;
+
+    setState(() => _checkingUpdate = true);
+    try {
+      final result = await _updateService.checkForUpdate();
+      if (!mounted) return;
+
+      final remote = result.remote;
+      if (result.hasUpdate && remote != null) {
+        if (remote.downloadUrl.isEmpty) {
+          _showError('服务器未配置下载地址，无法更新');
+          return;
+        }
+        await showAppUpdateDialog(
+          context: context,
+          versionInfo: remote,
+          updateService: _updateService,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              remote == null
+                  ? '当前已是最新版本'
+                  : '当前已是最新版本（${remote.version}）',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _showError('$e'.replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
   }
 
   Future<void> _submitLogin() async {
+    if (!await _applyServerHost()) return;
+
     final nickname = _nicknameController.text.trim();
     final password = _passwordController.text;
     if (nickname.isEmpty) {
@@ -57,6 +123,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     setState(() => _loading = true);
     try {
       await ref.read(authControllerProvider).login(nickname, password);
+      await LoginCredentialsStore.save(nickname, password);
       if (mounted) context.go('/lobby');
     } catch (e) {
       _showError('$e'.replaceFirst('Exception: ', ''));
@@ -66,6 +133,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   Future<void> _submitRegister() async {
+    if (!await _applyServerHost()) return;
+
     final nickname = _nicknameController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
@@ -89,6 +158,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     setState(() => _loading = true);
     try {
       await ref.read(authControllerProvider).register(nickname, password);
+      await LoginCredentialsStore.save(nickname, password);
       if (mounted) context.go('/lobby');
     } catch (e) {
       _showError('$e'.replaceFirst('Exception: ', ''));
@@ -186,6 +256,46 @@ class _LoginPageState extends ConsumerState<LoginPage>
     );
   }
 
+  Widget _buildCheckUpdateButton(UiScale ui) {
+    const elementId = 'check_update_button';
+    final region = ui.layoutRect(PageLayoutKind.login, elementId);
+    final btnH = region?.height ?? ui.h(ui.config.layout.loginButtonHeight);
+    final btnFont = _regionFont(region, 0.38, ui, ui.config.font.md2);
+    final radius = _regionRadius(region, ui);
+
+    return SizedBox(
+      width: double.infinity,
+      height: btnH,
+      child: OutlinedButton(
+        onPressed: _checkingUpdate ? null : _onCheckUpdatePressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: GameTheme.accentGold,
+          side: BorderSide(color: GameTheme.accentGold.withValues(alpha: 0.7)),
+          padding: EdgeInsets.symmetric(horizontal: btnFont * 0.4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        ),
+        child: _checkingUpdate
+            ? SizedBox(
+                width: btnFont * 1.2,
+                height: btnFont * 1.2,
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              )
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '检查更新',
+                  style: TextStyle(
+                    fontSize: btnFont,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required UiScale ui,
     required String elementId,
@@ -265,6 +375,22 @@ class _LoginPageState extends ConsumerState<LoginPage>
               ),
               PageLayoutPositioned(
                 page: PageLayoutKind.login,
+                elementId: 'server_host_field',
+                child: _buildTextField(
+                  ui: ui,
+                  elementId: 'server_host_field',
+                  controller: _serverHostController,
+                  label: '服务器地址',
+                  icon: Icons.dns_outlined,
+                ),
+              ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
+                elementId: 'check_update_button',
+                child: _buildCheckUpdateButton(ui),
+              ),
+              PageLayoutPositioned(
+                page: PageLayoutKind.login,
                 elementId: 'nickname_field',
                 child: _buildTextField(
                   ui: ui,
@@ -314,6 +440,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   @override
   void dispose() {
     _tabController.dispose();
+    _serverHostController.dispose();
     _nicknameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();

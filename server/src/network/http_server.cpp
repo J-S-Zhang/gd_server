@@ -148,6 +148,9 @@ std::string buildUserJson(const UserRecord& user, const std::string& token) {
     oss << "\"id\":" << user.id;
     oss << ",\"nickname\":\"" << escapeJson(user.nickname) << "\"";
     oss << ",\"username\":\"" << escapeJson(user.nickname) << "\"";
+    if (!user.avatar.empty()) {
+        oss << ",\"avatar\":\"" << escapeJson(user.avatar) << "\"";
+    }
     oss << ",\"token\":\"" << escapeJson(token) << "\"";
     oss << ",\"stats\":{";
     oss << "\"total_games\":" << user.stats.totalGames;
@@ -156,6 +159,20 @@ std::string buildUserJson(const UserRecord& user, const std::string& token) {
     oss << "}";
     oss << "}";
     return oss.str();
+}
+
+std::string extractBearerToken(const std::string& authorizationHeader) {
+    const std::string prefix = "Bearer ";
+    if (authorizationHeader.size() <= prefix.size()) return "";
+    if (authorizationHeader.compare(0, prefix.size(), prefix) != 0) return "";
+    std::string token = authorizationHeader.substr(prefix.size());
+    while (!token.empty() && std::isspace(static_cast<unsigned char>(token.front()))) {
+        token.erase(token.begin());
+    }
+    while (!token.empty() && std::isspace(static_cast<unsigned char>(token.back()))) {
+        token.pop_back();
+    }
+    return token;
 }
 
 std::string buildErrorJson(const std::string& errorCode, const std::string& message) {
@@ -191,7 +208,8 @@ void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& stat
     ::send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
 }
 
-void handleClient(SocketHandle sock, AuthService* authService, const AppVersionInfo& appVersionInfo) {
+void handleClient(SocketHandle sock, AuthService* authService, const AppVersionInfo& appVersionInfo,
+                  const AvatarStorageConfig& avatarConfig) {
     std::string requestLine;
     if (!recvLine(sock, requestLine)) {
         closeSocket(sock);
@@ -206,20 +224,24 @@ void handleClient(SocketHandle sock, AuthService* authService, const AppVersionI
     }
 
     int contentLength = 0;
+    std::string authorizationHeader;
     std::string line;
     while (recvLine(sock, line) && !line.empty()) {
         const auto colon = line.find(':');
         if (colon != std::string::npos) {
             std::string headerName = line.substr(0, colon);
+            const std::string headerValue = extractHeaderValue(line);
             for (char& c : headerName) {
                 c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
             }
             if (headerName == "content-length") {
                 try {
-                    contentLength = std::stoi(extractHeaderValue(line));
+                    contentLength = std::stoi(headerValue);
                 } catch (...) {
                     contentLength = 0;
                 }
+            } else if (headerName == "authorization") {
+                authorizationHeader = headerValue;
             }
         }
     }
@@ -277,6 +299,21 @@ void handleClient(SocketHandle sock, AuthService* authService, const AppVersionI
             sendHttpResponse(sock, 200, "OK", buildUserJson(result.user, result.token));
         } else {
             sendHttpResponse(sock, result.httpStatus, "Unauthorized",
+                             buildErrorJson(result.errorCode, result.message));
+        }
+        closeSocket(sock);
+        return;
+    }
+
+    if (method == "POST" && path == "/api/user/avatar") {
+        const std::string token = extractBearerToken(authorizationHeader);
+        const std::string imageBase64 = extractJsonStringValue(body, "image_base64");
+        const std::string format = extractJsonStringValue(body, "format");
+        auto result = authService->updateAvatar(token, imageBase64, format, avatarConfig);
+        if (result.success) {
+            sendHttpResponse(sock, 200, "OK", buildUserJson(result.user, token));
+        } else {
+            sendHttpResponse(sock, result.httpStatus, "Bad Request",
                              buildErrorJson(result.errorCode, result.message));
         }
         closeSocket(sock);
@@ -381,7 +418,7 @@ void HttpServer::run() {
         if (clientSock == kInvalidSocket) continue;
 
         std::thread([this, clientSock]() {
-            handleClient(clientSock, authService_, appVersionInfo_);
+            handleClient(clientSock, authService_, appVersionInfo_, avatarConfig_);
         }).detach();
     }
 

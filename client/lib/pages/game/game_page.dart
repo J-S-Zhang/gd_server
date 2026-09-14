@@ -381,6 +381,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                   isSpectating ? const [] : gameState.handOrganizedGroups,
               readOnly: isSpectating,
               onCardTap: controller.toggleCardSelection,
+              onBoxSelect: controller.setCardSelection,
             ),
           ),
         ),

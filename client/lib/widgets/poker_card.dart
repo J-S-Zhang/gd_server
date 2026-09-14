@@ -10,6 +10,8 @@ class PokerCardWidget extends StatelessWidget {
   final double width;
   final double height;
   final int currentLevel;
+  /// 框选预览高亮（尚未松手确认时）。
+  final bool previewSelected;
 
   const PokerCardWidget({
     super.key,
@@ -18,6 +20,7 @@ class PokerCardWidget extends StatelessWidget {
     this.width = 50,
     this.height = 72,
     this.currentLevel = 2,
+    this.previewSelected = false,
   });
 
   @override
@@ -28,6 +31,7 @@ class PokerCardWidget extends StatelessWidget {
     final isLevel = !isWild && isLevelCard(card, currentLevel);
     final selectionLift = ui.h(ui.config.handCards.selectionLift);
     final radius = ui.r(cardCfg.borderRadius);
+    final highlighted = card.selected || previewSelected;
 
     return GestureDetector(
       onTap: onTap,
@@ -39,8 +43,8 @@ class PokerCardWidget extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(
-            color: card.selected ? const Color(0xFFFFC107) : Colors.transparent,
-            width: card.selected ? ui.r(cardCfg.selectedBorderWidth) : 0,
+            color: highlighted ? const Color(0xFF64B5F6) : Colors.transparent,
+            width: highlighted ? ui.r(cardCfg.selectedBorderWidth) : 0,
           ),
           boxShadow: [
             BoxShadow(
@@ -74,6 +78,15 @@ class PokerCardWidget extends StatelessWidget {
                   ),
                 ),
               ),
+              if (highlighted)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF64B5F6).withValues(alpha: 0.38),
+                      borderRadius: BorderRadius.circular(ui.r(cardCfg.clipRadius)),
+                    ),
+                  ),
+                ),
               if (isWild)
                 _CardCornerMark.vertical(
                   text: '逢人配',

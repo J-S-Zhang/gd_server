@@ -28,6 +28,7 @@ class GameController {
   GameController(this._ref);
 
   int? _lastPassSoundKey;
+  int? _lastPlaySoundKey;
   List<int>? _straightFlushHandSignature;
   final Map<Suit, int> _straightFlushClickIndex = {};
 
@@ -104,6 +105,9 @@ class GameController {
     bool isEmoji = false,
   }) {
     if (content.isEmpty || seatIndex < 0) return;
+    if (!isEmoji) {
+      GameSoundService.instance.playChatMessageVoiceForText(content);
+    }
     _ref.read(seatChatProvider.notifier).show(
           seatIndex,
           content,
@@ -125,6 +129,12 @@ class GameController {
       return c;
     }).toList();
     _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
+  }
+
+  /// 框选多选：将选中状态设为 [cardIds] 中的牌（其余取消选中）。
+  void setCardSelection(Set<int> cardIds) {
+    _resetStraightFlushCycleIfHandChanged(_ref.read(gameStateProvider).myCards);
+    _setSelectedCardIds(cardIds);
   }
 
   void _resetStraightFlushCycleIfHandChanged(List<GameCard> cards) {
@@ -405,6 +415,8 @@ class GameController {
       currentPlayerIndex: nextPlayer,
     );
 
+    _playCardVoiceIfNeeded(data, playedIds, state.currentLevel);
+
     if (myUserId != null &&
         playerId == myUserId &&
         serverHasFinished == true) {
@@ -486,11 +498,20 @@ class GameController {
     if (seatIndex == null || seatIndex < 0 || content == null || content.isEmpty) {
       return;
     }
+    final isEmoji = data['is_emoji'] == true;
     _ref.read(seatChatProvider.notifier).show(
           seatIndex,
           content,
-          isEmoji: data['is_emoji'] == true,
+          isEmoji: isEmoji,
         );
+
+    if (!isEmoji) {
+      final playerId = data['player_id'] as int? ?? -1;
+      final myUserId = _ref.read(userProvider)?.id;
+      if (myUserId == null || playerId != myUserId) {
+        GameSoundService.instance.playChatMessageVoiceForText(content);
+      }
+    }
   }
 
   void _playPassVoiceIfNeeded(Map<String, dynamic> data) {
@@ -503,6 +524,23 @@ class GameController {
     if (_lastPassSoundKey == soundKey) return;
     _lastPassSoundKey = soundKey;
     GameSoundService.instance.playPassVoice();
+  }
+
+  void _playCardVoiceIfNeeded(
+    Map<String, dynamic> data,
+    List<int> playedIds,
+    int currentLevel,
+  ) {
+    if (playedIds.isEmpty) return;
+
+    final playerId = data['player_id'] as int? ?? -1;
+    final stateVersion = data['state_version'] as int? ?? 0;
+    final soundKey = Object.hash(playerId, stateVersion);
+    if (_lastPlaySoundKey == soundKey) return;
+    _lastPlaySoundKey = soundKey;
+
+    final cards = cardsFromIds(playedIds);
+    GameSoundService.instance.playCardVoice(cards, currentLevel);
   }
 
   int _resolvePassSeat(Map<String, dynamic> data, ClientGameState state) {

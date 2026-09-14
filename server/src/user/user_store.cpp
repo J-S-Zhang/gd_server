@@ -19,12 +19,25 @@ std::string trim(const std::string& s) {
 }
 
 std::string extractJsonStringValue(const std::string& json, const std::string& key) {
-    const std::string needle = "\"" + key + "\":\"";
+    const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
     if (pos == std::string::npos) return "";
     pos += needle.size();
-    auto end = json.find('"', pos);
-    if (end == std::string::npos) return "";
+    while (pos < json.size() && std::isspace(static_cast<unsigned char>(json[pos]))) {
+        ++pos;
+    }
+    if (pos >= json.size() || json[pos] != '"') return "";
+    ++pos;
+    auto end = pos;
+    while (end < json.size()) {
+        if (json[end] == '\\' && end + 1 < json.size()) {
+            end += 2;
+            continue;
+        }
+        if (json[end] == '"') break;
+        ++end;
+    }
+    if (end >= json.size()) return "";
     return json.substr(pos, end - pos);
 }
 
@@ -101,6 +114,7 @@ void UserStore::load() {
         user.password = extractJsonStringValue(json.substr(pos), "password");
         user.passwordHash = extractJsonStringValue(json.substr(pos), "password_hash");
         user.salt = extractJsonStringValue(json.substr(pos), "salt");
+        user.avatar = extractJsonStringValue(json.substr(pos), "avatar");
         user.stats.totalGames = static_cast<uint32_t>(
             extractJsonUintValue(json.substr(pos), "total_games"));
         user.stats.wins = static_cast<uint32_t>(extractJsonUintValue(json.substr(pos), "wins"));
@@ -127,6 +141,9 @@ void UserStore::save() const {
         oss << ",\"password\":\"" << escapeJson(u.password) << "\"";
         oss << ",\"password_hash\":\"" << escapeJson(u.passwordHash) << "\"";
         oss << ",\"salt\":\"" << escapeJson(u.salt) << "\"";
+        if (!u.avatar.empty()) {
+            oss << ",\"avatar\":\"" << escapeJson(u.avatar) << "\"";
+        }
         oss << ",\"total_games\":" << u.stats.totalGames;
         oss << ",\"wins\":" << u.stats.wins;
         oss << ",\"losses\":" << u.stats.losses;
@@ -191,6 +208,18 @@ bool UserStore::updateStats(PlayerId id, const UserStats& stats) {
     for (auto& u : users_) {
         if (u.id == id) {
             u.stats = stats;
+            save();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool UserStore::updateAvatar(PlayerId id, const std::string& avatarPath) {
+    std::lock_guard lock(mutex_);
+    for (auto& u : users_) {
+        if (u.id == id) {
+            u.avatar = avatarPath;
             save();
             return true;
         }

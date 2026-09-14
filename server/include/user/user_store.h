@@ -21,6 +21,8 @@ public:
 
     bool updateStats(PlayerId id, const UserStats& stats);
 
+    bool updateAvatar(PlayerId id, const std::string& avatarPath);
+
 private:
     std::string dbPath_;
     mutable std::mutex mutex_;

@@ -1,3 +1,5 @@
+import '../config/server_config.dart';
+
 class UserStats {
   final int totalGames;
   final int wins;
@@ -42,8 +44,31 @@ class User {
       username: json['username'] as String? ?? json['nickname'] as String,
       nickname: json['nickname'] as String,
       avatar: json['avatar'] as String?,
-      token: json['token'] as String,
+      token: json['token'] as String? ?? '',
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>?),
     );
+  }
+
+  User copyWith({
+    int? id,
+    String? username,
+    String? nickname,
+    String? avatar,
+    String? token,
+    UserStats? stats,
+  }) {
+    return User(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      nickname: nickname ?? this.nickname,
+      avatar: avatar ?? this.avatar,
+      token: token ?? this.token,
+      stats: stats ?? this.stats,
+    );
+  }
+
+  String? get avatarUrl {
+    final url = ServerConfig.resolveMediaUrl(avatar);
+    return url.isEmpty ? null : url;
   }
 }

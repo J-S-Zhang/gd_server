@@ -1,5 +1,7 @@
 #include "auth/auth_service.h"
 #include "auth/password_hash.h"
+#include "user/avatar_storage.h"
+#include "utils/sha1.h"
 
 namespace guandan {
 
@@ -73,6 +75,64 @@ std::optional<UserRecord> AuthService::validateToken(const std::string& token) {
     auto userId = tokenManager_.validateToken(token);
     if (!userId) return std::nullopt;
     return userStore_.findById(*userId);
+}
+
+AvatarUpdateResult AuthService::updateAvatar(const std::string& token,
+                                             const std::string& imageBase64,
+                                             const std::string& format,
+                                             const AvatarStorageConfig& config) {
+    AvatarUpdateResult result;
+    auto user = validateToken(token);
+    if (!user) {
+        result.httpStatus = 401;
+        result.errorCode = "unauthorized";
+        result.message = "请先登录";
+        return result;
+    }
+
+    if (imageBase64.empty()) {
+        result.httpStatus = 400;
+        result.errorCode = "invalid_image";
+        result.message = "头像数据无效";
+        return result;
+    }
+
+    const std::vector<uint8_t> bytes = base64Decode(imageBase64);
+    constexpr size_t kMaxAvatarBytes = 512 * 1024;
+    if (bytes.empty() || bytes.size() > kMaxAvatarBytes) {
+        result.httpStatus = 400;
+        result.errorCode = "invalid_image";
+        result.message = "头像大小需在 512KB 以内";
+        return result;
+    }
+
+    const auto avatarPath = saveUserAvatar(config, user->id, bytes, format);
+    if (!avatarPath) {
+        result.httpStatus = 500;
+        result.errorCode = "save_failed";
+        result.message = "头像保存失败，请稍后重试";
+        return result;
+    }
+
+    if (!userStore_.updateAvatar(user->id, *avatarPath)) {
+        result.httpStatus = 500;
+        result.errorCode = "save_failed";
+        result.message = "头像保存失败，请稍后重试";
+        return result;
+    }
+
+    auto updated = userStore_.findById(user->id);
+    if (!updated) {
+        result.httpStatus = 500;
+        result.errorCode = "internal_error";
+        result.message = "头像更新失败";
+        return result;
+    }
+
+    result.success = true;
+    result.httpStatus = 200;
+    result.user = *updated;
+    return result;
 }
 
 }  // namespace guandan

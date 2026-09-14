@@ -31,6 +31,19 @@ class HttpClient {
     );
   }
 
+  Future<User> uploadAvatar(List<int> bytes, String format) async {
+    if (_token == null || _token!.isEmpty) {
+      throw Exception('请先登录');
+    }
+    return _authRequest(
+      '${Constants.apiBaseUrl}/api/user/avatar',
+      {
+        'image_base64': base64Encode(bytes),
+        'format': format,
+      },
+    );
+  }
+
   Future<AppVersionInfo> fetchAppVersion() async {
     Object? lastError;
     for (var attempt = 0; attempt < 2; attempt++) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "auth/auth_service.h"
+#include "user/avatar_storage.h"
 #include <functional>
 #include <string>
 
@@ -26,6 +27,7 @@ public:
 
     void setAuthService(AuthService* authService) { authService_ = authService; }
     void setAppVersionInfo(const AppVersionInfo& info) { appVersionInfo_ = info; }
+    void setAvatarStorageConfig(const AvatarStorageConfig& config) { avatarConfig_ = config; }
     void run();
     void stop();
 
@@ -33,6 +35,7 @@ private:
     int port_;
     AuthService* authService_ = nullptr;
     AppVersionInfo appVersionInfo_;
+    AvatarStorageConfig avatarConfig_;
     bool running_ = false;
 };
 

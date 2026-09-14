@@ -36,6 +36,7 @@ set(GUANDAN_CORE_SOURCES
     src/utils/uuid.cpp
     src/utils/sha1.cpp
     src/user/user_store.cpp
+    src/user/avatar_storage.cpp
     src/auth/password_hash.cpp
     src/auth/token_manager.cpp
     src/auth/auth_service.cpp

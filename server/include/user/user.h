@@ -18,6 +18,8 @@ struct UserRecord {
     std::string password;
     std::string passwordHash;
     std::string salt;
+    /// 对外可访问路径，如 /downloads/avatars/user_10001.jpg
+    std::string avatar;
     UserStats stats;
 };
 
