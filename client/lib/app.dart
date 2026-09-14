@@ -76,7 +76,7 @@ class _GuandanAppState extends ConsumerState<GuandanApp> {
       routerConfig: appRouter,
       builder: (context, child) {
         return UiScope(
-          scale: UiScale.fromContext(context),
+          scale: UiScale.fullScreenFromContext(context),
           child: child ?? const SizedBox.shrink(),
         );
       },

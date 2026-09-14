@@ -53,7 +53,7 @@ class HttpClient {
               Uri.parse('${Constants.apiBaseUrl}/api/app/version'),
               headers: _headers,
             )
-            .timeout(const Duration(seconds: 10));
+            .timeout(const Duration(seconds: 2));
 
         final Map<String, dynamic> data =
             jsonDecode(response.body) as Map<String, dynamic>;
@@ -90,7 +90,7 @@ class HttpClient {
               headers: _headers,
               body: jsonEncode(body),
             )
-            .timeout(const Duration(seconds: 15));
+            .timeout(const Duration(seconds: 2));
 
         final Map<String, dynamic> data =
             jsonDecode(response.body) as Map<String, dynamic>;

@@ -26,9 +26,8 @@ class ResultPage extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
-        child: SafeArea(
-          child: Center(
-            child: Container(
+        child: Center(
+          child: Container(
               margin: ui.edgeInsetsAll(ui.config.spacing.page),
               padding: ui.edgeInsetsAll(ui.config.spacing.page),
               decoration: GameTheme.panelDecoration(ui),
@@ -70,7 +69,6 @@ class ResultPage extends ConsumerWidget {
                 ],
               ),
             ),
-          ),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
 import '../models/card.dart';
 import '../utils/hand_layout.dart';
+import 'game/game_layout_positioned.dart';
 import 'poker_card.dart';
 
 class HandCardsWidget extends StatefulWidget {
@@ -51,8 +52,8 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final cardSize = ui.handCardSizePx();
     final cardWidth = cardSize.width;
     final cardHeight = cardSize.height;
-    final hStep = cardWidth * (1 - handCfg.horizontalOverlap);
-    final vStep = cardHeight * (1 - handCfg.verticalOverlap);
+    final double hStep = cardWidth * (1 - handCfg.horizontalOverlap);
+    final double vStep = cardHeight * (1 - handCfg.verticalOverlap);
     final regionHeight = baseRegion?.height ?? ui.h(handCfg.height);
     final selectionLift = baseRegion != null
         ? baseRegion.height * (handCfg.selectionLift / handCfg.height)
@@ -134,17 +135,17 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
                             key: ValueKey(_groupKey(groups[gi])),
                             duration: _layoutAnimDuration,
                             curve: _layoutAnimCurve,
-                            left: gi * hStep,
+                            left: gi.toDouble() * hStep,
                             bottom: 0,
                             width: cardWidth,
-                            height: cardHeight + (groups[gi].length - 1) * vStep,
+                            height: cardHeight + (groups[gi].length - 1).toDouble() * vStep,
                             child: Stack(
                               clipBehavior: Clip.none,
                               alignment: Alignment.bottomCenter,
                               children: [
                                 for (var i = 0; i < groups[gi].length; i++)
                                   Positioned(
-                                    bottom: i * vStep,
+                                    bottom: i.toDouble() * vStep,
                                     child: PokerCardWidget(
                                       card: groups[gi][i],
                                       width: cardWidth,
@@ -253,8 +254,8 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final targets = <_HandCardHitTarget>[];
     for (var gi = 0; gi < groups.length; gi++) {
       for (var i = 0; i < groups[gi].length; i++) {
-        final left = gi * hStep;
-        final top = contentHeight - cardHeight - i * vStep;
+        final left = gi.toDouble() * hStep;
+        final top = contentHeight - cardHeight - i.toDouble() * vStep;
         targets.add(
           _HandCardHitTarget(
             card: groups[gi][i],

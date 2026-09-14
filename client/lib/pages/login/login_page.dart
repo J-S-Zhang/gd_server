@@ -358,11 +358,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
       resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
-        child: SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.hardEdge,
-            children: [
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
               PageLayoutPositioned(
                 page: PageLayoutKind.login,
                 elementId: 'logo_header',
@@ -430,8 +429,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 elementId: 'submit_button',
                 child: _buildSubmitButton(ui, isRegister),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

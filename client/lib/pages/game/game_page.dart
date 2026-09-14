@@ -32,7 +32,6 @@ import '../../widgets/game/waiting_action_bar.dart';
 import '../../widgets/game_table.dart';
 import '../../widgets/game/spectate_teammate_bar.dart';
 import '../../widgets/hand_cards.dart';
-import '../../widgets/layout_safe_area.dart';
 import '../../widgets/player_widget.dart';
 
 class GamePage extends ConsumerStatefulWidget {
@@ -159,17 +158,16 @@ class _GamePageState extends ConsumerState<GamePage> {
 
     return Scaffold(
       body: GameTheme.gameBackground(
-        child: LayoutSafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.hardEdge,
-            children: [
-              Positioned.fill(
-                child: Stack(
-                  fit: StackFit.expand,
-                  clipBehavior: Clip.hardEdge,
-                  children: [
-                    GameTableWidget(
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned.fill(
+              child: Stack(
+                fit: StackFit.expand,
+                clipBehavior: Clip.hardEdge,
+                children: [
+                  GameTableWidget(
                       gameState: gameState,
                       roomId: widget.roomId,
                       isWaitingLobby: isWaitingLobby,
@@ -207,7 +205,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                       elementId: 'social_right',
                       child: GameVoiceToolbar(roomId: widget.roomId),
                     ),
-                    if (isPlaying) ..._buildPlayingOverlays(
+                    ..._buildRoomBaseOverlays(
                       ui: ui,
                       gameState: gameState,
                       controller: controller,
@@ -216,8 +214,19 @@ class _GamePageState extends ConsumerState<GamePage> {
                       maxPlayers: layoutPlayers,
                       me: me,
                       selfChat: selfChat,
-                      room: room,
+                      isWaitingLobby: isWaitingLobby,
                     ),
+                    if (isPlaying)
+                      ..._buildPlayingOverlays(
+                        ui: ui,
+                        gameState: gameState,
+                        controller: controller,
+                        user: user,
+                        mySeatIndex: mySeatIndex,
+                        maxPlayers: layoutPlayers,
+                        me: me,
+                        room: room,
+                      ),
                     if (isWaitingLobby)
                       GameLayoutPositioned(
                         elementId: 'waiting_action_bar',
@@ -230,11 +239,10 @@ class _GamePageState extends ConsumerState<GamePage> {
                           onStart: () => roomController.startGame(widget.roomId),
                         ),
                       ),
-                  ],
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -294,7 +302,7 @@ class _GamePageState extends ConsumerState<GamePage> {
     return null;
   }
 
-  List<Widget> _buildPlayingOverlays({
+  List<Widget> _buildRoomBaseOverlays({
     required UiScale ui,
     required ClientGameState gameState,
     required GameController controller,
@@ -303,6 +311,114 @@ class _GamePageState extends ConsumerState<GamePage> {
     required int maxPlayers,
     required Player? me,
     required SeatChatMessage? selfChat,
+    required bool isWaitingLobby,
+  }) {
+    final isSpectating = !isWaitingLobby && gameState.isSpectating;
+    final selfSeatPlayer = isWaitingLobby
+        ? (me ??
+            Player(
+              id: user?.id ?? 0,
+              nickname: user?.nickname ?? '玩家',
+              seatIndex: mySeatIndex,
+              team: mySeatIndex % 2,
+            ))
+        : _selfSeatPlayer(
+            isSpectating: isSpectating,
+            viewPlayer: _playerAtSeat(gameState.players, gameState.mySeatIndex),
+            me: me,
+            user: user,
+            mySeatIndex: mySeatIndex,
+          );
+
+    return [
+      GameLayoutPositioned(
+        elementId: 'self_seat',
+        child: PlayerWidget(
+          player: selfSeatPlayer,
+          showLobbyState: isWaitingLobby,
+          isCurrentTurn: !isWaitingLobby && gameState.isMyTurn,
+          cardCountOverride:
+              isWaitingLobby || isSpectating ? null : gameState.myCards.length,
+          chatBubble: ui.seatChatLayoutElement(0, maxPlayers) != null
+              ? null
+              : selfChat?.content,
+          chatIsEmoji: selfChat?.isEmoji ?? false,
+          maxPlayers: maxPlayers,
+          layoutElementId: 'self_seat',
+        ),
+      ),
+      if (selfChat != null &&
+          selfChat.content.isNotEmpty &&
+          ui.seatChatLayoutElement(0, maxPlayers) != null)
+        Builder(
+          builder: (context) {
+            final rect = ui.layoutRegionRect('chat_0', maxPlayers: maxPlayers);
+            if (rect == null) return const SizedBox.shrink();
+            return Positioned(
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+              child: SeatChatDisplay(
+                localSeat: 0,
+                maxPlayers: maxPlayers,
+                content: selfChat.content,
+                isEmoji: selfChat.isEmoji,
+              ),
+            );
+          },
+        ),
+      GameLayoutPositioned(
+        elementId: 'hand_toolbar',
+        child: HandToolbar(
+          straightFlushSuits: isWaitingLobby || isSpectating
+              ? const {}
+              : detectStraightFlushSuits(
+                  gameState.myCards,
+                  currentLevel: gameState.currentLevel,
+                ),
+          onSuitTap: isWaitingLobby || isSpectating
+              ? null
+              : controller.cycleStraightFlushSelection,
+          onRestore:
+              isWaitingLobby || isSpectating ? null : controller.restoreHand,
+          onSort: isWaitingLobby || isSpectating
+              ? null
+              : () => controller.sortHand(context),
+          externalChatPanel: true,
+          showChatPanel: _showChatPanel,
+          onShowChatPanelChanged: (v) => setState(() => _showChatPanel = v),
+          onQuickMessage: (message) => _sendSeatChat(message),
+          onEmoji: (emoji) => _sendSeatChat(emoji, isEmoji: true),
+        ),
+      ),
+      if (_showChatPanel)
+        GameLayoutPositioned(
+          elementId: 'chat_popup',
+          child: ChatPopupPanel(
+            selectedTab: _chatTab,
+            onTabChanged: (tab) => setState(() => _chatTab = tab),
+            onQuickMessageSelected: (message) {
+              _sendSeatChat(message);
+              setState(() => _showChatPanel = false);
+            },
+            onEmojiSelected: (emoji) {
+              _sendSeatChat(emoji, isEmoji: true);
+              setState(() => _showChatPanel = false);
+            },
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> _buildPlayingOverlays({
+    required UiScale ui,
+    required ClientGameState gameState,
+    required GameController controller,
+    required User? user,
+    required int mySeatIndex,
+    required int maxPlayers,
+    required Player? me,
     required room_model.Room? room,
   }) {
     final selfFinished = me?.hasFinished ?? false;
@@ -313,7 +429,6 @@ class _GamePageState extends ConsumerState<GamePage> {
       mergedPlayers[p.id] = p;
     }
     final allPlayers = mergedPlayers.values.toList();
-    final viewPlayer = _playerAtSeat(allPlayers, viewSeatIndex);
     final viewPlay =
         gameState.seatRoundPlays[viewSeatIndex] ?? const SeatRoundPlay();
     final isViewSeatTurn = gameState.currentPlayerIndex == viewSeatIndex;
@@ -324,13 +439,6 @@ class _GamePageState extends ConsumerState<GamePage> {
     // 本人出完牌后手牌为空，避免显示「等待发牌」；切到队友视角后再显示队友手牌。
     final showHandCards =
         gameState.myCards.isNotEmpty && (isSpectating || !selfFinished);
-    final selfSeatPlayer = _selfSeatPlayer(
-      isSpectating: isSpectating,
-      viewPlayer: viewPlayer,
-      me: me,
-      user: user,
-      mySeatIndex: mySeatIndex,
-    );
 
     final showSelfPlay = hasViewPlay || (selfFinished && !isSpectating);
 
@@ -385,41 +493,6 @@ class _GamePageState extends ConsumerState<GamePage> {
             ),
           ),
         ),
-      GameLayoutPositioned(
-        elementId: 'self_seat',
-        child: PlayerWidget(
-          player: selfSeatPlayer,
-          isCurrentTurn: gameState.isMyTurn,
-          cardCountOverride: isSpectating ? null : gameState.myCards.length,
-          chatBubble: ui.seatChatLayoutElement(0, maxPlayers) != null
-              ? null
-              : selfChat?.content,
-          chatIsEmoji: selfChat?.isEmoji ?? false,
-          maxPlayers: maxPlayers,
-          layoutElementId: 'self_seat',
-        ),
-      ),
-      if (selfChat != null &&
-          selfChat.content.isNotEmpty &&
-          ui.seatChatLayoutElement(0, maxPlayers) != null)
-        Builder(
-          builder: (context) {
-            final rect = ui.layoutRegionRect('chat_0', maxPlayers: maxPlayers);
-            if (rect == null) return const SizedBox.shrink();
-            return Positioned(
-              left: rect.left,
-              top: rect.top,
-              width: rect.width,
-              height: rect.height,
-              child: SeatChatDisplay(
-                localSeat: 0,
-                maxPlayers: maxPlayers,
-                content: selfChat.content,
-                isEmoji: selfChat.isEmoji,
-              ),
-            );
-          },
-        ),
       if (isSpectating)
         GameLayoutPositioned(
           elementId: 'spectate_bar',
@@ -429,41 +502,6 @@ class _GamePageState extends ConsumerState<GamePage> {
             players: allPlayers,
             onSelect: (seat) =>
                 controller.spectateTeammate(widget.roomId, seat),
-          ),
-        ),
-      GameLayoutPositioned(
-        elementId: 'hand_toolbar',
-        child: HandToolbar(
-          straightFlushSuits: isSpectating
-              ? const {}
-              : detectStraightFlushSuits(
-                  gameState.myCards,
-                  currentLevel: gameState.currentLevel,
-                ),
-          onSuitTap: isSpectating ? null : controller.cycleStraightFlushSelection,
-          onRestore: isSpectating ? null : controller.restoreHand,
-          onSort: isSpectating ? null : () => controller.sortHand(context),
-          externalChatPanel: true,
-          showChatPanel: _showChatPanel,
-          onShowChatPanelChanged: (v) => setState(() => _showChatPanel = v),
-          onQuickMessage: (message) => _sendSeatChat(message),
-          onEmoji: (emoji) => _sendSeatChat(emoji, isEmoji: true),
-        ),
-      ),
-      if (_showChatPanel)
-        GameLayoutPositioned(
-          elementId: 'chat_popup',
-          child: ChatPopupPanel(
-            selectedTab: _chatTab,
-            onTabChanged: (tab) => setState(() => _chatTab = tab),
-            onQuickMessageSelected: (message) {
-              _sendSeatChat(message);
-              setState(() => _showChatPanel = false);
-            },
-            onEmojiSelected: (emoji) {
-              _sendSeatChat(emoji, isEmoji: true);
-              setState(() => _showChatPanel = false);
-            },
           ),
         ),
     ];

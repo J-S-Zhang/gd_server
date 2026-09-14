@@ -77,11 +77,10 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
-        child: SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.hardEdge,
-            children: [
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
               PageLayoutPositioned(
                 page: PageLayoutKind.lobby,
                 elementId: 'header',
@@ -111,8 +110,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                 elementId: 'join_room',
                 child: _buildJoinRoom(ui, isConnected),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

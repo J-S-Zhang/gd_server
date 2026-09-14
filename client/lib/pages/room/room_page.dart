@@ -21,11 +21,10 @@ class RoomPage extends ConsumerWidget {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
-        child: SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            clipBehavior: Clip.hardEdge,
-            children: [
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.hardEdge,
+          children: [
               PageLayoutPositioned(
                 page: PageLayoutKind.room,
                 elementId: 'header',
@@ -41,8 +40,7 @@ class RoomPage extends ConsumerWidget {
                 elementId: 'side_panel',
                 child: _buildSidePanel(ui, room, controller),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );

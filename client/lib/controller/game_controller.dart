@@ -11,9 +11,11 @@ import '../models/player.dart';
 import '../models/room.dart';
 import '../models/seat_round_play.dart';
 import '../network/websocket_client.dart';
+import '../models/quick_chat_message.dart';
 import '../services/game_sound_service.dart';
 import 'auth_controller.dart';
 import 'room_controller.dart';
+import 'voice_pack_controller.dart';
 
 final gameStateProvider = StateProvider<ClientGameState>((ref) {
   return const ClientGameState();
@@ -106,7 +108,7 @@ class GameController {
   }) {
     if (content.isEmpty || seatIndex < 0) return;
     if (!isEmoji) {
-      GameSoundService.instance.playChatMessageVoiceForText(content);
+      _playQuickChatVoice(content);
     }
     _ref.read(seatChatProvider.notifier).show(
           seatIndex,
@@ -506,12 +508,26 @@ class GameController {
         );
 
     if (!isEmoji) {
-      final playerId = data['player_id'] as int? ?? -1;
+      final playerId = _jsonInt(data['player_id']) ?? -1;
       final myUserId = _ref.read(userProvider)?.id;
       if (myUserId == null || playerId != myUserId) {
-        GameSoundService.instance.playChatMessageVoiceForText(content);
+        _playQuickChatVoice(content);
       }
     }
+  }
+
+  void _playQuickChatVoice(String content) {
+    final voiceId = quickChatVoiceIdForText(content);
+    if (voiceId == null) return;
+    final pack = _ref.read(voicePackProvider);
+    GameSoundService.instance.playChatMessageVoice(voiceId, pack: pack);
+  }
+
+  int? _jsonInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   void _playPassVoiceIfNeeded(Map<String, dynamic> data) {
