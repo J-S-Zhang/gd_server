@@ -51,6 +51,8 @@ enum class GamePhase {
     WAITING,
     READY,
     DEALING,
+    TRIBUTE,
+    RETURN_TRIBUTE,
     PLAYING,
     ROUND_END,
     SETTLEMENT,

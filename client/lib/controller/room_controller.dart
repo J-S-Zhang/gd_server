@@ -268,16 +268,7 @@ class RoomController {
     }
   }
 
-  GamePhase _parseRoomPhase(String phase) {
-    switch (phase.toUpperCase()) {
-      case 'PLAYING':
-        return GamePhase.playing;
-      case 'SETTLEMENT':
-        return GamePhase.settlement;
-      default:
-        return GamePhase.waiting;
-    }
-  }
+  GamePhase _parseRoomPhase(String phase) => parseRoomPhase(phase);
 
   bool _playerIsOwner(Player player, Map<String, dynamic> data, int userId) {
     if (player.id != userId) return false;
@@ -316,6 +307,9 @@ class RoomController {
       enableTribute: data.containsKey('enable_tribute')
           ? data['enable_tribute'] == true
           : room.enableTribute,
+      phase: data.containsKey('room_phase')
+          ? parseRoomPhase(data['room_phase'] as String?)
+          : room.phase,
     );
   }
 

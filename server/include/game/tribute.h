@@ -4,6 +4,7 @@
 #include "game/game_state.h"
 #include "game/types.h"
 #include <array>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -31,9 +32,25 @@ struct TributeRoundResult {
     std::string summary;
 };
 
+/// 进贡阶段计划（尚未转移牌）。
+struct TributePhasePlan {
+    bool skipped = true;
+    bool antiTribute = false;
+    std::vector<int> tributerSeats;
+    std::vector<int> recipientSeats;
+    int headSeat = 0;
+    std::string summary;
+};
+
 /// 4/6 人掼蛋进贡、还贡、抗贡规则。
 class TributeManager {
 public:
+    TributePhasePlan planRound(
+        const GameState& state,
+        const GameRuleConfig& config,
+        const PreviousRoundInfo& previous
+    ) const;
+
     TributeRoundResult resolveRound(
         GameState& state,
         const GameRuleConfig& config,
@@ -43,6 +60,57 @@ public:
 
     bool isValidTributeCard(const Card& card, const RuleContext& ctx) const;
     bool isValidReturnCard(const Card& card, const RuleContext& ctx) const;
+
+    /// 进贡牌：手牌中最大非逢人配（非红桃级牌）。
+    CardId requiredTributeCard(
+        const Hand& hand,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
+
+    bool isValidTributeSubmission(
+        int seat,
+        CardId cardId,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
+
+    bool isValidReturnSubmission(
+        int seat,
+        CardId cardId,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
+
+    /// 还贡推荐：优先 ≤10 非级牌中最小；否则手牌最小。
+    CardId pickReturnCard(
+        const Hand& hand,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
+
+    std::vector<CardId> validReturnCardIds(
+        const Hand& hand,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
+
+    void assignTributes(
+        GameState& state,
+        const RuleContext& ctx,
+        const TributePhasePlan& plan,
+        const std::map<int, CardId>& submissions,
+        TributeRoundResult& result
+    ) const;
+
+    void applyReturnTransfer(
+        GameState& state,
+        int fromSeat,
+        int toSeat,
+        CardId cardId
+    ) const;
+
+    int computeFirstPlayerSeat(const TributeRoundResult& result, int headSeat) const;
 
     CardId pickBestTributeCard(
         const Hand& hand,
@@ -82,6 +150,7 @@ private:
     ) const;
 
     int countBigJokersInSeat(const GameState& state, int seat) const;
+    CardId pickSmallestCard(const Hand& hand, const GameState& state) const;
     void transferCard(GameState& state, int fromSeat, int toSeat, CardId cardId) const;
 };
 

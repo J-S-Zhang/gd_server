@@ -21,6 +21,7 @@ dependencies:
   permission_handler: ^11.3.1
   flutter_webrtc: ^0.12.12
   image_picker: ^1.1.2
+  image: ^4.5.4
 
 dev_dependencies:
   flutter_test:
@@ -32,6 +33,7 @@ flutter:
   assets:
     - assets/config/ui_config.json
     - assets/images/
+    - assets/images/avatars/
     - assets/images/bgs/
     - assets/images/cards/
     - assets/sounds/

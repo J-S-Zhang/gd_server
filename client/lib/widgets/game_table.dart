@@ -26,6 +26,7 @@ class GameTableWidget extends StatelessWidget {
   final int maxPlayers;
   final bool isSoloMode;
   final bool isWaitingLobby;
+  final bool isRoundWaiting;
   final void Function(int serverSeatIndex)? onEmptySeatTap;
   final Map<int, SeatChatMessage> seatChats;
 
@@ -38,6 +39,7 @@ class GameTableWidget extends StatelessWidget {
     this.maxPlayers = 6,
     this.isSoloMode = false,
     this.isWaitingLobby = false,
+    this.isRoundWaiting = false,
     this.onEmptySeatTap,
     this.seatChats = const <int, SeatChatMessage>{},
   });
@@ -59,16 +61,22 @@ class GameTableWidget extends StatelessWidget {
             height: centerRect.height,
             child: isWaitingLobby
                 ? _buildWaitingCenter(ui)
-                : _buildPlayingCenter(ui),
+                : isRoundWaiting
+                    ? _buildRoundWaitingCenter(ui)
+                    : _buildPlayingCenter(ui),
           )
         else
           Center(
             child: isWaitingLobby
                 ? _buildWaitingCenter(ui)
-                : _buildPlayingCenter(ui),
+                : isRoundWaiting
+                    ? _buildRoundWaitingCenter(ui)
+                    : _buildPlayingCenter(ui),
           ),
         if (isWaitingLobby)
           ..._positionLobbySeats(ui)
+        else if (isRoundWaiting)
+          ..._positionRoundWaitingSeats(ui)
         else ...[
           ..._positionPlayers(ui, _effectivePlayers(), gameState.mySeatIndex),
           ..._positionPlayAreas(ui, _effectivePlayers(), gameState.mySeatIndex),
@@ -169,6 +177,40 @@ class GameTableWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildRoundWaitingCenter(UiScale ui) {
+    final readyCount = lobbyPlayers.where((p) => p.isReady).length;
+    final fontSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.5);
+    final subSize = ui.regionFontSize(_centerId, childId: 'subtitle', heightRatio: 0.45);
+    return DecoratedBox(
+      decoration: GameTheme.panelDecoration(ui),
+      child: RegionFitTextBlock(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '本局结束',
+              style: TextStyle(
+                color: GameTheme.accentGold,
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: ui.h(ui.config.spacing.sm)),
+            Text(
+              '$readyCount/$maxPlayers 人已准备',
+              style: TextStyle(color: GameTheme.textSecondary, fontSize: subSize),
+            ),
+            SizedBox(height: ui.h(ui.config.spacing.xs)),
+            Text(
+              '全部准备后开始下一局',
+              style: TextStyle(color: Colors.white38, fontSize: subSize * 0.9),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlayingCenter(UiScale ui) {
     if (_currentPlayer() != null) return const SizedBox.shrink();
 
@@ -191,7 +233,19 @@ class GameTableWidget extends StatelessWidget {
       merged[p.id] = p;
     }
     for (final p in gameState.players) {
-      merged[p.id] = p;
+      final roomPlayer = merged[p.id];
+      merged[p.id] = Player(
+        id: p.id,
+        nickname: p.nickname,
+        seatIndex: p.seatIndex,
+        team: p.team,
+        cardCount: p.cardCount,
+        hasFinished: p.hasFinished,
+        finishRank: p.finishRank,
+        isReady: roomPlayer?.isReady ?? p.isReady,
+        isBot: p.isBot,
+        status: p.status,
+      );
     }
     return merged.values.toList();
   }
@@ -236,6 +290,42 @@ class GameTableWidget extends StatelessWidget {
         child: child,
       ),
     );
+  }
+
+  List<Widget> _positionRoundWaitingSeats(UiScale ui) {
+    final seatElements = ui.config.seatLayout.seatElementsFor(maxPlayers);
+    final widgets = <Widget>[];
+    final players = _effectivePlayers();
+    for (var serverSeat = 0; serverSeat < maxPlayers; serverSeat++) {
+      final localSeat =
+          SeatLayout.toLocalSeat(serverSeat, lobbyMySeatIndex, maxPlayers);
+      if (localSeat == 0) continue;
+
+      final player = _playerAtSeatFromList(serverSeat, players);
+      if (player == null) continue;
+
+      widgets.add(
+        _positionSeatOnCanvas(
+          ui: ui,
+          localSeat: localSeat,
+          seatElements: seatElements,
+          child: PlayerWidget(
+            player: player,
+            showLobbyState: true,
+            layoutElementId: 'seat_$localSeat',
+            maxPlayers: maxPlayers,
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  Player? _playerAtSeatFromList(int serverSeat, List<Player> players) {
+    for (final p in players) {
+      if (p.seatIndex == serverSeat) return p;
+    }
+    return null;
   }
 
   List<Widget> _positionLobbySeats(UiScale ui) {

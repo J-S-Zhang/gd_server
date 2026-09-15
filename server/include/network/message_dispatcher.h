@@ -38,6 +38,12 @@ private:
     void sendSpectateUpdatesToFinishedPlayers(const std::shared_ptr<Room>& room);
     void scheduleTurnTimer(const std::shared_ptr<Room>& room);
     void cancelTurnTimer(const RoomId& roomId);
+    void scheduleTributeTimer(const std::shared_ptr<Room>& room);
+    void cancelTributeTimer(const RoomId& roomId);
+    void executeBotTributeActions(const std::shared_ptr<Room>& room);
+    void broadcastTributePhaseUpdate(const std::shared_ptr<Room>& room);
+    void onTributePhaseCompleted(const std::shared_ptr<Room>& room);
+    void tryStartNextRound(const std::shared_ptr<Room>& room);
     void executeBotTurn(const std::shared_ptr<Room>& room, PlayerId botId);
     void broadcastPlayerPlayed(const std::shared_ptr<Room>& room, PlayerId playerId,
                                const std::vector<CardId>& cards, const PlayResult& result);
@@ -55,6 +61,8 @@ private:
     void handleStartGame(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePlayCards(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePass(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleSubmitTribute(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleSubmitReturn(uint64_t sessionId, const Message& msg, SendFn send);
     void handleSpectateTeammate(uint64_t sessionId, const Message& msg, SendFn send);
     void handleReconnect(uint64_t sessionId, const Message& msg, SendFn send);
     void handleRequestDismiss(uint64_t sessionId, const Message& msg, SendFn send);

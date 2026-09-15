@@ -1,5 +1,6 @@
 import '../models/card.dart';
 import '../utils/card_pattern.dart';
+import '../utils/card_rules.dart';
 import '../utils/card_utils.dart';
 import '../utils/hand_layout.dart';
 import 'package:flutter/material.dart';
@@ -96,6 +97,61 @@ class GameController {
     _ws.pass(roomId, state.turnId);
   }
 
+  bool get canSubmitTribute {
+    final state = _ref.read(gameStateProvider);
+    if (!state.mustSubmitTribute) return false;
+    final selected = selectedCardIds;
+    return selected.length == 1 &&
+        selected.first == state.requiredTributeCardId;
+  }
+
+  bool get canSubmitReturn {
+    final state = _ref.read(gameStateProvider);
+    if (!state.mustSubmitReturn) return false;
+    final selected = selectedCardIds;
+    if (selected.length != 1) return false;
+    final cardId = selected.first;
+    if (state.validReturnCardIds.contains(cardId)) return true;
+    if (state.validReturnCardIds.isEmpty) {
+      return cardId == _smallestCardId(state.myCards);
+    }
+    return false;
+  }
+
+  void submitTribute(String roomId) {
+    final state = _ref.read(gameStateProvider);
+    final cardId = state.requiredTributeCardId;
+    if (!canSubmitTribute || cardId == 0) return;
+
+    final nextCards = state.myCards.where((c) => c.id != cardId).toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      myCards: nextCards,
+      handOrganizedGroups: filterOrganizedGroups(
+        state.handOrganizedGroups,
+        nextCards.map((c) => c.id).toSet(),
+      ),
+    );
+    _resetStraightFlushCycleIfHandChanged(nextCards);
+    _ws.submitTribute(roomId, cardId);
+  }
+
+  void submitReturn(String roomId) {
+    final state = _ref.read(gameStateProvider);
+    if (!canSubmitReturn) return;
+    final cardId = selectedCardIds.first;
+
+    final nextCards = state.myCards.where((c) => c.id != cardId).toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(
+      myCards: nextCards,
+      handOrganizedGroups: filterOrganizedGroups(
+        state.handOrganizedGroups,
+        nextCards.map((c) => c.id).toSet(),
+      ),
+    );
+    _resetStraightFlushCycleIfHandChanged(nextCards);
+    _ws.submitReturn(roomId, cardId);
+  }
+
   void spectateTeammate(String roomId, int targetSeatIndex) {
     _ws.spectateTeammate(roomId, targetSeatIndex);
   }
@@ -118,6 +174,24 @@ class GameController {
     _ws.sendSeatChat(roomId, content, isEmoji: isEmoji);
   }
 
+  void onHandCardTap(int cardId) {
+    final state = _ref.read(gameStateProvider);
+    if (state.mustSubmitTribute) {
+      if (cardId != state.requiredTributeCardId) return;
+      _setSelectedCardIds({cardId});
+      return;
+    }
+    if (state.mustSubmitReturn) {
+      if (state.validReturnCardIds.isNotEmpty &&
+          !state.validReturnCardIds.contains(cardId)) {
+        return;
+      }
+      _setSelectedCardIds({cardId});
+      return;
+    }
+    toggleCardSelection(cardId);
+  }
+
   void toggleCardSelection(int cardId) {
     _resetStraightFlushCycleIfHandChanged(_ref.read(gameStateProvider).myCards);
     final state = _ref.read(gameStateProvider);
@@ -133,10 +207,73 @@ class GameController {
     _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
   }
 
-  /// 框选多选：将选中状态设为 [cardIds] 中的牌（其余取消选中）。
+  int? _smallestCardId(List<GameCard> cards) {
+    if (cards.isEmpty) return null;
+    GameCard? smallest;
+    for (final card in cards) {
+      if (smallest == null ||
+          rankValue(card.rank) < rankValue(smallest.rank)) {
+        smallest = card;
+      }
+    }
+    return smallest?.id;
+  }
+
+  ClientGameState _applyDealtSnapshot(
+    ClientGameState newState, {
+    bool resetTrick = false,
+  }) {
+    if (resetTrick) {
+      newState = newState.copyWith(
+        seatRoundPlays: const {},
+        lastPlayedCards: const [],
+        lastPlayedPlayerId: -1,
+        lastPlayedSeatIndex: -1,
+        handOrganizedGroups: const [],
+      );
+    }
+    if (newState.mustSubmitTribute && newState.requiredTributeCardId > 0) {
+      final requiredId = newState.requiredTributeCardId;
+      newState = newState.copyWith(
+        myCards: newState.myCards
+            .map(
+              (c) => GameCard(
+                id: c.id,
+                suit: c.suit,
+                rank: c.rank,
+                selected: c.id == requiredId,
+              ),
+            )
+            .toList(),
+      );
+    }
+    return newState;
+  }
+
+  /// 出牌阶段：取消手牌区全部选中。
+  void clearCardSelection() {
+    final state = _ref.read(gameStateProvider);
+    if (state.isSpectating || state.phase != GamePhase.playing) return;
+    if (!state.myCards.any((c) => c.selected)) return;
+    _straightFlushClickIndex.clear();
+    _setSelectedCardIds({});
+  }
+
+  /// 框选多选：矩形内的牌切换选中状态（已选→取消，未选→选中），框外不变。
   void setCardSelection(Set<int> cardIds) {
     _resetStraightFlushCycleIfHandChanged(_ref.read(gameStateProvider).myCards);
-    _setSelectedCardIds(cardIds);
+    if (cardIds.isEmpty) return;
+    final state = _ref.read(gameStateProvider);
+    final cards = state.myCards.map((c) {
+      if (!cardIds.contains(c.id)) return c;
+      return GameCard(
+        id: c.id,
+        suit: c.suit,
+        rank: c.rank,
+        selected: !c.selected,
+      );
+    }).toList();
+    _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
   }
 
   void _resetStraightFlushCycleIfHandChanged(List<GameCard> cards) {
@@ -278,20 +415,38 @@ class GameController {
     switch (type) {
       case 'game_snapshot':
       case 'cards_dealt':
+      case 'tribute_phase_updated':
         var newState = ClientGameState.fromSnapshot(
           msg['data'] as Map<String, dynamic>,
         );
         newState = _mergeRoomPlayerInfo(newState);
-        newState = newState.copyWith(
-          phase: GamePhase.playing,
-          seatRoundPlays: const {},
-          lastPlayedCards: const [],
-          lastPlayedPlayerId: -1,
-          lastPlayedSeatIndex: -1,
-          handOrganizedGroups: const [],
+        newState = _applyDealtSnapshot(
+          newState,
+          resetTrick: type == 'cards_dealt',
         );
+        if (type == 'game_snapshot') {
+          final room = _ref.read(roomProvider);
+          if (room?.phase == GamePhase.roundEnd) {
+            newState = newState.copyWith(
+              phase: GamePhase.roundEnd,
+              myCards: const [],
+              lastPlayedCards: const [],
+              lastPlayedPlayerId: -1,
+              lastPlayedSeatIndex: -1,
+              seatRoundPlays: const {},
+              handOrganizedGroups: const [],
+            );
+          }
+        }
         _ref.read(gameStateProvider.notifier).state = newState;
         _resetStraightFlushCycleIfHandChanged(newState.myCards);
+        if (type == 'cards_dealt' || type == 'tribute_phase_updated') {
+          final room = _ref.read(roomProvider);
+          if (room != null) {
+            _ref.read(roomProvider.notifier).state =
+                room.copyWith(phase: GamePhase.playing);
+          }
+        }
         break;
       case 'spectate_update':
       case 'spectate_changed':
@@ -316,7 +471,21 @@ class GameController {
           passAFailCounts:
               _parseIntList(data['pass_a_fail_counts'], state.passAFailCounts),
           players: _applyFinishRanksFromSettlement(data, state.players),
+          myCards: matchWon ? state.myCards : const [],
+          lastPlayedCards: matchWon ? state.lastPlayedCards : const [],
+          lastPlayedPlayerId: matchWon ? state.lastPlayedPlayerId : -1,
+          lastPlayedSeatIndex: matchWon ? state.lastPlayedSeatIndex : -1,
+          seatRoundPlays: matchWon ? state.seatRoundPlays : const {},
+          handOrganizedGroups: matchWon ? state.handOrganizedGroups : const [],
         );
+        if (!matchWon) {
+          final room = _ref.read(roomProvider);
+          if (room != null) {
+            _ref.read(roomProvider.notifier).state =
+                room.copyWith(phase: GamePhase.roundEnd);
+          }
+          showGameNotice(_ref, '本局结束，请点击准备');
+        }
         break;
       case 'tribute_resolved':
         break;

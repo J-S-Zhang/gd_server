@@ -80,7 +80,7 @@ void Room::leave(PlayerId playerId) {
 }
 
 bool Room::ready(PlayerId playerId) {
-    if (phase_ != RoomPhase::WAITING) return false;
+    if (phase_ != RoomPhase::WAITING && phase_ != RoomPhase::SETTLEMENT) return false;
     for (auto& p : players_) {
         if (p.id == playerId) {
             p.isReady = true;
@@ -94,7 +94,7 @@ bool Room::ready(PlayerId playerId) {
 }
 
 bool Room::unready(PlayerId playerId) {
-    if (phase_ != RoomPhase::WAITING) return false;
+    if (phase_ != RoomPhase::WAITING && phase_ != RoomPhase::SETTLEMENT) return false;
     if (isBotPlayer(playerId)) return false;
     for (auto& p : players_) {
         if (p.id == playerId) {
@@ -231,11 +231,28 @@ bool Room::setSpectateTarget(PlayerId viewerId, int targetSeat) {
     return true;
 }
 
+void Room::enterSettlement() {
+    phase_ = RoomPhase::SETTLEMENT;
+    for (auto& p : players_) {
+        p.isReady = p.isBot;
+    }
+}
+
+bool Room::allReady() const {
+    if (!isFull()) return false;
+    for (const auto& p : players_) {
+        if (!p.isReady) return false;
+    }
+    return true;
+}
+
 bool Room::startNextRound() {
-    if (phase_ != RoomPhase::PLAYING) return false;
+    if (phase_ != RoomPhase::SETTLEMENT) return false;
+    if (!allReady()) return false;
     auto result = engine_.startNextRound();
     if (result.code == ErrorCode::OK) {
         clearSpectateTargets();
+        phase_ = RoomPhase::PLAYING;
         return true;
     }
     return false;

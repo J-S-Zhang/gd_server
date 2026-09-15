@@ -1,6 +1,7 @@
 #include "game/game_engine.h"
 #include "game/deck.h"
 #include "game/finish_rank.h"
+#include <algorithm>
 
 namespace guandan {
 
@@ -38,7 +39,8 @@ bool GameEngine::allReady() const {
 }
 
 void GameEngine::updateConfig(const GameRuleConfig& config) {
-    if (state_.phase == GamePhase::PLAYING || state_.phase == GamePhase::FINISHED) {
+    if (state_.phase == GamePhase::PLAYING || state_.phase == GamePhase::FINISHED ||
+        state_.phase == GamePhase::TRIBUTE || state_.phase == GamePhase::RETURN_TRIBUTE) {
         return;
     }
     config_ = config;
@@ -94,27 +96,195 @@ PlayResult GameEngine::dealAndStartPlaying(bool applyTribute) {
     state_.currentLevel = progress_.currentRoundLevel();
     state_.isPassARound = progress_.isPassARound();
 
-    if (applyTribute) {
-        lastTribute_ = tributeManager_.resolveRound(
-            state_, config_, previousRound_, ruleContext());
-        state_.firstPlayerIndex = lastTribute_.firstPlayerSeat;
-    } else {
-        lastTribute_ = {};
-        lastTribute_.skipped = true;
-        state_.firstPlayerIndex = 0;
-    }
-
-    state_.phase = GamePhase::PLAYING;
     state_.round++;
-    state_.currentPlayerIndex = state_.firstPlayerIndex;
     state_.lastPlayedCards.clear();
     state_.lastPattern = CardPattern::invalid();
     state_.lastPlayedPlayerIndex = -1;
     state_.passCount = 0;
     state_.turnId = 1;
+
+    if (applyTribute) {
+        clearTributeState();
+        const auto plan = tributeManager_.planRound(state_, config_, previousRound_);
+        if (plan.skipped) {
+            lastTribute_ = {};
+            lastTribute_.skipped = true;
+            lastTribute_.firstPlayerSeat = plan.headSeat;
+            beginPlayingFromDeal(plan.headSeat);
+            return result;
+        }
+        if (plan.antiTribute) {
+            lastTribute_ = {};
+            lastTribute_.antiTribute = true;
+            lastTribute_.firstPlayerSeat = plan.headSeat;
+            lastTribute_.summary = plan.summary;
+            beginPlayingFromDeal(plan.headSeat);
+            return result;
+        }
+
+        tributeState_.active = true;
+        tributeState_.plan = plan;
+        tributeState_.pendingTributers = plan.tributerSeats;
+        lastTribute_ = {};
+        state_.phase = GamePhase::TRIBUTE;
+        incrementStateVersion();
+        return result;
+    }
+
+    lastTribute_ = {};
+    lastTribute_.skipped = true;
+    beginPlayingFromDeal(0);
+    return result;
+}
+
+void GameEngine::clearTributeState() {
+    tributeState_ = {};
+}
+
+void GameEngine::beginPlayingFromDeal(int firstPlayerSeat) {
+    state_.phase = GamePhase::PLAYING;
+    state_.firstPlayerIndex = firstPlayerSeat;
+    state_.currentPlayerIndex = firstPlayerSeat;
+    incrementStateVersion();
+}
+
+PlayResult GameEngine::finishTributePhaseAndStartPlay() {
+    PlayResult result;
+    const int firstPlayerSeat = tributeManager_.computeFirstPlayerSeat(
+        lastTribute_, tributeState_.plan.headSeat);
+    lastTribute_.firstPlayerSeat = firstPlayerSeat;
+    lastTribute_.headTributerSeat = -1;
+    for (const auto& tr : lastTribute_.tributes) {
+        if (tr.toSeat == tributeState_.plan.headSeat) {
+            lastTribute_.headTributerSeat = tr.fromSeat;
+            break;
+        }
+    }
+    clearTributeState();
+    beginPlayingFromDeal(firstPlayerSeat);
+    return result;
+}
+
+bool GameEngine::hasPendingTributeAction() const {
+    return tributeState_.active &&
+           (state_.phase == GamePhase::TRIBUTE ||
+            state_.phase == GamePhase::RETURN_TRIBUTE);
+}
+
+PlayResult GameEngine::submitTribute(PlayerId playerId, CardId cardId) {
+    PlayResult result;
+    if (state_.phase != GamePhase::TRIBUTE || !tributeState_.active) {
+        result.code = ErrorCode::INVALID_STATE;
+        return result;
+    }
+
+    const int seat = seatOf(playerId);
+    if (seat < 0) {
+        result.code = ErrorCode::INVALID_STATE;
+        return result;
+    }
+
+    const auto& pending = tributeState_.pendingTributers;
+    if (std::find(pending.begin(), pending.end(), seat) == pending.end()) {
+        result.code = ErrorCode::NOT_YOUR_TURN;
+        return result;
+    }
+
+    if (!tributeManager_.isValidTributeSubmission(seat, cardId, state_, ruleContext())) {
+        result.code = ErrorCode::INVALID_CARDS;
+        result.message = "Must tribute the largest non-wild card";
+        return result;
+    }
+
+    tributeState_.tributeSubmissions[seat] = cardId;
+    tributeState_.pendingTributers.erase(
+        std::remove(tributeState_.pendingTributers.begin(),
+                    tributeState_.pendingTributers.end(), seat),
+        tributeState_.pendingTributers.end());
     incrementStateVersion();
 
+    if (!tributeState_.pendingTributers.empty()) {
+        return result;
+    }
+
+    lastTribute_.skipped = false;
+    lastTribute_.antiTribute = false;
+    tributeManager_.assignTributes(
+        state_, ruleContext(), tributeState_.plan,
+        tributeState_.tributeSubmissions, lastTribute_);
+
+    if (lastTribute_.tributes.empty()) {
+        lastTribute_.firstPlayerSeat = tributeState_.plan.headSeat;
+        return finishTributePhaseAndStartPlay();
+    }
+
+    tributeState_.pendingReturnSeats.clear();
+    tributeState_.returnToTributer.clear();
+    for (const auto& tr : lastTribute_.tributes) {
+        tributeState_.pendingReturnSeats.push_back(tr.toSeat);
+        tributeState_.returnToTributer[tr.toSeat] = tr.fromSeat;
+    }
+    state_.phase = GamePhase::RETURN_TRIBUTE;
+    incrementStateVersion();
     return result;
+}
+
+PlayResult GameEngine::submitReturn(PlayerId playerId, CardId cardId) {
+    PlayResult result;
+    if (state_.phase != GamePhase::RETURN_TRIBUTE || !tributeState_.active) {
+        result.code = ErrorCode::INVALID_STATE;
+        return result;
+    }
+
+    const int seat = seatOf(playerId);
+    if (seat < 0) {
+        result.code = ErrorCode::INVALID_STATE;
+        return result;
+    }
+
+    const auto& pending = tributeState_.pendingReturnSeats;
+    if (std::find(pending.begin(), pending.end(), seat) == pending.end()) {
+        result.code = ErrorCode::NOT_YOUR_TURN;
+        return result;
+    }
+
+    if (!tributeManager_.isValidReturnSubmission(seat, cardId, state_, ruleContext())) {
+        result.code = ErrorCode::INVALID_CARDS;
+        result.message = "Invalid return card";
+        return result;
+    }
+
+    const int toSeat = tributeState_.returnToTributer[seat];
+    tributeManager_.applyReturnTransfer(state_, seat, toSeat, cardId);
+    lastTribute_.returns.push_back({seat, toSeat, cardId});
+
+    tributeState_.pendingReturnSeats.erase(
+        std::remove(tributeState_.pendingReturnSeats.begin(),
+                    tributeState_.pendingReturnSeats.end(), seat),
+        tributeState_.pendingReturnSeats.end());
+    incrementStateVersion();
+
+    if (!tributeState_.pendingReturnSeats.empty()) {
+        return result;
+    }
+
+    return finishTributePhaseAndStartPlay();
+}
+
+std::optional<CardId> GameEngine::chooseBotTributeCard(PlayerId playerId) const {
+    const int seat = seatOf(playerId);
+    if (seat < 0) return std::nullopt;
+    const CardId cardId = tributeManager_.requiredTributeCard(
+        state_.players[seat].hand, state_, ruleContext());
+    return cardId == 0 ? std::nullopt : std::optional<CardId>(cardId);
+}
+
+std::optional<CardId> GameEngine::chooseBotReturnCard(PlayerId playerId) const {
+    const int seat = seatOf(playerId);
+    if (seat < 0) return std::nullopt;
+    const CardId cardId = tributeManager_.pickReturnCard(
+        state_.players[seat].hand, state_, ruleContext());
+    return cardId == 0 ? std::nullopt : std::optional<CardId>(cardId);
 }
 
 PlayResult GameEngine::startGame() {
@@ -320,6 +490,33 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId, int anchorSeatOverride) c
         view.myCards = state_.players[anchorSeat].hand.cards();
         const int anchorTeam = state_.players[anchorSeat].team;
         view.isPlayingOwnRound = progress_.isPlayingOwnRound(anchorTeam);
+    }
+
+    if (tributeState_.active) {
+        view.pendingTributerSeats = tributeState_.pendingTributers;
+        view.pendingReturnSeats = tributeState_.pendingReturnSeats;
+        if (viewerSeat >= 0) {
+            if (state_.phase == GamePhase::TRIBUTE) {
+                const bool isPendingTributer = std::find(
+                    tributeState_.pendingTributers.begin(),
+                    tributeState_.pendingTributers.end(),
+                    viewerSeat) != tributeState_.pendingTributers.end();
+                if (isPendingTributer) {
+                    view.requiredTributeCardId = tributeManager_.requiredTributeCard(
+                        state_.players[viewerSeat].hand, state_, ruleContext());
+                }
+            } else if (state_.phase == GamePhase::RETURN_TRIBUTE) {
+                const bool isPendingReturner = std::find(
+                    tributeState_.pendingReturnSeats.begin(),
+                    tributeState_.pendingReturnSeats.end(),
+                    viewerSeat) != tributeState_.pendingReturnSeats.end();
+                view.mustReturnTribute = isPendingReturner;
+                if (isPendingReturner) {
+                    view.validReturnCardIds = tributeManager_.validReturnCardIds(
+                        state_.players[viewerSeat].hand, state_, ruleContext());
+                }
+            }
+        }
     }
 
     for (int i = 0; i < state_.playerCount; ++i) {

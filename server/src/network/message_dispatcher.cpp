@@ -159,6 +159,85 @@ void MessageDispatcher::cancelTurnTimer(const RoomId& roomId) {
     timerManager_.cancel("turn:" + roomId);
 }
 
+void MessageDispatcher::cancelTributeTimer(const RoomId& roomId) {
+    timerManager_.cancel("tribute:" + roomId);
+}
+
+void MessageDispatcher::broadcastTributePhaseUpdate(const std::shared_ptr<Room>& room) {
+    for (const auto& p : room->players()) {
+        sendPlayerView(room, p.id, "tribute_phase_updated");
+    }
+}
+
+void MessageDispatcher::onTributePhaseCompleted(const std::shared_ptr<Room>& room) {
+    const auto& tribute = room->engine().lastTributeResult();
+    Message tributeMsg;
+    tributeMsg.type = "tribute_resolved";
+    tributeMsg.roomId = room->id();
+    tributeMsg.dataJson = buildTributeResolvedJson(tribute);
+    broadcastToRoom(room, tributeMsg);
+
+    for (const auto& p : room->players()) {
+        sendPlayerView(room, p.id, "cards_dealt");
+    }
+    scheduleTurnTimer(room);
+}
+
+void MessageDispatcher::scheduleTributeTimer(const std::shared_ptr<Room>& room) {
+    cancelTributeTimer(room->id());
+    if (!room->engine().hasPendingTributeAction()) return;
+
+    timerManager_.schedule("tribute:" + room->id(), 1, [this, room]() {
+        executeBotTributeActions(room);
+    });
+}
+
+void MessageDispatcher::executeBotTributeActions(const std::shared_ptr<Room>& room) {
+    auto& engine = room->engine();
+    if (!engine.hasPendingTributeAction()) return;
+
+    cancelTributeTimer(room->id());
+    const auto& state = engine.getState();
+    bool acted = false;
+
+    if (state.phase == GamePhase::TRIBUTE) {
+        for (int seat : engine.pendingTributerSeats()) {
+            if (seat < 0 || seat >= state.playerCount) continue;
+            const PlayerId botId = state.players[seat].id;
+            if (!isBotPlayer(botId)) continue;
+            const auto cardId = engine.chooseBotTributeCard(botId);
+            if (!cardId) continue;
+            if (engine.submitTribute(botId, *cardId).code == ErrorCode::OK) {
+                acted = true;
+            }
+        }
+    } else if (state.phase == GamePhase::RETURN_TRIBUTE) {
+        for (int seat : engine.pendingReturnSeats()) {
+            if (seat < 0 || seat >= state.playerCount) continue;
+            const PlayerId botId = state.players[seat].id;
+            if (!isBotPlayer(botId)) continue;
+            const auto cardId = engine.chooseBotReturnCard(botId);
+            if (!cardId) continue;
+            if (engine.submitReturn(botId, *cardId).code == ErrorCode::OK) {
+                acted = true;
+            }
+        }
+    }
+
+    if (acted) {
+        broadcastTributePhaseUpdate(room);
+    }
+
+    if (engine.hasPendingTributeAction()) {
+        scheduleTributeTimer(room);
+        return;
+    }
+
+    if (engine.getState().phase == GamePhase::PLAYING) {
+        onTributePhaseCompleted(room);
+    }
+}
+
 void MessageDispatcher::scheduleTurnTimer(const std::shared_ptr<Room>& room) {
     cancelTurnTimer(room->id());
     const auto& state = room->engine().getState();
@@ -324,6 +403,13 @@ void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, Send
     if (room && room->phase() != RoomPhase::FINISHED) {
         if (room->phase() == RoomPhase::PLAYING ||
             room->phase() == RoomPhase::SETTLEMENT) {
+            if (room->phase() == RoomPhase::SETTLEMENT) {
+                Message stateMsg;
+                stateMsg.type = "room_state";
+                stateMsg.roomId = room->id();
+                stateMsg.dataJson = buildRoomStateJson(*room);
+                sendResponse(send, stateMsg);
+            }
             sendSnapshotToPlayer(room, playerId);
         } else {
             Message stateMsg;
@@ -454,6 +540,7 @@ void MessageDispatcher::handleReady(uint64_t sessionId, const Message& msg, Send
     stateMsg.roomId = room->id();
     stateMsg.dataJson = buildRoomStateJson(*room);
     broadcastToRoom(room, stateMsg);
+    tryStartNextRound(room);
 }
 
 void MessageDispatcher::handleUnready(uint64_t sessionId, const Message& msg, SendFn send) {
@@ -521,7 +608,19 @@ void MessageDispatcher::onGameStarted(const std::shared_ptr<Room>& room, uint64_
 }
 
 void MessageDispatcher::onRoundStarted(const std::shared_ptr<Room>& room) {
-    const auto& tribute = room->engine().lastTributeResult();
+    auto& engine = room->engine();
+    const auto& state = engine.getState();
+
+    for (const auto& p : room->players()) {
+        sendPlayerView(room, p.id, "cards_dealt");
+    }
+
+    if (engine.hasPendingTributeAction()) {
+        scheduleTributeTimer(room);
+        return;
+    }
+
+    const auto& tribute = engine.lastTributeResult();
     if (!tribute.skipped || tribute.antiTribute || !tribute.tributes.empty()) {
         Message tributeMsg;
         tributeMsg.type = "tribute_resolved";
@@ -530,15 +629,15 @@ void MessageDispatcher::onRoundStarted(const std::shared_ptr<Room>& room) {
         broadcastToRoom(room, tributeMsg);
     }
 
-    for (const auto& p : room->players()) {
-        sendPlayerView(room, p.id, "cards_dealt");
+    if (state.phase == GamePhase::PLAYING) {
+        scheduleTurnTimer(room);
     }
-    scheduleTurnTimer(room);
 }
 
 void MessageDispatcher::onGameOver(const std::shared_ptr<Room>& room,
                                      const SettlementResult& result) {
     cancelTurnTimer(room->id());
+    cancelTributeTimer(room->id());
 
     std::ostringstream oss;
     oss << "{\"winning_team\":" << result.winningTeam;
@@ -585,9 +684,19 @@ void MessageDispatcher::onGameOver(const std::shared_ptr<Room>& room,
         return;
     }
 
-    if (room->startNextRound()) {
-        onRoundStarted(room);
-    }
+    room->enterSettlement();
+    Message stateMsg;
+    stateMsg.type = "room_state";
+    stateMsg.roomId = room->id();
+    stateMsg.dataJson = buildRoomStateJson(*room);
+    broadcastToRoom(room, stateMsg);
+    tryStartNextRound(room);
+}
+
+void MessageDispatcher::tryStartNextRound(const std::shared_ptr<Room>& room) {
+    if (room->phase() != RoomPhase::SETTLEMENT || !room->allReady()) return;
+    if (!room->startNextRound()) return;
+    onRoundStarted(room);
 }
 
 void MessageDispatcher::handleSetRoomOptions(uint64_t sessionId, const Message& msg, SendFn send) {
@@ -696,6 +805,84 @@ void MessageDispatcher::handlePlayCards(uint64_t sessionId, const Message& msg, 
         playedPlayer.finishRank,
         state.currentPlayerIndex,
         state.stateVersion, state.turnId);
+    sendResponse(send, resp);
+}
+
+void MessageDispatcher::handleSubmitTribute(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    CardId cardId = msg.cards.empty()
+        ? static_cast<CardId>(extractJsonUintFromData(msg.dataJson, "card_id"))
+        : msg.cards[0];
+    if (cardId == 0) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_CARDS);
+        return;
+    }
+
+    auto result = room->engine().submitTribute(playerId, cardId);
+    if (result.code != ErrorCode::OK) {
+        sendError(send, msg.requestId, result.code);
+        return;
+    }
+
+    cancelTributeTimer(room->id());
+    broadcastTributePhaseUpdate(room);
+
+    auto& engine = room->engine();
+    if (engine.hasPendingTributeAction()) {
+        scheduleTributeTimer(room);
+    } else if (engine.getState().phase == GamePhase::PLAYING) {
+        onTributePhaseCompleted(room);
+    }
+
+    Message resp;
+    resp.type = "submit_tribute";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    sendResponse(send, resp);
+}
+
+void MessageDispatcher::handleSubmitReturn(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId playerId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(playerId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    CardId cardId = msg.cards.empty()
+        ? static_cast<CardId>(extractJsonUintFromData(msg.dataJson, "card_id"))
+        : msg.cards[0];
+    if (cardId == 0) {
+        sendError(send, msg.requestId, ErrorCode::INVALID_CARDS);
+        return;
+    }
+
+    auto result = room->engine().submitReturn(playerId, cardId);
+    if (result.code != ErrorCode::OK) {
+        sendError(send, msg.requestId, result.code);
+        return;
+    }
+
+    cancelTributeTimer(room->id());
+    broadcastTributePhaseUpdate(room);
+
+    auto& engine = room->engine();
+    if (engine.hasPendingTributeAction()) {
+        scheduleTributeTimer(room);
+    } else if (engine.getState().phase == GamePhase::PLAYING) {
+        onTributePhaseCompleted(room);
+    }
+
+    Message resp;
+    resp.type = "submit_return";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
     sendResponse(send, resp);
 }
 
@@ -1056,6 +1243,8 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "start_game") handleStartGame(sessionId, msg, send);
     else if (msg.type == "play_cards") handlePlayCards(sessionId, msg, send);
     else if (msg.type == "pass") handlePass(sessionId, msg, send);
+    else if (msg.type == "submit_tribute") handleSubmitTribute(sessionId, msg, send);
+    else if (msg.type == "submit_return") handleSubmitReturn(sessionId, msg, send);
     else if (msg.type == "spectate_teammate") handleSpectateTeammate(sessionId, msg, send);
     else if (msg.type == "reconnect") handleReconnect(sessionId, msg, send);
     else if (msg.type == "request_dismiss") handleRequestDismiss(sessionId, msg, send);

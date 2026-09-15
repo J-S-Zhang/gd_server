@@ -141,6 +141,10 @@ class WebSocketClient {
   bool playCards(String roomId, List<int> cards, int turnId) =>
       send('play_cards', data: {'cards': cards}, roomId: roomId, turnId: turnId);
   bool pass(String roomId, int turnId) => send('pass', roomId: roomId, turnId: turnId);
+  bool submitTribute(String roomId, int cardId) =>
+      send('submit_tribute', data: {'cards': [cardId]}, roomId: roomId);
+  bool submitReturn(String roomId, int cardId) =>
+      send('submit_return', data: {'cards': [cardId]}, roomId: roomId);
   bool spectateTeammate(String roomId, int targetSeatIndex) =>
       send('spectate_teammate', data: {'target_seat_index': targetSeatIndex}, roomId: roomId);
   bool requestDismissRoom(String roomId) => send('request_dismiss', roomId: roomId);

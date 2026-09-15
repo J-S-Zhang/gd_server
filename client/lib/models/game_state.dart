@@ -13,6 +13,10 @@ GamePhase parsePhase(String? phase) {
       return GamePhase.ready;
     case 'DEALING':
       return GamePhase.dealing;
+    case 'TRIBUTE':
+      return GamePhase.tribute;
+    case 'RETURN_TRIBUTE':
+      return GamePhase.returnTribute;
     case 'PLAYING':
       return GamePhase.playing;
     case 'ROUND_END':
@@ -49,6 +53,11 @@ class ClientGameState {
   final List<Player> players;
   final Map<int, SeatRoundPlay> seatRoundPlays;
   final List<Set<int>> handOrganizedGroups;
+  final List<int> pendingTributerSeats;
+  final List<int> pendingReturnSeats;
+  final int requiredTributeCardId;
+  final List<int> validReturnCardIds;
+  final bool mustReturnTribute;
 
   const ClientGameState({
     this.phase = GamePhase.waiting,
@@ -73,10 +82,28 @@ class ClientGameState {
     this.players = const [],
     this.seatRoundPlays = const {},
     this.handOrganizedGroups = const [],
+    this.pendingTributerSeats = const [],
+    this.pendingReturnSeats = const [],
+    this.requiredTributeCardId = 0,
+    this.validReturnCardIds = const [],
+    this.mustReturnTribute = false,
   });
 
   bool get isMyTurn =>
       !isSpectating && currentPlayerIndex == ownSeatIndex;
+
+  bool get mustSubmitTribute =>
+      !isSpectating &&
+      phase == GamePhase.tribute &&
+      pendingTributerSeats.contains(ownSeatIndex);
+
+  bool get mustSubmitReturn =>
+      !isSpectating &&
+      phase == GamePhase.returnTribute &&
+      mustReturnTribute;
+
+  bool get isInTributeFlow =>
+      phase == GamePhase.tribute || phase == GamePhase.returnTribute;
 
   /// 本墩其他玩家均已不要，轮到自己重新领出（可出任意牌型）。
   bool canLeadFreely(int? myUserId) {
@@ -126,6 +153,11 @@ class ClientGameState {
     List<Player>? players,
     Map<int, SeatRoundPlay>? seatRoundPlays,
     List<Set<int>>? handOrganizedGroups,
+    List<int>? pendingTributerSeats,
+    List<int>? pendingReturnSeats,
+    int? requiredTributeCardId,
+    List<int>? validReturnCardIds,
+    bool? mustReturnTribute,
   }) {
     return ClientGameState(
       phase: phase ?? this.phase,
@@ -150,6 +182,13 @@ class ClientGameState {
       players: players ?? this.players,
       seatRoundPlays: seatRoundPlays ?? this.seatRoundPlays,
       handOrganizedGroups: handOrganizedGroups ?? this.handOrganizedGroups,
+      pendingTributerSeats:
+          pendingTributerSeats ?? this.pendingTributerSeats,
+      pendingReturnSeats: pendingReturnSeats ?? this.pendingReturnSeats,
+      requiredTributeCardId:
+          requiredTributeCardId ?? this.requiredTributeCardId,
+      validReturnCardIds: validReturnCardIds ?? this.validReturnCardIds,
+      mustReturnTribute: mustReturnTribute ?? this.mustReturnTribute,
     );
   }
 
@@ -231,6 +270,21 @@ class ClientGameState {
       ),
       lastPlayedSeatIndex: lastPlayedSeatIndex,
       players: players,
+      pendingTributerSeats: (json['pending_tributer_seats'] as List<dynamic>?)
+              ?.map((e) => e as int)
+              .toList() ??
+          const [],
+      pendingReturnSeats: (json['pending_return_seats'] as List<dynamic>?)
+              ?.map((e) => e as int)
+              .toList() ??
+          const [],
+      requiredTributeCardId:
+          json['required_tribute_card_id'] as int? ?? 0,
+      validReturnCardIds: (json['valid_return_card_ids'] as List<dynamic>?)
+              ?.map((e) => e as int)
+              .toList() ??
+          const [],
+      mustReturnTribute: json['must_return_tribute'] == true,
     );
   }
 }

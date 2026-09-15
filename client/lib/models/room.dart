@@ -1,10 +1,25 @@
 import '../models/player.dart';
 import '../models/game_mode.dart';
 
+GamePhase parseRoomPhase(String? phase) {
+  switch (phase?.toUpperCase()) {
+    case 'PLAYING':
+      return GamePhase.playing;
+    case 'SETTLEMENT':
+      return GamePhase.roundEnd;
+    case 'FINISHED':
+      return GamePhase.finished;
+    default:
+      return GamePhase.waiting;
+  }
+}
+
 enum GamePhase {
   waiting,
   ready,
   dealing,
+  tribute,
+  returnTribute,
   playing,
   roundEnd,
   settlement,
@@ -76,7 +91,9 @@ class Room {
       roomId: roomId,
       players: players,
       isOwner: isOwner,
-      phase: phase,
+      phase: data.containsKey('room_phase')
+          ? parseRoomPhase(data['room_phase'] as String?)
+          : phase,
       mode: mode,
       maxPlayers: maxPlayers,
       enableTribute: data['enable_tribute'] is bool ? data['enable_tribute'] as bool : true,

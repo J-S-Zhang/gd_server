@@ -9,6 +9,8 @@ static std::string phaseToString(GamePhase phase) {
         case GamePhase::WAITING: return "WAITING";
         case GamePhase::READY: return "READY";
         case GamePhase::DEALING: return "DEALING";
+        case GamePhase::TRIBUTE: return "TRIBUTE";
+        case GamePhase::RETURN_TRIBUTE: return "RETURN_TRIBUTE";
         case GamePhase::PLAYING: return "PLAYING";
         case GamePhase::ROUND_END: return "ROUND_END";
         case GamePhase::SETTLEMENT: return "SETTLEMENT";
@@ -59,6 +61,21 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) 
     oss << ",\"my_cards\":" << cardIdsToJsonArray(view.myCards);
     oss << ",\"last_played_cards\":" << cardIdsToJsonArray(view.lastPlayedCards);
     oss << ",\"last_played_player_index\":" << view.lastPlayedPlayerIndex;
+    oss << ",\"pending_tributer_seats\":[";
+    for (size_t i = 0; i < view.pendingTributerSeats.size(); ++i) {
+        if (i > 0) oss << ",";
+        oss << view.pendingTributerSeats[i];
+    }
+    oss << "]";
+    oss << ",\"pending_return_seats\":[";
+    for (size_t i = 0; i < view.pendingReturnSeats.size(); ++i) {
+        if (i > 0) oss << ",";
+        oss << view.pendingReturnSeats[i];
+    }
+    oss << "]";
+    oss << ",\"required_tribute_card_id\":" << view.requiredTributeCardId;
+    oss << ",\"must_return_tribute\":" << (view.mustReturnTribute ? "true" : "false");
+    oss << ",\"valid_return_card_ids\":" << cardIdsToJsonArray(view.validReturnCardIds);
 
     oss << ",\"players\":[";
     for (size_t i = 0; i < view.others.size(); ++i) {
@@ -124,6 +141,17 @@ std::string buildPlayerPassedJson(
     return oss.str();
 }
 
+static const char* roomPhaseToString(RoomPhase phase) {
+    switch (phase) {
+        case RoomPhase::CREATED: return "CREATED";
+        case RoomPhase::WAITING: return "WAITING";
+        case RoomPhase::PLAYING: return "PLAYING";
+        case RoomPhase::SETTLEMENT: return "SETTLEMENT";
+        case RoomPhase::FINISHED: return "FINISHED";
+    }
+    return "WAITING";
+}
+
 std::string buildRoomStateJson(const Room& room) {
     const auto& players = room.players();
     const auto& config = room.config();
@@ -147,6 +175,7 @@ std::string buildRoomStateJson(const Room& room) {
     oss << ",\"max_players\":" << config.maxPlayers;
     oss << ",\"mode\":\"" << config.modeName << "\"";
     oss << ",\"enable_tribute\":" << (config.enableTribute ? "true" : "false");
+    oss << ",\"room_phase\":\"" << roomPhaseToString(room.phase()) << "\"";
     oss << "}";
     return oss.str();
 }

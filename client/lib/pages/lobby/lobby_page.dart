@@ -137,10 +137,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                 page: page,
                 parentId: parentId,
                 childId: 'user_profile',
-                child: LobbyUserHeader(
-                  user: user,
-                  regionHeight: ui.elementChildRect(parentId, 'user_profile', page: page)?.height,
-                ),
+                child: LobbyUserHeader(user: user),
               ),
             RegionChildPositioned(
               page: page,

@@ -49,6 +49,8 @@ public:
     bool setEnableTribute(PlayerId playerId, bool enabled);
     bool startGame();
     bool startNextRound();
+    void enterSettlement();
+    bool allReady() const;
     void finishMatch();
     void fillBots();
     bool isFull() const { return static_cast<int>(players_.size()) >= config_.maxPlayers; }

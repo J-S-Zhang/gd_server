@@ -11,6 +11,7 @@
 #include "game/turn_manager.h"
 #include "game/types.h"
 #include <array>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -46,6 +47,12 @@ struct PlayerView {
     int lastPlayedPlayerIndex;
     CardPattern lastPattern;
 
+    std::vector<int> pendingTributerSeats;
+    std::vector<int> pendingReturnSeats;
+    CardId requiredTributeCardId = 0;
+    std::vector<CardId> validReturnCardIds;
+    bool mustReturnTribute = false;
+
     struct OtherPlayer {
         PlayerId id;
         int seatIndex;
@@ -72,8 +79,19 @@ public:
 
     PlayResult playCards(PlayerId playerId, const std::vector<CardId>& cards);
     PlayResult pass(PlayerId playerId);
+    PlayResult submitTribute(PlayerId playerId, CardId cardId);
+    PlayResult submitReturn(PlayerId playerId, CardId cardId);
 
     std::optional<std::vector<CardId>> chooseBotPlay(PlayerId playerId) const;
+    std::optional<CardId> chooseBotTributeCard(PlayerId playerId) const;
+    std::optional<CardId> chooseBotReturnCard(PlayerId playerId) const;
+    bool hasPendingTributeAction() const;
+    const std::vector<int>& pendingTributerSeats() const {
+        return tributeState_.pendingTributers;
+    }
+    const std::vector<int>& pendingReturnSeats() const {
+        return tributeState_.pendingReturnSeats;
+    }
 
     bool isGameOver() const { return state_.phase == GamePhase::FINISHED; }
     const GameState& getState() const { return state_; }
@@ -94,8 +112,21 @@ private:
     PreviousRoundInfo previousRound_{};
     TributeRoundResult lastTribute_{};
 
+    struct InteractiveTributeState {
+        bool active = false;
+        TributePhasePlan plan;
+        std::vector<int> pendingTributers;
+        std::map<int, CardId> tributeSubmissions;
+        std::vector<int> pendingReturnSeats;
+        std::map<int, int> returnToTributer;
+    };
+    InteractiveTributeState tributeState_{};
+
     RuleContext ruleContext() const;
     PlayResult dealAndStartPlaying(bool applyTribute);
+    void beginPlayingFromDeal(int firstPlayerSeat);
+    PlayResult finishTributePhaseAndStartPlay();
+    void clearTributeState();
     void assignFinishRank(int playerIndex);
     bool checkTeamWin() const;
     void incrementStateVersion();

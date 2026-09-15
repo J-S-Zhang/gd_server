@@ -23,8 +23,8 @@
     "cornerMarkFontScale": 0.88
   },
   "handCards": {
-    "width": 24.92,
-    "height": 35.6,
+    "width": 25.2,
+    "height": 36,
     "aspectRatio": 0.7,
     "horizontalOverlap": 0.1,
     "verticalOverlap": 0.7,
@@ -829,8 +829,8 @@
   "lobbyPageLayout": {
     "coordinateMode": "screenFraction",
     "referenceScreen": {
-      "width": 844,
-      "height": 390
+      "width": 400,
+      "height": 180
     },
     "elements": {
       "canvas": {
@@ -845,25 +845,44 @@
         "y": 0.05,
         "w": 0.9,
         "h": 0.1,
-        "aspectRatio": 10,
+        "aspectRatio": 16,
         "children": {
           "user_profile": {
             "x": 0.12,
             "y": 0.5,
             "w": 0.24,
-            "h": 0.9
+            "h": 1,
+            "children": {
+              "avatar": {
+                "x": 0.25,
+                "y": 0.5,
+                "w": 0.5,
+                "h": 1,
+                "aspectRatio": 1
+              },
+              "nickname": {
+                "x": 0.75,
+                "y": 0.5,
+                "w": 0.5,
+                "h": 1,
+                "aspectRatio": 1
+              }
+            },
+            "aspectRatio": 2
           },
           "title": {
             "x": 0.5,
             "y": 0.5,
-            "w": 0.22,
-            "h": 0.55
+            "w": 0.4,
+            "h": 1,
+            "aspectRatio": 4
           },
           "connection_status": {
-            "x": 0.88,
+            "x": 0.9,
             "y": 0.5,
-            "w": 0.14,
-            "h": 0.55
+            "w": 0.2,
+            "h": 1,
+            "aspectRatio": 2
           }
         }
       },
@@ -970,6 +989,108 @@
         "w": 0.22,
         "h": 0.55,
         "aspectRatio": 0.4
+      }
+    }
+  },
+  "profilePageLayout": {
+    "coordinateMode": "screenFraction",
+    "referenceScreen": {
+      "width": 400,
+      "height": 180
+    },
+    "elements": {
+      "canvas": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 1,
+        "aspectRatio": 2.2222222222222223
+      },
+      "profile_panel": {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 1,
+        "h": 0.8,
+        "aspectRatio": 2,
+        "children": {
+          "close_button": {
+            "x": 0.95,
+            "y": 0.08,
+            "w": 0.06,
+            "h": 0.12
+          },
+          "left_nav": {
+            "x": 0.1,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.9,
+            "children": {
+              "avatar_nav": {
+                "x": 0.5,
+                "y": 0.13,
+                "w": 1,
+                "h": 0.16
+              },
+              "frame_nav": {
+                "x": 0.5,
+                "y": 0.29,
+                "w": 1,
+                "h": 0.16
+              },
+              "nickname_color_nav": {
+                "x": 0.5,
+                "y": 0.45,
+                "w": 1,
+                "h": 0.16
+              }
+            }
+          },
+          "avatar_grid": {
+            "x": 0.4,
+            "y": 0.5,
+            "w": 0.4,
+            "h": 0.9
+          },
+          "frame_grid": {
+            "x": 0.4,
+            "y": 0.5,
+            "w": 0.4,
+            "h": 0.9
+          },
+          "color_grid": {
+            "x": 0.4,
+            "y": 0.5,
+            "w": 0.4,
+            "h": 0.9
+          },
+          "preview_panel": {
+            "x": 0.8,
+            "y": 0.5,
+            "w": 0.3,
+            "h": 0.9,
+            "children": {
+              "preview": {
+                "x": 0.5,
+                "y": 0.35,
+                "w": 0.4,
+                "h": 0.25,
+                "aspectRatio": 1
+              },
+              "upload_button": {
+                "x": 0.5,
+                "y": 0.72,
+                "w": 0.9,
+                "h": 0.15
+              },
+              "use_button": {
+                "x": 0.5,
+                "y": 0.88,
+                "w": 0.9,
+                "h": 0.15
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -1294,7 +1415,7 @@
           "hand_cards": {
             "x": 0.5,
             "y": 0.8,
-            "w": 0.89,
+            "w": 0.9,
             "h": 0.2,
             "aspectRatio": 10,
             "children": {
@@ -1776,7 +1897,8 @@
       "game": [
         "chat_quick",
         "chat_emoji"
-      ]
+      ],
+      "profile": []
     }
   }
 }
