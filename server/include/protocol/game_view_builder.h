@@ -9,7 +9,7 @@
 
 namespace guandan {
 
-std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId);
+std::string buildGameSnapshotJson(const PlayerView& view, const Room& room);
 std::string buildPlayerPlayedJson(
     PlayerId playerId,
     const std::vector<CardId>& cards,

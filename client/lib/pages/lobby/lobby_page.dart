@@ -30,6 +30,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     ref.read(roomControllerProvider).listen();
     ref.read(gameControllerProvider).listen();
     ref.read(wsReconnectManagerProvider);
+    ref.read(authControllerProvider).syncActiveAvatarPreset();
     _connectWebSocket();
   }
 

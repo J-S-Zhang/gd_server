@@ -26,6 +26,7 @@ class User {
   final String username;
   final String nickname;
   final String? avatar;
+  final String? avatarPreset;
   final String token;
   final UserStats stats;
 
@@ -34,6 +35,7 @@ class User {
     required this.username,
     required this.nickname,
     this.avatar,
+    this.avatarPreset,
     required this.token,
     this.stats = const UserStats(),
   });
@@ -44,6 +46,7 @@ class User {
       username: json['username'] as String? ?? json['nickname'] as String,
       nickname: json['nickname'] as String,
       avatar: json['avatar'] as String?,
+      avatarPreset: json['avatar_preset'] as String?,
       token: json['token'] as String? ?? '',
       stats: UserStats.fromJson(json['stats'] as Map<String, dynamic>?),
     );
@@ -54,6 +57,7 @@ class User {
     String? username,
     String? nickname,
     String? avatar,
+    String? avatarPreset,
     String? token,
     UserStats? stats,
   }) {
@@ -62,6 +66,7 @@ class User {
       username: username ?? this.username,
       nickname: nickname ?? this.nickname,
       avatar: avatar ?? this.avatar,
+      avatarPreset: avatarPreset ?? this.avatarPreset,
       token: token ?? this.token,
       stats: stats ?? this.stats,
     );

@@ -135,4 +135,51 @@ AvatarUpdateResult AuthService::updateAvatar(const std::string& token,
     return result;
 }
 
+namespace {
+
+bool isAllowedAvatarPreset(const std::string& presetId) {
+    return presetId == "avatar_1" || presetId == "avatar_2";
+}
+
+}  // namespace
+
+AvatarPresetUpdateResult AuthService::updateAvatarPreset(const std::string& token,
+                                                       const std::string& presetId) {
+    AvatarPresetUpdateResult result;
+    auto user = validateToken(token);
+    if (!user) {
+        result.httpStatus = 401;
+        result.errorCode = "unauthorized";
+        result.message = "请先登录";
+        return result;
+    }
+
+    if (!presetId.empty() && !isAllowedAvatarPreset(presetId)) {
+        result.httpStatus = 400;
+        result.errorCode = "invalid_preset";
+        result.message = "头像预设无效";
+        return result;
+    }
+
+    if (!userStore_.updateAvatarPreset(user->id, presetId)) {
+        result.httpStatus = 500;
+        result.errorCode = "save_failed";
+        result.message = "头像预设保存失败";
+        return result;
+    }
+
+    auto updated = userStore_.findById(user->id);
+    if (!updated) {
+        result.httpStatus = 500;
+        result.errorCode = "internal_error";
+        result.message = "头像预设更新失败";
+        return result;
+    }
+
+    result.success = true;
+    result.httpStatus = 200;
+    result.user = *updated;
+    return result;
+}
+
 }  // namespace guandan

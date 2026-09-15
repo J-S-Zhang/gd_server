@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/ui_scale.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
+import 'player_avatar.dart';
 
 class RoomPlayerWidget extends StatelessWidget {
   final Player? player;
@@ -66,13 +67,11 @@ class RoomPlayerWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          PlayerAvatar(
+            nickname: player!.nickname,
+            avatarPresetId: player!.avatarPreset,
+            avatarPath: player!.avatar,
             radius: avatarR,
-            backgroundColor: GameTheme.tableBlueLight,
-            child: Text(
-              player!.nickname.isNotEmpty ? player!.nickname[0] : '?',
-              style: TextStyle(color: Colors.white, fontSize: avatarR * 0.9),
-            ),
           ),
           SizedBox(width: w * 0.04),
           Expanded(

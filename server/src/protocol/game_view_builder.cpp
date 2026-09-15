@@ -19,6 +19,30 @@ static std::string phaseToString(GamePhase phase) {
     }
 }
 
+static std::string escapeJson(const std::string& s) {
+    std::string out;
+    for (char c : s) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out += c; break;
+        }
+    }
+    return out;
+}
+
+static const RoomPlayer* findRoomPlayer(const Room& room, PlayerId id) {
+    for (const auto& p : room.players()) {
+        if (p.id == id) return &p;
+    }
+    return nullptr;
+}
+
 static std::string cardIdsToJsonArray(const std::vector<CardId>& cards) {
     std::ostringstream oss;
     oss << "[";
@@ -30,7 +54,8 @@ static std::string cardIdsToJsonArray(const std::vector<CardId>& cards) {
     return oss.str();
 }
 
-std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) {
+std::string buildGameSnapshotJson(const PlayerView& view, const Room& room) {
+    const RoomId& roomId = room.id();
     std::ostringstream oss;
     oss << "{";
     oss << "\"room_id\":\"" << roomId << "\"";
@@ -90,7 +115,17 @@ std::string buildGameSnapshotJson(const PlayerView& view, const RoomId& roomId) 
         oss << ",\"finish_rank\":" << p.finishRank;
         oss << ",\"is_ready\":" << (p.isReady ? "true" : "false");
         oss << ",\"status\":\"" << (p.status == PlayerStatus::ONLINE ? "online" : "offline") << "\"";
-        oss << ",\"nickname\":\"Player" << p.id << "\"";
+        const RoomPlayer* rp = findRoomPlayer(room, p.id);
+        std::string nickname = rp && !rp->nickname.empty()
+                                   ? rp->nickname
+                                   : ("Player" + std::to_string(p.id));
+        oss << ",\"nickname\":\"" << escapeJson(nickname) << "\"";
+        if (rp && !rp->avatar.empty()) {
+            oss << ",\"avatar\":\"" << escapeJson(rp->avatar) << "\"";
+        }
+        if (rp && !rp->avatarPreset.empty()) {
+            oss << ",\"avatar_preset\":\"" << escapeJson(rp->avatarPreset) << "\"";
+        }
         oss << "}";
     }
     oss << "]}";
@@ -164,7 +199,13 @@ std::string buildRoomStateJson(const Room& room) {
         oss << "\"id\":" << p.id;
         oss << ",\"seat_index\":" << p.seatIndex;
         oss << ",\"team\":" << (p.seatIndex % 2);
-        oss << ",\"nickname\":\"" << p.nickname << "\"";
+        oss << ",\"nickname\":\"" << escapeJson(p.nickname) << "\"";
+        if (!p.avatar.empty()) {
+            oss << ",\"avatar\":\"" << escapeJson(p.avatar) << "\"";
+        }
+        if (!p.avatarPreset.empty()) {
+            oss << ",\"avatar_preset\":\"" << escapeJson(p.avatarPreset) << "\"";
+        }
         oss << ",\"is_ready\":" << (p.isReady ? "true" : "false");
         oss << ",\"is_owner\":" << (p.isOwner ? "true" : "false");
         oss << ",\"is_bot\":" << (p.isBot ? "true" : "false");

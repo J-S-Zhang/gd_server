@@ -9,6 +9,7 @@ import '../utils/seat_layout.dart';
 import 'game/finish_rank_badge.dart';
 import 'game/region_fit_text.dart';
 import 'game/seat_chat_bubble.dart';
+import 'player_avatar.dart';
 
 const int kCardCountRevealThreshold = 10;
 
@@ -44,6 +45,19 @@ class PlayerWidget extends StatelessWidget {
   });
 
   int get _effectiveCardCount => cardCountOverride ?? player.cardCount;
+
+  Color get _avatarBackgroundColor =>
+      player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935);
+
+  Widget _avatarWidget(double avatarRadius) {
+    return PlayerAvatar(
+      nickname: player.nickname,
+      avatarPresetId: player.avatarPreset,
+      avatarPath: player.avatar,
+      radius: avatarRadius,
+      backgroundColor: _avatarBackgroundColor,
+    );
+  }
 
   bool get _showCardCountBadge =>
       !showLobbyState &&
@@ -105,19 +119,7 @@ class PlayerWidget extends StatelessWidget {
     final avatar = Stack(
       clipBehavior: Clip.none,
       children: [
-        CircleAvatar(
-          radius: avatarRadius,
-          backgroundColor:
-              player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935),
-          child: Text(
-            player.nickname.isNotEmpty ? player.nickname[0] : '?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: avatarRadius * 0.85,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+        _avatarWidget(avatarRadius),
         if (_showCardCountBadge)
           Positioned(
             right: -avatarRadius * 0.25,
@@ -447,19 +449,7 @@ class PlayerWidget extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        CircleAvatar(
-          radius: avatarRadius,
-          backgroundColor:
-              player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935),
-          child: Text(
-            player.nickname.isNotEmpty ? player.nickname[0] : '?',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: avatarRadius * 0.85,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+        _avatarWidget(avatarRadius),
         if (_showCardCountBadge)
           Positioned(
             right: -avatarRadius * 0.25,
@@ -533,19 +523,7 @@ class PlayerWidget extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              CircleAvatar(
-                radius: avatarRadius,
-                backgroundColor:
-                    player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935),
-                child: Text(
-                  player.nickname.isNotEmpty ? player.nickname[0] : '?',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: ui.sp(compact ? ui.config.font.lg : ui.config.font.lg),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              _avatarWidget(avatarRadius),
               if (_showCardCountBadge)
                 Positioned(
                   right: ui.w(-6),

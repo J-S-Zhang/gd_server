@@ -20,10 +20,13 @@
 #endif
 
 #include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <thread>
+
+namespace fs = std::filesystem;
 
 namespace guandan {
 
@@ -151,6 +154,9 @@ std::string buildUserJson(const UserRecord& user, const std::string& token) {
     if (!user.avatar.empty()) {
         oss << ",\"avatar\":\"" << escapeJson(user.avatar) << "\"";
     }
+    if (!user.avatarPreset.empty()) {
+        oss << ",\"avatar_preset\":\"" << escapeJson(user.avatarPreset) << "\"";
+    }
     oss << ",\"token\":\"" << escapeJson(token) << "\"";
     oss << ",\"stats\":{";
     oss << "\"total_games\":" << user.stats.totalGames;
@@ -206,6 +212,72 @@ void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& stat
     resp << body;
     const std::string payload = resp.str();
     ::send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
+}
+
+void sendHttpBinaryResponse(SocketHandle sock, int code, const std::string& status,
+                            const std::string& contentType, const std::string& body) {
+    std::ostringstream resp;
+    resp << "HTTP/1.1 " << code << " " << status << "\r\n";
+    resp << "Content-Type: " << contentType << "\r\n";
+    resp << "Access-Control-Allow-Origin: *\r\n";
+    resp << "Access-Control-Allow-Headers: Content-Type, Authorization\r\n";
+    resp << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
+    resp << "Content-Length: " << body.size() << "\r\n";
+    resp << "Connection: close\r\n";
+    resp << "\r\n";
+    resp << body;
+    const std::string payload = resp.str();
+    ::send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
+}
+
+bool isSafeAvatarFileName(const std::string& name) {
+    if (name.empty()) return false;
+    if (name.find("..") != std::string::npos) return false;
+    if (name.find('/') != std::string::npos || name.find('\\') != std::string::npos) return false;
+    return true;
+}
+
+std::string guessImageContentType(const std::string& extLower) {
+    if (extLower == ".jpg" || extLower == ".jpeg") return "image/jpeg";
+    if (extLower == ".png") return "image/png";
+    if (extLower == ".webp") return "image/webp";
+    return "application/octet-stream";
+}
+
+bool tryServeAvatarFile(SocketHandle sock, const std::string& path,
+                        const AvatarStorageConfig& avatarConfig) {
+    std::string prefix = avatarConfig.publicPathPrefix;
+    while (!prefix.empty() && prefix.back() == '/') {
+        prefix.pop_back();
+    }
+    if (prefix.empty() || prefix.front() != '/') {
+        prefix.insert(prefix.begin(), '/');
+    }
+    if (path.size() <= prefix.size() || path.rfind(prefix, 0) != 0) {
+        return false;
+    }
+
+    std::string rel = path.substr(prefix.size());
+    while (!rel.empty() && rel.front() == '/') {
+        rel.erase(0, 1);
+    }
+    if (!isSafeAvatarFileName(rel)) {
+        return false;
+    }
+
+    const fs::path filePath = fs::path(avatarConfig.storageDir) / rel;
+    std::ifstream in(filePath, std::ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+
+    std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::string ext = fs::path(rel).extension().string();
+    for (char& c : ext) {
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    }
+    sendHttpBinaryResponse(sock, 200, "OK", guessImageContentType(ext), data);
+    return true;
 }
 
 void handleClient(SocketHandle sock, AuthService* authService, const AppVersionInfo& appVersionInfo,
@@ -268,6 +340,11 @@ void handleClient(SocketHandle sock, AuthService* authService, const AppVersionI
         return;
     }
 
+    if (method == "GET" && tryServeAvatarFile(sock, path, avatarConfig)) {
+        closeSocket(sock);
+        return;
+    }
+
     if (!authService) {
         sendHttpResponse(sock, 503, "Service Unavailable",
                          buildErrorJson("service_unavailable", "认证服务未就绪"));
@@ -310,6 +387,20 @@ void handleClient(SocketHandle sock, AuthService* authService, const AppVersionI
         const std::string imageBase64 = extractJsonStringValue(body, "image_base64");
         const std::string format = extractJsonStringValue(body, "format");
         auto result = authService->updateAvatar(token, imageBase64, format, avatarConfig);
+        if (result.success) {
+            sendHttpResponse(sock, 200, "OK", buildUserJson(result.user, token));
+        } else {
+            sendHttpResponse(sock, result.httpStatus, "Bad Request",
+                             buildErrorJson(result.errorCode, result.message));
+        }
+        closeSocket(sock);
+        return;
+    }
+
+    if (method == "POST" && path == "/api/user/avatar-preset") {
+        const std::string token = extractBearerToken(authorizationHeader);
+        const std::string presetId = extractJsonStringValue(body, "preset_id");
+        auto result = authService->updateAvatarPreset(token, presetId);
         if (result.success) {
             sendHttpResponse(sock, 200, "OK", buildUserJson(result.user, token));
         } else {

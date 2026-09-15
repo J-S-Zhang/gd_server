@@ -28,6 +28,32 @@ std::string jsonEscape(const std::string& s) {
     return out;
 }
 
+PlayerJoinInfo joinInfoFromUser(const UserRecord& user) {
+    PlayerJoinInfo info;
+    info.nickname = user.nickname;
+    info.avatar = user.avatar;
+    info.avatarPreset = user.avatarPreset;
+    return info;
+}
+
+PlayerJoinInfo joinInfoFromSession(AuthService& authService, SessionManager& sessionManager,
+                                   uint64_t sessionId) {
+    PlayerJoinInfo info;
+    auto* session = sessionManager.getSession(sessionId);
+    if (!session) {
+        info.nickname = "Player";
+        return info;
+    }
+    if (!session->token.empty()) {
+        auto user = authService.validateToken(session->token);
+        if (user) {
+            return joinInfoFromUser(*user);
+        }
+    }
+    info.nickname = session->nickname.empty() ? "Player" : session->nickname;
+    return info;
+}
+
 const char* roomPhaseToString(RoomPhase phase) {
     switch (phase) {
         case RoomPhase::CREATED: return "CREATED";
@@ -128,7 +154,7 @@ void MessageDispatcher::sendPlayerView(const std::shared_ptr<Room>& room,
     Message msg;
     msg.type = messageType;
     msg.roomId = room->id();
-    msg.dataJson = buildGameSnapshotJson(view, room->id());
+    msg.dataJson = buildGameSnapshotJson(view, *room);
     sessionManager_.sendToPlayer(playerId, messageToJson(msg));
 }
 
@@ -376,6 +402,9 @@ void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, Send
     sessionManager_.authenticate(sessionId, msg.token);
 
     auto room = roomManager_.findRoomByPlayer(playerId);
+    if (room && room->phase() != RoomPhase::FINISHED) {
+        room->syncPlayerProfile(playerId, joinInfoFromUser(*user));
+    }
 
     std::ostringstream oss;
     oss << "{\"player_id\":" << playerId;
@@ -424,12 +453,12 @@ void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, Send
 
 void MessageDispatcher::handleCreateRoom(uint64_t sessionId, const Message& msg, SendFn send) {
     PlayerId playerId = resolvePlayerId(sessionId);
-    auto* session = sessionManager_.getSession(sessionId);
-    std::string nickname = session ? session->nickname : "Player";
+    const PlayerJoinInfo profile =
+        joinInfoFromSession(authService_, sessionManager_, sessionId);
     std::string mode = extractJsonStringFromData(msg.dataJson, "mode");
     if (mode.empty()) mode = "six";
 
-    auto room = roomManager_.createRoom(playerId, nickname, mode);
+    auto room = roomManager_.createRoom(playerId, profile, mode);
     if (!room) {
         sendError(send, msg.requestId, ErrorCode::ALREADY_IN_ROOM);
         return;
@@ -454,10 +483,11 @@ void MessageDispatcher::handleCreateRoom(uint64_t sessionId, const Message& msg,
 
 void MessageDispatcher::handleJoinRoom(uint64_t sessionId, const Message& msg, SendFn send) {
     PlayerId playerId = resolvePlayerId(sessionId);
-    auto* session = sessionManager_.getSession(sessionId);
-    std::string nickname = session ? session->nickname : "Player";
+    const PlayerJoinInfo profile =
+        joinInfoFromSession(authService_, sessionManager_, sessionId);
+    const std::string& nickname = profile.nickname;
 
-    auto room = roomManager_.joinRoom(msg.roomId, playerId, nickname);
+    auto room = roomManager_.joinRoom(msg.roomId, playerId, profile);
     if (!room) {
         auto existing = roomManager_.getRoom(msg.roomId);
         if (!existing) {
@@ -950,7 +980,7 @@ void MessageDispatcher::handleSpectateTeammate(uint64_t sessionId, const Message
     resp.roomId = room->id();
     const int anchor = room->resolveViewAnchor(playerId);
     auto view = room->engine().buildViewFor(playerId, anchor);
-    resp.dataJson = buildGameSnapshotJson(view, room->id());
+    resp.dataJson = buildGameSnapshotJson(view, *room);
     sendResponse(send, resp);
 }
 

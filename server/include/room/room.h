@@ -20,9 +20,17 @@ enum class RoomPhase {
     FINISHED
 };
 
+struct PlayerJoinInfo {
+    std::string nickname;
+    std::string avatar;
+    std::string avatarPreset;
+};
+
 struct RoomPlayer {
     PlayerId id = 0;
     std::string nickname;
+    std::string avatar;
+    std::string avatarPreset;
     int seatIndex = -1;
     bool isReady = false;
     bool isOwner = false;
@@ -41,7 +49,8 @@ public:
     GameEngine& engine() { return engine_; }
     RoomTaskQueue& taskQueue() { return taskQueue_; }
 
-    bool join(PlayerId playerId, const std::string& nickname);
+    bool join(PlayerId playerId, const PlayerJoinInfo& info);
+    bool syncPlayerProfile(PlayerId playerId, const PlayerJoinInfo& info);
     void leave(PlayerId playerId);
     bool ready(PlayerId playerId);
     bool unready(PlayerId playerId);

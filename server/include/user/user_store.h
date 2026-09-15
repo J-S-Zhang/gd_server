@@ -23,6 +23,8 @@ public:
 
     bool updateAvatar(PlayerId id, const std::string& avatarPath);
 
+    bool updateAvatarPreset(PlayerId id, const std::string& presetId);
+
 private:
     std::string dbPath_;
     mutable std::mutex mutex_;

@@ -115,6 +115,7 @@ void UserStore::load() {
         user.passwordHash = extractJsonStringValue(json.substr(pos), "password_hash");
         user.salt = extractJsonStringValue(json.substr(pos), "salt");
         user.avatar = extractJsonStringValue(json.substr(pos), "avatar");
+        user.avatarPreset = extractJsonStringValue(json.substr(pos), "avatar_preset");
         user.stats.totalGames = static_cast<uint32_t>(
             extractJsonUintValue(json.substr(pos), "total_games"));
         user.stats.wins = static_cast<uint32_t>(extractJsonUintValue(json.substr(pos), "wins"));
@@ -143,6 +144,9 @@ void UserStore::save() const {
         oss << ",\"salt\":\"" << escapeJson(u.salt) << "\"";
         if (!u.avatar.empty()) {
             oss << ",\"avatar\":\"" << escapeJson(u.avatar) << "\"";
+        }
+        if (!u.avatarPreset.empty()) {
+            oss << ",\"avatar_preset\":\"" << escapeJson(u.avatarPreset) << "\"";
         }
         oss << ",\"total_games\":" << u.stats.totalGames;
         oss << ",\"wins\":" << u.stats.wins;
@@ -220,6 +224,18 @@ bool UserStore::updateAvatar(PlayerId id, const std::string& avatarPath) {
     for (auto& u : users_) {
         if (u.id == id) {
             u.avatar = avatarPath;
+            save();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool UserStore::updateAvatarPreset(PlayerId id, const std::string& presetId) {
+    std::lock_guard lock(mutex_);
+    for (auto& u : users_) {
+        if (u.id == id) {
+            u.avatarPreset = presetId;
             save();
             return true;
         }

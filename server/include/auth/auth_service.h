@@ -17,6 +17,14 @@ struct AvatarUpdateResult {
     UserRecord user;
 };
 
+struct AvatarPresetUpdateResult {
+    bool success = false;
+    int httpStatus = 400;
+    std::string errorCode;
+    std::string message;
+    UserRecord user;
+};
+
 struct AuthResult {
     bool success = false;
     int httpStatus = 400;
@@ -35,6 +43,8 @@ public:
     std::optional<UserRecord> validateToken(const std::string& token);
     AvatarUpdateResult updateAvatar(const std::string& token, const std::string& imageBase64,
                                     const std::string& format, const AvatarStorageConfig& config);
+    AvatarPresetUpdateResult updateAvatarPreset(const std::string& token,
+                                                const std::string& presetId);
 
 private:
     UserStore& userStore_;

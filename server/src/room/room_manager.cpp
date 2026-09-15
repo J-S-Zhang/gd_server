@@ -5,7 +5,7 @@
 namespace guandan {
 
 std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
-                                              const std::string& nickname,
+                                              const PlayerJoinInfo& profile,
                                               const std::string& mode) {
     std::lock_guard lock(mutex_);
     if (playerRoomMap_.count(ownerId)) return nullptr;
@@ -17,7 +17,7 @@ std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
 
     auto config = RoomConfig::fromModeName(mode);
     auto room = std::make_shared<Room>(roomId, ownerId, config);
-    room->join(ownerId, nickname);
+    room->join(ownerId, profile);
     if (config.mode == GameMode::SOLO) {
         room->fillBots();
     }
@@ -27,14 +27,14 @@ std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
 }
 
 std::shared_ptr<Room> RoomManager::joinRoom(const RoomId& roomId, PlayerId playerId,
-                                            const std::string& nickname) {
+                                            const PlayerJoinInfo& profile) {
     std::lock_guard lock(mutex_);
     if (playerRoomMap_.count(playerId)) return nullptr;
 
     auto it = rooms_.find(roomId);
     if (it == rooms_.end()) return nullptr;
 
-    if (!it->second->join(playerId, nickname)) return nullptr;
+    if (!it->second->join(playerId, profile)) return nullptr;
     playerRoomMap_[playerId] = roomId;
     return it->second;
 }

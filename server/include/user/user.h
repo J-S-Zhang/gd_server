@@ -20,6 +20,8 @@ struct UserRecord {
     std::string salt;
     /// 对外可访问路径，如 /downloads/avatars/user_10001.jpg
     std::string avatar;
+    /// 内置头像预设 id，如 avatar_1；与 avatar 一并同步给房间内其他玩家
+    std::string avatarPreset;
     UserStats stats;
 };
 

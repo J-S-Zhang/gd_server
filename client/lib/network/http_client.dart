@@ -44,6 +44,16 @@ class HttpClient {
     );
   }
 
+  Future<User> updateAvatarPreset(String presetId) async {
+    if (_token == null || _token!.isEmpty) {
+      throw Exception('请先登录');
+    }
+    return _authRequest(
+      '${Constants.apiBaseUrl}/api/user/avatar-preset',
+      {'preset_id': presetId},
+    );
+  }
+
   Future<AppVersionInfo> fetchAppVersion() async {
     Object? lastError;
     for (var attempt = 0; attempt < 2; attempt++) {

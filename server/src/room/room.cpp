@@ -53,7 +53,7 @@ void Room::fillBots() {
     }
 }
 
-bool Room::join(PlayerId playerId, const std::string& nickname) {
+bool Room::join(PlayerId playerId, const PlayerJoinInfo& info) {
     if (isBotPlayer(playerId)) return false;
     if (isFull()) return false;
     for (const auto& p : players_) {
@@ -64,11 +64,27 @@ bool Room::join(PlayerId playerId, const std::string& nickname) {
 
     RoomPlayer rp;
     rp.id = playerId;
-    rp.nickname = nickname;
+    rp.nickname = info.nickname;
+    rp.avatar = info.avatar;
+    rp.avatarPreset = info.avatarPreset;
     rp.seatIndex = seat;
     rp.isOwner = (playerId == ownerId_);
     players_.push_back(rp);
     return true;
+}
+
+bool Room::syncPlayerProfile(PlayerId playerId, const PlayerJoinInfo& info) {
+    if (isBotPlayer(playerId)) return false;
+    for (auto& p : players_) {
+        if (p.id != playerId || p.isBot) continue;
+        if (!info.nickname.empty()) {
+            p.nickname = info.nickname;
+        }
+        p.avatar = info.avatar;
+        p.avatarPreset = info.avatarPreset;
+        return true;
+    }
+    return false;
 }
 
 void Room::leave(PlayerId playerId) {

@@ -1,8 +1,12 @@
+import '../config/server_config.dart';
+
 enum PlayerStatus { online, offline }
 
 class Player {
   final int id;
   final String nickname;
+  final String? avatar;
+  final String? avatarPreset;
   final int seatIndex;
   final int team;
   final int cardCount;
@@ -15,6 +19,8 @@ class Player {
   const Player({
     required this.id,
     required this.nickname,
+    this.avatar,
+    this.avatarPreset,
     required this.seatIndex,
     required this.team,
     this.cardCount = 0,
@@ -25,10 +31,17 @@ class Player {
     this.status = PlayerStatus.online,
   });
 
+  String? get avatarUrl {
+    final url = ServerConfig.resolveMediaUrl(avatar);
+    return url.isEmpty ? null : url;
+  }
+
   factory Player.fromJson(Map<String, dynamic> json) {
     return Player(
       id: json['id'] as int,
       nickname: json['nickname'] as String? ?? 'Player',
+      avatar: json['avatar'] as String?,
+      avatarPreset: json['avatar_preset'] as String?,
       seatIndex: json['seat_index'] as int? ?? 0,
       team: json['team'] as int? ?? 0,
       cardCount: json['card_count'] as int? ?? 0,
