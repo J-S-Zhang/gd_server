@@ -132,7 +132,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
                     duration: _layoutAnimDuration,
                     curve: _layoutAnimCurve,
                     width: contentWidth,
-                    height: contentHeight.clamp(0, regionHeight),
+                    height: contentHeight,
                     child: Stack(
                       clipBehavior: Clip.none,
                       alignment: Alignment.bottomLeft,

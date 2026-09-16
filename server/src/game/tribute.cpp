@@ -69,16 +69,33 @@ CardId TributeManager::pickBestTributeCard(
     return best;
 }
 
-CardId TributeManager::pickSmallestCard(const Hand& hand, const GameState& state) const {
-    CardId best = 0;
+int TributeManager::minSingleEffectiveRank(
+    const Hand& hand,
+    const GameState& state,
+    const RuleContext& ctx
+) const {
     int bestOrder = 999;
     for (CardId id : hand.cards()) {
-        const Card& card = state.getCardById(id);
-        const int order = isJoker(card.rank) ? rankValue(card.rank) : rankValue(card.rank);
-        if (order < bestOrder) {
-            bestOrder = order;
-            best = id;
-        }
+        bestOrder = std::min(
+            bestOrder,
+            singleEffectiveRank(state.getCardById(id), ctx));
+    }
+    return bestOrder == 999 ? 0 : bestOrder;
+}
+
+CardId TributeManager::pickSmallestCard(
+    const Hand& hand,
+    const GameState& state,
+    const RuleContext& ctx
+) const {
+    const int minOrder = minSingleEffectiveRank(hand, state, ctx);
+    if (minOrder == 0) return 0;
+
+    CardId best = 0;
+    for (CardId id : hand.cards()) {
+        if (singleEffectiveRank(state.getCardById(id), ctx) != minOrder) continue;
+        best = id;
+        break;
     }
     return best;
 }
@@ -109,7 +126,7 @@ CardId TributeManager::pickReturnCard(
 ) const {
     const CardId valid = pickBestReturnCard(hand, state, ctx);
     if (valid != 0) return valid;
-    return pickSmallestCard(hand, state);
+    return pickSmallestCard(hand, state, ctx);
 }
 
 std::vector<CardId> TributeManager::validReturnCardIds(
@@ -117,13 +134,24 @@ std::vector<CardId> TributeManager::validReturnCardIds(
     const GameState& state,
     const RuleContext& ctx
 ) const {
-    std::vector<CardId> ids;
+    std::vector<CardId> primary;
     for (CardId id : hand.cards()) {
         if (isValidReturnCard(state.getCardById(id), ctx)) {
-            ids.push_back(id);
+            primary.push_back(id);
         }
     }
-    return ids;
+    if (!primary.empty()) return primary;
+
+    const int minOrder = minSingleEffectiveRank(hand, state, ctx);
+    if (minOrder == 0) return {};
+
+    std::vector<CardId> fallback;
+    for (CardId id : hand.cards()) {
+        if (singleEffectiveRank(state.getCardById(id), ctx) == minOrder) {
+            fallback.push_back(id);
+        }
+    }
+    return fallback;
 }
 
 bool TributeManager::isValidTributeSubmission(
@@ -147,10 +175,9 @@ bool TributeManager::isValidReturnSubmission(
     if (seat < 0 || seat >= state.playerCount || cardId == 0) return false;
     const auto& hand = state.players[seat].hand;
     if (!hand.contains({cardId})) return false;
-    const Card& card = state.getCardById(cardId);
-    if (isValidReturnCard(card, ctx)) return true;
-    if (!validReturnCardIds(hand, state, ctx).empty()) return false;
-    return cardId == pickSmallestCard(hand, state);
+
+    const auto validIds = validReturnCardIds(hand, state, ctx);
+    return std::find(validIds.begin(), validIds.end(), cardId) != validIds.end();
 }
 
 int TributeManager::countBigJokersInSeat(const GameState& state, int seat) const {

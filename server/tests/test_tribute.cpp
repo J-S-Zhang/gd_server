@@ -175,3 +175,95 @@ TEST(test_tribute_six_triple_down) {
     ASSERT(state.getCardById(result.tributes[1].cardId).rank == Rank::Q);
     ASSERT(state.getCardById(result.tributes[2].cardId).rank == Rank::R9);
 }
+
+TEST(test_return_tribute_primary_any_leq_ten_non_level) {
+    TributeManager manager;
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+
+    std::array<int, 6> ranks{};
+    std::vector<std::vector<Card>> hands(6);
+    hands[0] = {
+        makeCard(1, Suit::DIAMOND, Rank::R3),
+        makeCard(2, Suit::CLUB, Rank::R8),
+        makeCard(3, Suit::HEART, Rank::R10),
+        makeCard(4, Suit::SPADE, Rank::K),
+    };
+
+    GameState state = makeStateWithHands(4, ranks, hands);
+    const auto valid = manager.validReturnCardIds(state.players[0].hand, state, ctx);
+    ASSERT(valid.size() == 3);
+    ASSERT(manager.isValidReturnSubmission(0, 1, state, ctx));
+    ASSERT(manager.isValidReturnSubmission(0, 2, state, ctx));
+    ASSERT(manager.isValidReturnSubmission(0, 3, state, ctx));
+    ASSERT(!manager.isValidReturnSubmission(0, 4, state, ctx));
+}
+
+TEST(test_return_tribute_fallback_smallest_single_rank) {
+    TributeManager manager;
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+
+    std::array<int, 6> ranks{};
+    std::vector<std::vector<Card>> hands(6);
+    hands[0] = {
+        makeCard(1, Suit::SPADE, Rank::R2),
+        makeCard(2, Suit::HEART, Rank::R2),
+        makeCard(3, Suit::CLUB, Rank::Q),
+        makeCard(4, Suit::DIAMOND, Rank::K),
+        makeCard(5, Suit::SPADE, Rank::A),
+    };
+
+    GameState state = makeStateWithHands(4, ranks, hands);
+    const auto valid = manager.validReturnCardIds(state.players[0].hand, state, ctx);
+    ASSERT(valid.size() == 1);
+    ASSERT(state.getCardById(valid[0]).rank == Rank::Q);
+    ASSERT(manager.isValidReturnSubmission(0, 3, state, ctx));
+    ASSERT(!manager.isValidReturnSubmission(0, 1, state, ctx));
+    ASSERT(manager.pickReturnCard(state.players[0].hand, state, ctx) == 3);
+}
+
+TEST(test_return_tribute_fallback_multiple_smallest) {
+    TributeManager manager;
+    RuleContext ctx;
+    ctx.currentLevel = 2;
+
+    std::array<int, 6> ranks{};
+    std::vector<std::vector<Card>> hands(6);
+    hands[0] = {
+        makeCard(1, Suit::SPADE, Rank::R2),
+        makeCard(2, Suit::HEART, Rank::R2),
+        makeCard(3, Suit::CLUB, Rank::Q),
+        makeCard(4, Suit::DIAMOND, Rank::Q),
+        makeCard(5, Suit::SPADE, Rank::K),
+    };
+
+    GameState state = makeStateWithHands(4, ranks, hands);
+    const auto valid = manager.validReturnCardIds(state.players[0].hand, state, ctx);
+    ASSERT(valid.size() == 2);
+    ASSERT(manager.isValidReturnSubmission(0, 3, state, ctx));
+    ASSERT(manager.isValidReturnSubmission(0, 4, state, ctx));
+    ASSERT(!manager.isValidReturnSubmission(0, 5, state, ctx));
+}
+
+TEST(test_return_tribute_level_card_excluded_from_primary) {
+    TributeManager manager;
+    RuleContext ctx;
+    ctx.currentLevel = 5;
+
+    std::array<int, 6> ranks{};
+    std::vector<std::vector<Card>> hands(6);
+    hands[0] = {
+        makeCard(1, Suit::SPADE, Rank::R5),
+        makeCard(2, Suit::HEART, Rank::R5),
+        makeCard(3, Suit::CLUB, Rank::R6),
+        makeCard(4, Suit::DIAMOND, Rank::Q),
+    };
+
+    GameState state = makeStateWithHands(4, ranks, hands);
+    const auto valid = manager.validReturnCardIds(state.players[0].hand, state, ctx);
+    ASSERT(valid.size() == 1);
+    ASSERT(state.getCardById(valid[0]).rank == Rank::R6);
+    ASSERT(!manager.isValidReturnSubmission(0, 1, state, ctx));
+    ASSERT(manager.isValidReturnSubmission(0, 3, state, ctx));
+}

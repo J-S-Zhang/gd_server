@@ -23,8 +23,8 @@
     "cornerMarkFontScale": 0.88
   },
   "handCards": {
-    "width": 25.2,
-    "height": 36,
+    "width": 25.7,
+    "height": 36.72,
     "aspectRatio": 0.7,
     "horizontalOverlap": 0.1,
     "verticalOverlap": 0.7,
@@ -1422,16 +1422,16 @@
           },
           "hand_cards": {
             "x": 0.5,
-            "y": 0.8,
+            "y": 0.78,
             "w": 0.9,
-            "h": 0.2,
-            "aspectRatio": 10,
+            "h": 0.24,
+            "aspectRatio": 8,
             "children": {
               "card_sample": {
                 "x": 0.5,
-                "y": 0.5,
+                "y": 0.575,
                 "w": 0.7,
-                "h": 1,
+                "h": 0.85,
                 "aspectRatio": 0.7
               }
             }

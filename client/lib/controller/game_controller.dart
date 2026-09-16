@@ -109,13 +109,8 @@ class GameController {
     final state = _ref.read(gameStateProvider);
     if (!state.mustSubmitReturn) return false;
     final selected = selectedCardIds;
-    if (selected.length != 1) return false;
-    final cardId = selected.first;
-    if (state.validReturnCardIds.contains(cardId)) return true;
-    if (state.validReturnCardIds.isEmpty) {
-      return cardId == _smallestCardId(state.myCards);
-    }
-    return false;
+    return selected.length == 1 &&
+        state.validReturnCardIds.contains(selected.first);
   }
 
   void submitTribute(String roomId) {
@@ -188,10 +183,7 @@ class GameController {
       return;
     }
     if (state.mustSubmitReturn) {
-      if (state.validReturnCardIds.isNotEmpty &&
-          !state.validReturnCardIds.contains(cardId)) {
-        return;
-      }
+      if (!state.validReturnCardIds.contains(cardId)) return;
       _setSelectedCardIds({cardId});
       return;
     }
@@ -211,18 +203,6 @@ class GameController {
       return c;
     }).toList();
     _ref.read(gameStateProvider.notifier).state = state.copyWith(myCards: cards);
-  }
-
-  int? _smallestCardId(List<GameCard> cards) {
-    if (cards.isEmpty) return null;
-    GameCard? smallest;
-    for (final card in cards) {
-      if (smallest == null ||
-          rankValue(card.rank) < rankValue(smallest.rank)) {
-        smallest = card;
-      }
-    }
-    return smallest?.id;
   }
 
   ClientGameState _applyDealtSnapshot(
@@ -468,12 +448,16 @@ class GameController {
         final data = msg['data'] as Map<String, dynamic>? ?? {};
         final matchWon = data['match_won'] == true;
         final state = _ref.read(gameStateProvider);
+        final playersAfterSettlement = _applyFinishRanksFromSettlement(
+          data,
+          _resetReadyAfterSettlement(state.players),
+        );
         _ref.read(gameStateProvider.notifier).state = state.copyWith(
           phase: matchWon ? GamePhase.settlement : GamePhase.roundEnd,
           teamLevels: _parseIntList(data['team_levels'], state.teamLevels),
           passAFailCounts:
               _parseIntList(data['pass_a_fail_counts'], state.passAFailCounts),
-          players: _applyFinishRanksFromSettlement(data, state.players),
+          players: playersAfterSettlement,
           myCards: matchWon ? state.myCards : const [],
           lastPlayedCards: matchWon ? state.lastPlayedCards : const [],
           lastPlayedPlayerId: matchWon ? state.lastPlayedPlayerId : -1,
@@ -484,8 +468,10 @@ class GameController {
         if (!matchWon) {
           final room = _ref.read(roomProvider);
           if (room != null) {
-            _ref.read(roomProvider.notifier).state =
-                room.copyWith(phase: GamePhase.roundEnd);
+            _ref.read(roomProvider.notifier).state = room.copyWith(
+              phase: GamePhase.roundEnd,
+              players: _resetReadyAfterSettlement(room.players),
+            );
           }
           showGameNotice(_ref, '本局结束，请点击准备');
         }
@@ -752,6 +738,28 @@ class GameController {
     return {
       state.lastPlayedSeatIndex: SeatRoundPlay(cardIds: state.lastPlayedCards),
     };
+  }
+
+  /// 小局结束后与服务器 enterSettlement 一致：真人未准备，机器人自动准备。
+  List<Player> _resetReadyAfterSettlement(List<Player> players) {
+    return players
+        .map(
+          (p) => Player(
+            id: p.id,
+            nickname: p.nickname,
+            avatar: p.avatar,
+            avatarPreset: p.avatarPreset,
+            seatIndex: p.seatIndex,
+            team: p.team,
+            cardCount: p.cardCount,
+            hasFinished: p.hasFinished,
+            finishRank: p.finishRank,
+            isReady: p.isBot,
+            isBot: p.isBot,
+            status: p.status,
+          ),
+        )
+        .toList();
   }
 
   List<Player> _applyFinishRanksFromSettlement(

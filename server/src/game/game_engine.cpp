@@ -27,8 +27,12 @@ void GameEngine::init(RoomId roomId, const std::vector<PlayerId>& playerIds) {
 }
 
 void GameEngine::setPlayerReady(PlayerId playerId) {
+    setPlayerReady(playerId, true);
+}
+
+void GameEngine::setPlayerReady(PlayerId playerId, bool ready) {
     auto* p = state_.getPlayerById(playerId);
-    if (p) p->isReady = true;
+    if (p) p->isReady = ready;
 }
 
 bool GameEngine::allReady() const {

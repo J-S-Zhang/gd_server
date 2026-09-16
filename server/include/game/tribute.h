@@ -82,13 +82,14 @@ public:
         const RuleContext& ctx
     ) const;
 
-    /// 还贡推荐：优先 ≤10 非级牌中最小；否则手牌最小。
+    /// 还贡推荐：优先 ≤10 非级牌中最小；否则按单牌大小还最小。
     CardId pickReturnCard(
         const Hand& hand,
         const GameState& state,
         const RuleContext& ctx
     ) const;
 
+    /// 可还贡牌：优先所有 ≤10 非级牌；若无则所有单牌最小的牌（可多张自选）。
     std::vector<CardId> validReturnCardIds(
         const Hand& hand,
         const GameState& state,
@@ -150,7 +151,16 @@ private:
     ) const;
 
     int countBigJokersInSeat(const GameState& state, int seat) const;
-    CardId pickSmallestCard(const Hand& hand, const GameState& state) const;
+    CardId pickSmallestCard(
+        const Hand& hand,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
+    int minSingleEffectiveRank(
+        const Hand& hand,
+        const GameState& state,
+        const RuleContext& ctx
+    ) const;
     void transferCard(GameState& state, int fromSeat, int toSeat, CardId cardId) const;
 };
 

@@ -72,6 +72,7 @@ public:
 
     void init(RoomId roomId, const std::vector<PlayerId>& playerIds);
     void setPlayerReady(PlayerId playerId);
+    void setPlayerReady(PlayerId playerId, bool ready);
     bool allReady() const;
     void updateConfig(const GameRuleConfig& config);
     PlayResult startGame();

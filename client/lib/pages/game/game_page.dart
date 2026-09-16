@@ -118,7 +118,8 @@ class _GamePageState extends ConsumerState<GamePage> {
       cardCount: gamePlayer.cardCount,
       hasFinished: gamePlayer.hasFinished,
       finishRank: gamePlayer.finishRank,
-      isReady: gamePlayer.isReady || roomPlayer.isReady,
+      // 准备状态以房间数据为准；对局内 gameState 的 isReady 会保留开局前状态。
+      isReady: roomPlayer.isReady,
       isBot: roomPlayer.isBot,
       status: roomPlayer.status,
     );

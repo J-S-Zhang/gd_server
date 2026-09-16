@@ -251,6 +251,7 @@ void Room::enterSettlement() {
     phase_ = RoomPhase::SETTLEMENT;
     for (auto& p : players_) {
         p.isReady = p.isBot;
+        engine_.setPlayerReady(p.id, p.isReady);
     }
 }
 
