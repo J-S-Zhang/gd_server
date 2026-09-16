@@ -105,15 +105,21 @@ class ClientGameState {
   bool get isInTributeFlow =>
       phase == GamePhase.tribute || phase == GamePhase.returnTribute;
 
-  /// 本墩其他玩家均已不要，轮到自己重新领出（可出任意牌型）。
+  /// 轮到自己且拥有牌权（新墩或本墩领出），可任意出牌。
   bool canLeadFreely(int? myUserId) {
-    if (lastPlayedCards.isEmpty) return true;
     if (myUserId == null || !isMyTurn) return false;
+    if (lastPlayedCards.isEmpty) return true;
     return lastPlayedPlayerId == myUserId;
   }
 
-  bool mustRespondToTrick(int? myUserId) =>
-      lastPlayedCards.isNotEmpty && !canLeadFreely(myUserId);
+  /// 轮到自己且必须跟牌（非领出）时，才需要「不出」。
+  bool shouldShowPassButton(int? myUserId) {
+    if (!isMyTurn || myUserId == null) return false;
+    if (lastPlayedCards.isEmpty) return false;
+    return lastPlayedPlayerId != myUserId;
+  }
+
+  bool mustRespondToTrick(int? myUserId) => shouldShowPassButton(myUserId);
 
   int? myTeamLevel(int myTeam) =>
       myTeam >= 0 && myTeam < teamLevels.length ? teamLevels[myTeam] : null;

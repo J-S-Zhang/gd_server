@@ -202,6 +202,7 @@ std::string UserStore::registerUser(const std::string& nickname, const std::stri
     user.password = password;
     user.passwordHash = passwordHash;
     user.salt = salt;
+    user.avatarPreset = "avatar_2";
     users_.push_back(std::move(user));
     save();
     return "";

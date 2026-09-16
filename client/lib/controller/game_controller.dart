@@ -164,7 +164,13 @@ class GameController {
   }) {
     if (content.isEmpty || seatIndex < 0) return;
     if (!isEmoji) {
-      _playQuickChatVoice(content);
+      final voiceId = quickChatVoiceIdForText(content);
+      if (voiceId != null) {
+        GameSoundService.instance.playChatMessageVoice(
+          voiceId,
+          pack: _ref.read(voicePackProvider),
+        );
+      }
     }
     _ref.read(seatChatProvider.notifier).show(
           seatIndex,
@@ -458,9 +464,6 @@ class GameController {
       case 'player_passed':
         _applyPlayerPassed(msg['data'] as Map<String, dynamic>? ?? {});
         break;
-      case 'seat_chat':
-        _applySeatChat(msg['data'] as Map<String, dynamic>? ?? {});
-        break;
       case 'settlement':
         final data = msg['data'] as Map<String, dynamic>? ?? {};
         final matchWon = data['match_won'] == true;
@@ -595,7 +598,7 @@ class GameController {
     }
   }
 
-  /// 本人出完牌后自动切到仍在场的队友视角（不再停留在自己视角）。
+  /// 本人出完牌后自动拉取队友手牌，仅用于底部手牌区展示。
   void _autoSpectateTeammateIfFinished() {
     final state = _ref.read(gameStateProvider);
     if (state.isSpectating) return;
@@ -661,42 +664,6 @@ class GameController {
       turnId: data['turn_id'] as int? ?? state.turnId,
       currentPlayerIndex: nextPlayer,
     );
-  }
-
-  void _applySeatChat(Map<String, dynamic> data) {
-    final seatIndex = data['seat_index'] as int?;
-    final content = data['content'] as String?;
-    if (seatIndex == null || seatIndex < 0 || content == null || content.isEmpty) {
-      return;
-    }
-    final isEmoji = data['is_emoji'] == true;
-    _ref.read(seatChatProvider.notifier).show(
-          seatIndex,
-          content,
-          isEmoji: isEmoji,
-        );
-
-    if (!isEmoji) {
-      final playerId = _jsonInt(data['player_id']) ?? -1;
-      final myUserId = _ref.read(userProvider)?.id;
-      if (myUserId == null || playerId != myUserId) {
-        _playQuickChatVoice(content);
-      }
-    }
-  }
-
-  void _playQuickChatVoice(String content) {
-    final voiceId = quickChatVoiceIdForText(content);
-    if (voiceId == null) return;
-    final pack = _ref.read(voicePackProvider);
-    GameSoundService.instance.playChatMessageVoice(voiceId, pack: pack);
-  }
-
-  int? _jsonInt(dynamic value) {
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    if (value is String) return int.tryParse(value);
-    return null;
   }
 
   void _playPassVoiceIfNeeded(Map<String, dynamic> data) {

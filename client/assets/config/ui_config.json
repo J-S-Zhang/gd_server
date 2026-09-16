@@ -1309,26 +1309,26 @@
               }
             }
           },
-          "waiting_action_bar": {
+          "ready_area": {
             "x": 0.5,
             "y": 0.75,
             "w": 0.4,
             "h": 0.1,
             "aspectRatio": 8,
             "children": {
-              "ready_btn": {
-                "x": 0.2,
+              "ready_button": {
+                "x": 0.25,
                 "y": 0.5,
                 "w": 0.4,
                 "h": 1,
-                "aspectRatio": 3
+                "aspectRatio": 2
               },
-              "start_btn": {
-                "x": 0.8,
+              "start_game_button": {
+                "x": 0.75,
                 "y": 0.5,
                 "w": 0.4,
                 "h": 1,
-                "aspectRatio": 3
+                "aspectRatio": 2
               }
             }
           },
@@ -1355,44 +1355,58 @@
           },
           "action_buttons": {
             "x": 0.5,
-            "y": 0.6,
-            "w": 0.6,
-            "h": 0.2,
-            "aspectRatio": 8,
+            "y": 0.55,
+            "w": 0.54,
+            "h": 0.1,
+            "aspectRatio": 12,
             "children": {
               "pass_btn": {
-                "x": 0.13,
+                "x": 0.3,
                 "y": 0.5,
-                "w": 0.26,
+                "w": 0.25,
                 "h": 1,
                 "aspectRatio": 2
               },
               "hint_btn": {
-                "x": 0.41,
+                "x": 0.5,
                 "y": 0.5,
-                "w": 0.26,
+                "w": 0.25,
                 "h": 1,
                 "aspectRatio": 2
               },
               "play_btn": {
-                "x": 0.69,
+                "x": 0.7,
                 "y": 0.5,
-                "w": 0.26,
+                "w": 0.25,
                 "h": 1,
                 "aspectRatio": 2
               },
               "countdown": {
-                "x": 0.91,
+                "x": 0.85,
                 "y": 0.5,
                 "w": 0.13,
                 "h": 1,
                 "aspectRatio": 1
+              },
+              "tribute_button": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0.25,
+                "h": 1,
+                "aspectRatio": 2
+              },
+              "return_tribute_button": {
+                "x": 0.5,
+                "y": 0.5,
+                "w": 0.25,
+                "h": 1,
+                "aspectRatio": 2
               }
             }
           },
           "self_play": {
             "x": 0.5,
-            "y": 0.6,
+            "y": 0.55,
             "w": 0.5,
             "h": 0.2,
             "aspectRatio": 6,
@@ -1678,14 +1692,14 @@
     "passHeight": 44,
     "hintWidth": 88,
     "hintHeight": 44,
-    "playWidth": 75,
-    "playHeight": 18.36,
+    "playWidth": 67.5,
+    "playHeight": 15.3,
     "largeHeight": 52,
     "borderRadius": 22,
     "aspectRatio": {
       "pass": 2,
       "hint": 2,
-      "play": 4.08,
+      "play": 4.41,
       "toolbarCompact": 2.2
     }
   },

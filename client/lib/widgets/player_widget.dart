@@ -56,6 +56,7 @@ class PlayerWidget extends StatelessWidget {
       avatarPath: player.avatar,
       radius: avatarRadius,
       backgroundColor: _avatarBackgroundColor,
+      clipCircle: false,
     );
   }
 
@@ -214,24 +215,7 @@ class PlayerWidget extends StatelessWidget {
 
     return Container(
       padding: ui.edgeInsetsSymmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: isCurrentTurn
-            ? GameTheme.accentGold.withValues(alpha: 0.25)
-            : Colors.black.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: isCurrentTurn ? GameTheme.accentGold : Colors.white.withValues(alpha: 0.15),
-          width: isCurrentTurn ? ui.r(2) : ui.r(1),
-        ),
-        boxShadow: isCurrentTurn
-            ? [
-                BoxShadow(
-                  color: GameTheme.accentGold.withValues(alpha: 0.35),
-                  blurRadius: ui.r(8),
-                ),
-              ]
-            : null,
-      ),
+      decoration: _inGameSeatDecoration(ui, borderRadius),
       child: content,
     );
   }
@@ -301,7 +285,7 @@ class PlayerWidget extends StatelessWidget {
       width: region.width,
       height: region.height,
       child: DecoratedBox(
-        decoration: _seatDecoration(ui, borderRadius),
+        decoration: _inGameSeatDecoration(ui, borderRadius),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -355,13 +339,11 @@ class PlayerWidget extends StatelessWidget {
     final nicknameFontSize = nicknameRect?.height != null
         ? nicknameRect!.height * 0.28
         : ui.sp(ui.config.font.sm2);
-    final statusText = _buildStatusText();
-
     return SizedBox(
       width: region.width,
       height: region.height,
       child: DecoratedBox(
-        decoration: _seatDecoration(ui, borderRadius),
+        decoration: _transparentSeatDecoration(ui, borderRadius),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -379,42 +361,16 @@ class PlayerWidget extends StatelessWidget {
                 layoutParentId: parentId,
                 layoutChildId: 'nickname',
                 layoutMaxPlayers: maxPlayers,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      player.nickname,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: GameTheme.textPrimary,
-                        fontSize: nicknameFontSize,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (player.isBot)
-                      Text(
-                        '机器人',
-                        style: TextStyle(
-                          color: Colors.cyanAccent,
-                          fontSize: nicknameFontSize * 0.75,
-                        ),
-                      ),
-                    if (statusText != null)
-                      Text(
-                        statusText,
-                        style: TextStyle(
-                          color: player.hasFinished
-                              ? GameTheme.accentGold
-                              : showLobbyState && player.isReady
-                                  ? Colors.greenAccent
-                                  : GameTheme.textSecondary,
-                          fontSize: nicknameFontSize * 0.8,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  player.nickname,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: GameTheme.textPrimary,
+                    fontSize: nicknameFontSize,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -424,26 +380,18 @@ class PlayerWidget extends StatelessWidget {
     );
   }
 
-  BoxDecoration _seatDecoration(UiScale ui, double borderRadius) {
+  BoxDecoration _transparentSeatDecoration(UiScale ui, double borderRadius) {
     return BoxDecoration(
-      color: isCurrentTurn
-          ? GameTheme.accentGold.withValues(alpha: 0.25)
-          : Colors.black.withValues(alpha: 0.35),
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(borderRadius),
-      border: Border.all(
-        color: isCurrentTurn ? GameTheme.accentGold : Colors.white.withValues(alpha: 0.15),
-        width: isCurrentTurn ? ui.r(2) : ui.r(1),
-      ),
-      boxShadow: isCurrentTurn
-          ? [
-              BoxShadow(
-                color: GameTheme.accentGold.withValues(alpha: 0.35),
-                blurRadius: ui.r(8),
-              ),
-            ]
+      border: isCurrentTurn
+          ? Border.all(color: GameTheme.accentGold, width: ui.r(2))
           : null,
     );
   }
+
+  BoxDecoration _inGameSeatDecoration(UiScale ui, double borderRadius) =>
+      _transparentSeatDecoration(ui, borderRadius);
 
   Widget _buildAvatarCircle(UiScale ui, double avatarRadius) {
     return Stack(
@@ -493,30 +441,38 @@ class PlayerWidget extends StatelessWidget {
     final borderRadius = region != null ? region.height * 0.12 : ui.r(cfg.borderRadius);
     final statusText = _buildStatusText();
 
+    if (showLobbyState) {
+      return Container(
+        width: width,
+        padding: ui.edgeInsetsSymmetric(
+          horizontal: compact ? 4 : 8,
+          vertical: compact ? 4 : 6,
+        ),
+        decoration: _transparentSeatDecoration(ui, borderRadius),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _avatarWidget(avatarRadius),
+            SizedBox(height: ui.h(compact ? 2 : 4)),
+            RegionFitText(
+              text: player.nickname,
+              width: ui.w(compact ? ui.config.player.compactWidth : ui.config.player.width),
+              fontSize: ui.sp(ui.config.font.sm2),
+              color: GameTheme.textPrimary,
+              overflowMode: RegionTextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: width,
       padding: ui.edgeInsetsSymmetric(
         horizontal: compact ? 4 : 8,
         vertical: compact ? 4 : 6,
       ),
-      decoration: BoxDecoration(
-        color: isCurrentTurn
-            ? GameTheme.accentGold.withValues(alpha: 0.25)
-            : Colors.black.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: isCurrentTurn ? GameTheme.accentGold : Colors.white.withValues(alpha: 0.15),
-          width: isCurrentTurn ? ui.r(2) : ui.r(1),
-        ),
-        boxShadow: isCurrentTurn
-            ? [
-                BoxShadow(
-                  color: GameTheme.accentGold.withValues(alpha: 0.35),
-                  blurRadius: ui.r(8),
-                ),
-              ]
-            : null,
-      ),
+      decoration: _transparentSeatDecoration(ui, borderRadius),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -576,9 +532,7 @@ class PlayerWidget extends StatelessWidget {
               style: TextStyle(
                 color: player.hasFinished
                     ? GameTheme.accentGold
-                    : showLobbyState && player.isReady
-                        ? Colors.greenAccent
-                        : GameTheme.textSecondary,
+                    : GameTheme.textSecondary,
                 fontSize: ui.sp(ui.config.font.sm),
                 fontWeight: FontWeight.w600,
               ),

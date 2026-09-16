@@ -16,7 +16,11 @@ import '../../models/user.dart';
 import '../../theme/game_theme.dart';
 import '../../utils/hand_layout.dart';
 import '../../widgets/game/action_buttons.dart';
-import '../../widgets/game/tribute_action_buttons.dart';
+import '../../widgets/game/action_buttons_region.dart';
+import '../../widgets/game/ready_area.dart';
+import '../../widgets/game/return_tribute_button.dart';
+import '../../widgets/game/tribute_button.dart';
+import '../../widgets/game/waiting_ready_panel.dart';
 import '../../widgets/game/dismiss_vote_dialog.dart';
 import '../../widgets/game/game_notice_banner.dart';
 import '../../widgets/game/game_top_bar.dart';
@@ -30,9 +34,7 @@ import '../../models/seat_round_play.dart';
 import '../../utils/seat_layout.dart';
 import '../../widgets/game/seat_chat_display.dart';
 import '../../widgets/game/seat_played_cards.dart';
-import '../../widgets/game/waiting_action_bar.dart';
 import '../../widgets/game_table.dart';
-import '../../widgets/game/spectate_teammate_bar.dart';
 import '../../widgets/hand_cards.dart';
 import '../../widgets/player_widget.dart';
 
@@ -53,6 +55,7 @@ class _GamePageState extends ConsumerState<GamePage> {
   @override
   void initState() {
     super.initState();
+    ref.read(roomControllerProvider).listen();
     ref.read(gameControllerProvider).listen();
     ref.read(voiceChatProvider.notifier).listen(roomId: widget.roomId);
     Future.microtask(() {
@@ -69,7 +72,10 @@ class _GamePageState extends ConsumerState<GamePage> {
   }
 
   bool _isPlaying(room_model.Room? room, ClientGameState gameState) {
-    if (gameState.phase == room_model.GamePhase.roundEnd) return false;
+    if (gameState.phase == room_model.GamePhase.roundEnd ||
+        room?.phase == room_model.GamePhase.roundEnd) {
+      return false;
+    }
     return room?.phase == room_model.GamePhase.playing ||
         gameState.phase == room_model.GamePhase.playing ||
         gameState.phase == room_model.GamePhase.dealing ||
@@ -131,6 +137,7 @@ class _GamePageState extends ConsumerState<GamePage> {
         room?.phase == room_model.GamePhase.roundEnd;
     final isPlaying = _isPlaying(room, gameState);
     final isWaitingLobby = !isPlaying && !isRoundWaiting;
+    final showReadyArea = isWaitingLobby || isRoundWaiting;
     final me = _findMe(room, gameState, user?.id);
     final mySeatIndex = me?.seatIndex ?? 0;
     final seatChats = ref.watch(seatChatProvider);
@@ -177,7 +184,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                 clipBehavior: Clip.hardEdge,
                 children: [
                   if (gameState.phase == room_model.GamePhase.playing &&
-                      !gameState.isSpectating)
+                      !(me?.hasFinished ?? false))
                     Positioned.fill(
                       child: GestureDetector(
                         behavior: HitTestBehavior.translucent,
@@ -235,7 +242,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                       selfChat: selfChat,
                       isWaitingLobby: isWaitingLobby,
                     ),
-                    if (isPlaying)
+                    if (isPlaying && !showReadyArea)
                       ..._buildPlayingOverlays(
                         ref: ref,
                         ui: ui,
@@ -245,16 +252,16 @@ class _GamePageState extends ConsumerState<GamePage> {
                         mySeatIndex: mySeatIndex,
                         maxPlayers: layoutPlayers,
                         me: me,
-                        room: room,
                       ),
-                    if (isWaitingLobby || isRoundWaiting)
+                    if (showReadyArea)
                       GameLayoutPositioned(
-                        elementId: 'waiting_action_bar',
-                        child: WaitingActionBar(
+                        elementId: ReadyArea.parentId,
+                        child: WaitingReadyPanel(
                           isReady: me?.isReady ?? false,
-                          isOwner: room?.isOwner ?? false,
+                          // 仅房间等待大厅且房主显示「开始游戏」；小局间隙只显示准备。
+                          showStartButton:
+                              isWaitingLobby && room?.isOwner == true,
                           canStart: room?.allReady ?? false,
-                          showStartButton: isWaitingLobby,
                           onReady: () => roomController.ready(widget.roomId),
                           onUnready: () => roomController.unready(widget.roomId),
                           onStart: () => roomController.startGame(widget.roomId),
@@ -275,52 +282,12 @@ class _GamePageState extends ConsumerState<GamePage> {
     final room = ref.read(roomProvider);
     final me = _findMe(room, gameState, user?.id);
     final mySeatIndex = me?.seatIndex ?? 0;
-    final seatIndex =
-        gameState.isSpectating ? gameState.ownSeatIndex : mySeatIndex;
-
     ref.read(gameControllerProvider).sendSeatChat(
           widget.roomId,
-          seatIndex,
+          mySeatIndex,
           content,
           isEmoji: isEmoji,
         );
-  }
-
-  Player _selfSeatPlayer({
-    required bool isSpectating,
-    required Player? viewPlayer,
-    required Player? me,
-    required User? user,
-    required int mySeatIndex,
-  }) {
-    if (isSpectating && viewPlayer != null) {
-      return Player(
-        id: viewPlayer.id,
-        nickname: '${viewPlayer.nickname}（观战）',
-        seatIndex: viewPlayer.seatIndex,
-        team: viewPlayer.team,
-        cardCount: viewPlayer.cardCount,
-        hasFinished: viewPlayer.hasFinished,
-        finishRank: viewPlayer.finishRank,
-        isReady: viewPlayer.isReady,
-        isBot: viewPlayer.isBot,
-        status: viewPlayer.status,
-      );
-    }
-    if (me != null) return me;
-    return Player(
-      id: user?.id ?? 0,
-      nickname: user?.nickname ?? '玩家',
-      seatIndex: mySeatIndex,
-      team: mySeatIndex % 2,
-    );
-  }
-
-  Player? _playerAtSeat(List<Player> players, int seatIndex) {
-    for (final p in players) {
-      if (p.seatIndex == seatIndex) return p;
-    }
-    return null;
   }
 
   List<Widget> _buildRoomBaseOverlays({
@@ -337,23 +304,14 @@ class _GamePageState extends ConsumerState<GamePage> {
     final isRoundWaiting =
         gameState.phase == room_model.GamePhase.roundEnd;
     final showSeatLobbyState = isWaitingLobby || isRoundWaiting;
-    final isSpectating =
-        !showSeatLobbyState && gameState.isSpectating;
-    final selfSeatPlayer = showSeatLobbyState
-        ? (me ??
-            Player(
-              id: user?.id ?? 0,
-              nickname: user?.nickname ?? '玩家',
-              seatIndex: mySeatIndex,
-              team: mySeatIndex % 2,
-            ))
-        : _selfSeatPlayer(
-            isSpectating: isSpectating,
-            viewPlayer: _playerAtSeat(gameState.players, gameState.mySeatIndex),
-            me: me,
-            user: user,
-            mySeatIndex: mySeatIndex,
-          );
+    final selfFinished = !showSeatLobbyState && (me?.hasFinished ?? false);
+    final selfSeatPlayer = me ??
+        Player(
+          id: user?.id ?? 0,
+          nickname: user?.nickname ?? '玩家',
+          seatIndex: mySeatIndex,
+          team: mySeatIndex % 2,
+        );
 
     return [
       GameLayoutPositioned(
@@ -363,7 +321,7 @@ class _GamePageState extends ConsumerState<GamePage> {
           showLobbyState: showSeatLobbyState,
           isCurrentTurn: !showSeatLobbyState && gameState.isMyTurn,
           cardCountOverride:
-              showSeatLobbyState || isSpectating ? null : gameState.myCards.length,
+              showSeatLobbyState || selfFinished ? null : gameState.myCards.length,
           chatBubble: ui.seatChatLayoutElement(0, maxPlayers) != null
               ? null
               : selfChat?.content,
@@ -396,18 +354,18 @@ class _GamePageState extends ConsumerState<GamePage> {
       GameLayoutPositioned(
         elementId: 'hand_toolbar',
         child: HandToolbar(
-          straightFlushSuits: showSeatLobbyState || isSpectating
+          straightFlushSuits: showSeatLobbyState || selfFinished
               ? const {}
               : detectStraightFlushSuits(
                   gameState.myCards,
                   currentLevel: gameState.currentLevel,
                 ),
-          onSuitTap: showSeatLobbyState || isSpectating
+          onSuitTap: showSeatLobbyState || selfFinished
               ? null
               : controller.cycleStraightFlushSelection,
           onRestore:
-              showSeatLobbyState || isSpectating ? null : controller.restoreHand,
-          onSort: showSeatLobbyState || isSpectating
+              showSeatLobbyState || selfFinished ? null : controller.restoreHand,
+          onSort: showSeatLobbyState || selfFinished
               ? null
               : () => controller.sortHand(context),
           externalChatPanel: true,
@@ -445,28 +403,20 @@ class _GamePageState extends ConsumerState<GamePage> {
     required int mySeatIndex,
     required int maxPlayers,
     required Player? me,
-    required room_model.Room? room,
   }) {
     final selfFinished = me?.hasFinished ?? false;
     final isSpectating = gameState.isSpectating;
-    final viewSeatIndex = isSpectating ? gameState.mySeatIndex : mySeatIndex;
-    final mergedPlayers = <int, Player>{};
-    for (final p in [...?room?.players, ...gameState.players]) {
-      mergedPlayers[p.id] = p;
-    }
-    final allPlayers = mergedPlayers.values.toList();
-    final viewPlay =
-        gameState.seatRoundPlays[viewSeatIndex] ?? const SeatRoundPlay();
-    final isViewSeatTurn = gameState.currentPlayerIndex == viewSeatIndex;
-    final hasViewPlay = !viewPlay.isEmpty && !isViewSeatTurn;
-    final selfFinishLabel = selfFinished && !isSpectating
+    final selfPlay =
+        gameState.seatRoundPlays[mySeatIndex] ?? const SeatRoundPlay();
+    final isSelfSeatTurn = gameState.currentPlayerIndex == mySeatIndex;
+    final hasSelfPlay = !selfPlay.isEmpty && !isSelfSeatTurn;
+    final selfFinishLabel = selfFinished
         ? SeatLayout.finishRankLabel(me!.finishRank, maxPlayers)
         : '';
-    // 本人出完牌后手牌为空，避免显示「等待发牌」；切到队友视角后再显示队友手牌。
+    // 观战模式仅在手牌区展示队友手牌，其余 UI 与本人视角一致。
     final showHandCards =
         gameState.myCards.isNotEmpty && (isSpectating || !selfFinished);
-
-    final showSelfPlay = hasViewPlay || (selfFinished && !isSpectating);
+    final showSelfPlay = hasSelfPlay || selfFinished;
     final organizedGroups =
         isSpectating ? const <Set<int>>[] : gameState.handOrganizedGroups;
     final reportedHandTopY = ref.watch(handCardsTopYProvider);
@@ -504,7 +454,7 @@ class _GamePageState extends ConsumerState<GamePage> {
         handCardsTopY: handCardsTopY,
         child: showSelfPlay
             ? SeatPlayedCards(
-                play: viewPlay,
+                play: selfPlay,
                 currentLevel: gameState.currentLevel,
                 finishLabel: selfFinishLabel.isEmpty ? null : selfFinishLabel,
                 layoutElementId: 'self_play',
@@ -515,46 +465,43 @@ class _GamePageState extends ConsumerState<GamePage> {
       DynamicHandGameLayoutPositioned(
         elementId: 'action_buttons',
         handCardsTopY: handCardsTopY,
-        child: _buildActionArea(
+        child: _buildPlayActionArea(
           context: context,
           gameState: gameState,
           controller: controller,
           user: user,
         ),
       ),
-      if (isSpectating)
-        GameLayoutPositioned(
-          elementId: 'spectate_bar',
-          child: SpectateTeammateBar(
-            spectatableTeammates: gameState.spectatableTeammates,
-            currentViewSeat: gameState.mySeatIndex,
-            players: allPlayers,
-            onSelect: (seat) =>
-                controller.spectateTeammate(widget.roomId, seat),
-          ),
-        ),
     ];
   }
 
-  Widget _buildActionArea({
+  Widget _buildPlayActionArea({
     required BuildContext context,
     required ClientGameState gameState,
     required GameController controller,
     required User? user,
   }) {
     if (gameState.mustSubmitTribute) {
-      return TributeActionButtons(
-        label: '进贡',
-        enabled: controller.canSubmitTribute,
-        onSubmit: () => controller.submitTribute(widget.roomId),
-      );
+      return ActionButtonsRegion.slots([
+        ActionButtonSlot(
+          childId: TributeButton.childId,
+          child: TributeButton(
+            enabled: controller.canSubmitTribute,
+            onSubmit: () => controller.submitTribute(widget.roomId),
+          ),
+        ),
+      ]);
     }
     if (gameState.mustSubmitReturn) {
-      return TributeActionButtons(
-        label: '还贡',
-        enabled: controller.canSubmitReturn,
-        onSubmit: () => controller.submitReturn(widget.roomId),
-      );
+      return ActionButtonsRegion.slots([
+        ActionButtonSlot(
+          childId: ReturnTributeButton.childId,
+          child: ReturnTributeButton(
+            enabled: controller.canSubmitReturn,
+            onSubmit: () => controller.submitReturn(widget.roomId),
+          ),
+        ),
+      ]);
     }
 
     return IgnorePointer(
@@ -565,7 +512,7 @@ class _GamePageState extends ConsumerState<GamePage> {
           enabled: true,
           canPlay: controller.selectedCardIds.isNotEmpty,
           turnId: gameState.turnId,
-          onPass: gameState.mustRespondToTrick(user?.id)
+          onPass: gameState.shouldShowPassButton(user?.id)
               ? () => controller.pass(widget.roomId)
               : null,
           onHint: () => controller.hint(context),

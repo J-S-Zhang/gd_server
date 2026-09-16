@@ -78,15 +78,21 @@ class GameTableWidget extends StatelessWidget {
         else if (isRoundWaiting)
           ..._positionRoundWaitingSeats(ui)
         else ...[
-          ..._positionPlayers(ui, _effectivePlayers(), gameState.mySeatIndex),
-          ..._positionPlayAreas(ui, _effectivePlayers(), gameState.mySeatIndex),
-          ..._positionChatAreas(ui, _effectivePlayers(), gameState.mySeatIndex),
+          ..._positionPlayers(ui, _effectivePlayers(), _viewerSeatIndex),
+          ..._positionPlayAreas(ui, _effectivePlayers(), _viewerSeatIndex),
         ],
+        ..._positionChatAreas(ui, _playersForChat(), _viewerSeatIndex),
       ],
     );
   }
 
   static const _centerId = 'table_center';
+
+  int get _viewerSeatIndex =>
+      isWaitingLobby || isRoundWaiting ? lobbyMySeatIndex : gameState.ownSeatIndex;
+
+  List<Player> _playersForChat() =>
+      isWaitingLobby || isRoundWaiting ? lobbyPlayers : _effectivePlayers();
 
   Widget _buildWaitingCenter(UiScale ui) {
     final readyCount = lobbyPlayers.where((p) => p.isReady).length;
@@ -309,12 +315,7 @@ class GameTableWidget extends StatelessWidget {
           ui: ui,
           localSeat: localSeat,
           seatElements: seatElements,
-          child: PlayerWidget(
-            player: player,
-            showLobbyState: true,
-            layoutElementId: 'seat_$localSeat',
-            maxPlayers: maxPlayers,
-          ),
+          child: _lobbyPlayerWidget(ui, player, localSeat),
         ),
       );
     }
@@ -344,12 +345,7 @@ class GameTableWidget extends StatelessWidget {
           localSeat: localSeat,
           seatElements: seatElements,
           child: player != null
-              ? PlayerWidget(
-                  player: player,
-                  showLobbyState: true,
-                  layoutElementId: 'seat_$localSeat',
-                  maxPlayers: maxPlayers,
-                )
+              ? _lobbyPlayerWidget(ui, player, localSeat)
               : EmptySeatWidget(
                   seatIndex: serverSeat,
                   layoutElementId: 'seat_$localSeat',
@@ -369,6 +365,18 @@ class GameTableWidget extends StatelessWidget {
       if (p.seatIndex == serverSeat) return p;
     }
     return null;
+  }
+
+  Widget _lobbyPlayerWidget(UiScale ui, Player player, int localSeat) {
+    final seatChat = seatChats[player.seatIndex];
+    return PlayerWidget(
+      player: player,
+      showLobbyState: true,
+      layoutElementId: 'seat_$localSeat',
+      maxPlayers: maxPlayers,
+      chatBubble: _usesConfiguredChatArea(ui, localSeat) ? null : seatChat?.content,
+      chatIsEmoji: seatChat?.isEmoji ?? false,
+    );
   }
 
   SeatRoundPlay _visibleSeatPlay(int seatIndex) {
@@ -494,37 +502,37 @@ class GameTableWidget extends StatelessWidget {
   List<Widget> _positionChatAreas(
     UiScale ui,
     List<Player> players,
-    int mySeatIndex,
+    int viewerSeatIndex,
   ) {
-    return players.map((player) {
+    final widgets = <Widget>[];
+    for (final player in players) {
       final localSeat =
-          SeatLayout.toLocalSeat(player.seatIndex, mySeatIndex, maxPlayers);
-      if (localSeat == 0 || !_usesConfiguredChatArea(ui, localSeat)) {
-        return const SizedBox.shrink();
-      }
+          SeatLayout.toLocalSeat(player.seatIndex, viewerSeatIndex, maxPlayers);
+      if (localSeat == 0 || !_usesConfiguredChatArea(ui, localSeat)) continue;
 
       final seatChat = seatChats[player.seatIndex];
-      if (seatChat == null || seatChat.content.isEmpty) {
-        return const SizedBox.shrink();
-      }
+      if (seatChat == null || seatChat.content.isEmpty) continue;
 
       final chatLayoutId = 'chat_$localSeat';
       final rect = ui.layoutRegionRect(chatLayoutId, maxPlayers: maxPlayers);
-      if (rect == null) return const SizedBox.shrink();
+      if (rect == null) continue;
 
-      return Positioned(
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-        child: SeatChatDisplay(
-          localSeat: localSeat,
-          maxPlayers: maxPlayers,
-          content: seatChat.content,
-          isEmoji: seatChat.isEmoji,
+      widgets.add(
+        Positioned(
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+          child: SeatChatDisplay(
+            localSeat: localSeat,
+            maxPlayers: maxPlayers,
+            content: seatChat.content,
+            isEmoji: seatChat.isEmoji,
+          ),
         ),
       );
-    }).toList();
+    }
+    return widgets;
   }
 
   bool _usesConfiguredChatArea(UiScale ui, int localSeat) {

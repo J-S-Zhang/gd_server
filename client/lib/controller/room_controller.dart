@@ -7,6 +7,7 @@ import '../models/game_mode.dart';
 import '../network/reconnect_manager.dart';
 import '../network/websocket_client.dart';
 import 'auth_controller.dart';
+import 'seat_chat_controller.dart';
 
 final wsConnectionStateProvider =
     StateProvider<WsConnectionState>((ref) => WsConnectionState.disconnected);
@@ -171,6 +172,10 @@ class RoomController {
 
       case 'player_joined':
         // room_state 广播会跟随，此处可忽略
+        break;
+
+      case 'seat_chat':
+        applyIncomingSeatChat(_ref, data);
         break;
 
       case 'player_ready':

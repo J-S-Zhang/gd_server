@@ -29,20 +29,13 @@ class RoomPlayerWidget extends StatelessWidget {
     final ui = context.ui;
     final h = cellHeight ?? ui.h(56);
     final w = cellWidth ?? double.infinity;
-    final radius = h * 0.12;
-    final avatarR = h * 0.28;
-    final fontMd = h * 0.22;
-    final fontSm = h * 0.18;
+    final avatarSize = h * 0.42;
+    final fontMd = h * 0.18;
 
     if (player == null) {
-      return Container(
+      return SizedBox(
         width: w,
         height: h,
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-          borderRadius: BorderRadius.circular(radius),
-          color: Colors.white.withValues(alpha: 0.05),
-        ),
         child: Center(
           child: Text(
             '座位 ${seatIndex + 1}',
@@ -52,51 +45,30 @@ class RoomPlayerWidget extends StatelessWidget {
       );
     }
 
-    return Container(
+    return SizedBox(
       width: w,
       height: h,
-      padding: EdgeInsets.symmetric(horizontal: w * 0.06, vertical: h * 0.08),
-      decoration: BoxDecoration(
-        color: player!.isReady
-            ? Colors.green.withValues(alpha: 0.25)
-            : Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
-          color: player!.isReady ? Colors.greenAccent : Colors.white24,
-        ),
-      ),
-      child: Row(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           PlayerAvatar(
             nickname: player!.nickname,
             avatarPresetId: player!.avatarPreset,
             avatarPath: player!.avatar,
-            radius: avatarR,
+            radius: avatarSize / 2,
+            clipCircle: false,
           ),
-          SizedBox(width: w * 0.04),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  player!.nickname,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: fontMd,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  player!.isReady ? '已准备' : '未准备',
-                  style: TextStyle(
-                    color: player!.isReady ? Colors.greenAccent : GameTheme.textSecondary,
-                    fontSize: fontSm,
-                  ),
-                ),
-              ],
+          SizedBox(height: h * 0.06),
+          Text(
+            player!.nickname,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: fontMd,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
