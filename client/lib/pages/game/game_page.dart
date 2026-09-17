@@ -6,6 +6,7 @@ import '../../controller/auth_controller.dart';
 import '../../controller/game_controller.dart';
 import '../../controller/hand_cards_layout_controller.dart';
 import '../../controller/game_notice_controller.dart';
+import '../../controller/emotion_controller.dart';
 import '../../controller/room_controller.dart';
 import '../../controller/seat_chat_controller.dart';
 import '../../controller/voice_chat_controller.dart';
@@ -32,6 +33,9 @@ import '../../widgets/game/hand_toolbar.dart';
 import '../../widgets/game/social_toolbar.dart';
 import '../../models/seat_round_play.dart';
 import '../../utils/seat_layout.dart';
+import '../../widgets/game/emotion_effect_layer.dart';
+import '../../widgets/game/emotion_panel.dart';
+import '../../widgets/game/seat_avatar_registry.dart';
 import '../../widgets/game/seat_chat_display.dart';
 import '../../widgets/game/seat_played_cards.dart';
 import '../../widgets/game_table.dart';
@@ -51,6 +55,8 @@ class _GamePageState extends ConsumerState<GamePage> {
   bool _dismissVoteDialogOpen = false;
   bool _showChatPanel = false;
   ChatPanelTab _chatTab = ChatPanelTab.quick;
+  final SeatAvatarRegistry _avatarRegistry = SeatAvatarRegistry();
+  Player? _emotionTarget;
 
   @override
   void initState() {
@@ -67,6 +73,7 @@ class _GamePageState extends ConsumerState<GamePage> {
   void dispose() {
     ref.read(handCardsTopYProvider.notifier).state = double.infinity;
     ref.read(gameNoticeProvider.notifier).clear();
+    ref.read(emotionControllerProvider).clear();
     ref.read(voiceChatProvider.notifier).reset();
     super.dispose();
   }
@@ -203,6 +210,12 @@ class _GamePageState extends ConsumerState<GamePage> {
                       maxPlayers: layoutPlayers,
                       isSoloMode: room?.isSoloMode ?? false,
                       seatChats: seatChats,
+                      avatarRegistry: _avatarRegistry,
+                      myPlayerId: user?.id,
+                      onPlayerAvatarTap: (player) {
+                        if (player.id == user?.id) return;
+                        setState(() => _emotionTarget = player);
+                      },
                       onEmptySeatTap: isWaitingLobby
                           ? (seatIndex) =>
                               roomController.changeSeat(widget.roomId, seatIndex)
@@ -268,6 +281,25 @@ class _GamePageState extends ConsumerState<GamePage> {
                           onStart: () => roomController.startGame(widget.roomId),
                         ),
                       ),
+                    Positioned.fill(
+                      child: EmotionEffectLayer(
+                        avatarRegistry: _avatarRegistry,
+                        players: _playersForEmotion(room, gameState),
+                      ),
+                    ),
+                    if (_emotionTarget != null)
+                      EmotionPanel(
+                        targetNickname: _emotionTarget!.nickname,
+                        onSelect: (type) {
+                          ref.read(emotionControllerProvider).send(
+                                widget.roomId,
+                                _emotionTarget!.id,
+                                type,
+                              );
+                          setState(() => _emotionTarget = null);
+                        },
+                        onClose: () => setState(() => _emotionTarget = null),
+                      ),
                 ],
               ),
             ),
@@ -275,6 +307,16 @@ class _GamePageState extends ConsumerState<GamePage> {
         ),
       ),
     );
+  }
+
+  List<Player> _playersForEmotion(
+    room_model.Room? room,
+    ClientGameState gameState,
+  ) {
+    if (room != null && room.players.isNotEmpty) {
+      return room.players;
+    }
+    return gameState.players;
   }
 
   void _sendSeatChat(String content, {bool isEmoji = false}) {
@@ -329,6 +371,7 @@ class _GamePageState extends ConsumerState<GamePage> {
           chatIsEmoji: selfChat?.isEmoji ?? false,
           maxPlayers: maxPlayers,
           layoutElementId: 'self_seat',
+          avatarKey: _avatarRegistry.keyForSeat(mySeatIndex),
         ),
       ),
       if (selfChat != null &&

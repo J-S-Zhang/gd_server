@@ -307,4 +307,15 @@ bool Room::startGame() {
     return false;
 }
 
+bool Room::containsPlayer(PlayerId playerId) const {
+    for (const auto& p : players_) {
+        if (p.id == playerId) return true;
+    }
+    return false;
+}
+
+uint64_t Room::nextEmotionEventId() {
+    return ++emotionEventId_;
+}
+
 }  // namespace guandan

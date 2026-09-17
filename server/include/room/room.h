@@ -81,6 +81,9 @@ public:
     int resolveViewAnchor(PlayerId viewerId) const;
     std::vector<int> spectatableTeammateSeats(PlayerId viewerId) const;
 
+    bool containsPlayer(PlayerId playerId) const;
+    uint64_t nextEmotionEventId();
+
     using BroadcastFn = std::function<void(PlayerId, const std::string&)>;
     void setBroadcastCallback(BroadcastFn fn) { broadcast_ = std::move(fn); }
 
@@ -97,6 +100,7 @@ private:
     BroadcastFn broadcast_;
     DismissVote dismissVote_;
     std::unordered_map<PlayerId, int> spectateTargets_;
+    uint64_t emotionEventId_ = 0;
 };
 
 }  // namespace guandan

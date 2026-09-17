@@ -7,6 +7,7 @@ import '../models/game_mode.dart';
 import '../network/reconnect_manager.dart';
 import '../network/websocket_client.dart';
 import 'auth_controller.dart';
+import 'emotion_controller.dart';
 import 'seat_chat_controller.dart';
 
 final wsConnectionStateProvider =
@@ -178,6 +179,19 @@ class RoomController {
         applyIncomingSeatChat(_ref, data);
         break;
 
+      case 'emotion_event':
+      case 'send_emotion_ack':
+        applyIncomingEmotion(
+          _ref,
+          data,
+          roomId: msg['room_id']?.toString(),
+        );
+        break;
+
+      case 'emotion_error':
+        _ref.read(emotionControllerProvider).handleError(data);
+        break;
+
       case 'player_ready':
       case 'player_unready':
       case 'seat_changed':
@@ -220,6 +234,7 @@ class RoomController {
 
       case 'room_dismissed':
         _ref.read(dismissVoteProvider.notifier).state = null;
+        _ref.read(emotionControllerProvider).clear();
         _ref.read(roomProvider.notifier).state = null;
         _ref.read(pendingNavigationProvider.notifier).state = '/lobby';
         break;

@@ -150,7 +150,8 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
                               clipBehavior: Clip.none,
                               alignment: Alignment.bottomCenter,
                               children: [
-                                for (var i = 0; i < groups[gi].length; i++)
+                                // 先画上方的牌（底层），最后画最下面的牌（顶层），避免遮挡点数。
+                                for (var i = groups[gi].length - 1; i >= 0; i--)
                                   Positioned(
                                     bottom: i.toDouble() * vStep,
                                     child: PokerCardWidget(

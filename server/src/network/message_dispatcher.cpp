@@ -4,6 +4,7 @@
 #include "protocol/message.h"
 #include "utils/logger.h"
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <sstream>
 #include <string>
@@ -1053,6 +1054,91 @@ void MessageDispatcher::handleSeatChat(uint64_t sessionId, const Message& msg, S
     sendResponse(send, resp);
 }
 
+void MessageDispatcher::handleSendEmotion(uint64_t sessionId, const Message& msg, SendFn send) {
+    PlayerId senderId = resolvePlayerId(sessionId);
+    auto room = roomManager_.findRoomByPlayer(senderId);
+    if (!room) {
+        sendError(send, msg.requestId, ErrorCode::NOT_IN_ROOM);
+        return;
+    }
+
+    const PlayerId targetId =
+        static_cast<PlayerId>(extractJsonUintFromData(msg.dataJson, "target_player_id"));
+    const int emotionType =
+        static_cast<int>(extractJsonUintFromData(msg.dataJson, "emotion_type"));
+
+    if (targetId == 0) {
+        Message resp;
+        resp.type = "emotion_error";
+        resp.requestId = msg.requestId;
+        resp.roomId = room->id();
+        resp.dataJson = "{\"code\":\"INVALID_EMOTION_TYPE\"}";
+        sendResponse(send, resp);
+        return;
+    }
+
+    if (!isValidEmotionType(emotionType)) {
+        Message resp;
+        resp.type = "emotion_error";
+        resp.requestId = msg.requestId;
+        resp.roomId = room->id();
+        resp.dataJson = "{\"code\":\"INVALID_EMOTION_TYPE\"}";
+        sendResponse(send, resp);
+        return;
+    }
+
+    if (senderId == targetId) {
+        Message resp;
+        resp.type = "emotion_error";
+        resp.requestId = msg.requestId;
+        resp.roomId = room->id();
+        resp.dataJson = "{\"code\":\"CANNOT_SEND_TO_SELF\"}";
+        sendResponse(send, resp);
+        return;
+    }
+
+    if (!room->containsPlayer(targetId)) {
+        Message resp;
+        resp.type = "emotion_error";
+        resp.requestId = msg.requestId;
+        resp.roomId = room->id();
+        resp.dataJson = "{\"code\":\"TARGET_NOT_IN_ROOM\"}";
+        sendResponse(send, resp);
+        return;
+    }
+
+    if (!emotionRateLimiter_.tryAcquire(senderId)) {
+        Message resp;
+        resp.type = "emotion_error";
+        resp.requestId = msg.requestId;
+        resp.roomId = room->id();
+        resp.dataJson = "{\"code\":\"TOO_FREQUENT\"}";
+        sendResponse(send, resp);
+        return;
+    }
+
+    const uint64_t eventId = room->nextEmotionEventId();
+    const int64_t serverTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+
+    Message broadcast;
+    broadcast.type = "emotion_event";
+    broadcast.roomId = room->id();
+    broadcast.dataJson = std::string("{\"event_id\":") + std::to_string(eventId) +
+                         ",\"sender_id\":" + std::to_string(senderId) +
+                         ",\"target_id\":" + std::to_string(targetId) +
+                         ",\"emotion_type\":" + std::to_string(emotionType) +
+                         ",\"server_time\":" + std::to_string(serverTimeMs) + "}";
+    broadcastToRoom(room, broadcast);
+
+    Message resp;
+    resp.type = "send_emotion_ack";
+    resp.requestId = msg.requestId;
+    resp.roomId = room->id();
+    resp.dataJson = broadcast.dataJson;
+    sendResponse(send, resp);
+}
+
 void MessageDispatcher::handleVoiceSignal(uint64_t sessionId, const Message& msg, SendFn send) {
     PlayerId fromId = resolvePlayerId(sessionId);
     auto room = roomManager_.findRoomByPlayer(fromId);
@@ -1281,6 +1367,7 @@ void MessageDispatcher::dispatch(uint64_t sessionId, const std::string& rawJson,
     else if (msg.type == "vote_dismiss") handleVoteDismiss(sessionId, msg, send);
     else if (msg.type == "voice_state") handleVoiceState(sessionId, msg, send);
     else if (msg.type == "seat_chat") handleSeatChat(sessionId, msg, send);
+    else if (msg.type == "send_emotion") handleSendEmotion(sessionId, msg, send);
     else if (msg.type == "voice_signal") handleVoiceSignal(sessionId, msg, send);
     else if (msg.type == "ping") handlePing(send);
     else sendError(send, msg.requestId, ErrorCode::UNKNOWN_TYPE);

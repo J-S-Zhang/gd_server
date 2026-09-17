@@ -27,6 +27,8 @@ class PlayerWidget extends StatelessWidget {
   final int maxPlayers;
   /// 对应 [seatLayout] 中当前人数档位的 seat_N，用于 w/h 比例定尺寸。
   final String? layoutElementId;
+  final Key? avatarKey;
+  final VoidCallback? onAvatarTap;
 
   const PlayerWidget({
     super.key,
@@ -42,6 +44,8 @@ class PlayerWidget extends StatelessWidget {
     this.chatIsEmoji = false,
     this.maxPlayers = 6,
     this.layoutElementId,
+    this.avatarKey,
+    this.onAvatarTap,
   });
 
   int get _effectiveCardCount => cardCountOverride ?? player.cardCount;
@@ -50,7 +54,7 @@ class PlayerWidget extends StatelessWidget {
       player.team == 0 ? GameTheme.tableBlueLight : const Color(0xFFE53935);
 
   Widget _avatarWidget(double avatarRadius) {
-    return PlayerAvatar(
+    Widget avatar = PlayerAvatar(
       nickname: player.nickname,
       avatarPresetId: player.avatarPreset,
       avatarPath: player.avatar,
@@ -58,6 +62,17 @@ class PlayerWidget extends StatelessWidget {
       backgroundColor: _avatarBackgroundColor,
       clipCircle: false,
     );
+    if (avatarKey != null) {
+      avatar = KeyedSubtree(key: avatarKey, child: avatar);
+    }
+    if (onAvatarTap != null) {
+      avatar = GestureDetector(
+        onTap: onAvatarTap,
+        behavior: HitTestBehavior.opaque,
+        child: avatar,
+      );
+    }
+    return avatar;
   }
 
   bool get _showCardCountBadge =>

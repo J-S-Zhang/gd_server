@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
 import 'game_notice_controller.dart';
+import 'emotion_controller.dart';
 import 'seat_chat_controller.dart';
 import '../models/player.dart';
 import '../models/room.dart';
@@ -485,6 +486,7 @@ class GameController {
         break;
       case 'room_dismissed':
         _ref.read(seatChatProvider.notifier).clearAll();
+        _ref.read(emotionControllerProvider).clear();
         _ref.read(gameStateProvider.notifier).state = const ClientGameState();
         break;
     }

@@ -16,6 +16,7 @@ import 'game/seat_play_area.dart';
 import 'game/region_child_stack.dart';
 import 'game/region_fit_text.dart';
 import 'game/seat_played_cards.dart';
+import 'game/seat_avatar_registry.dart';
 import 'player_widget.dart';
 
 class GameTableWidget extends StatelessWidget {
@@ -29,6 +30,9 @@ class GameTableWidget extends StatelessWidget {
   final bool isRoundWaiting;
   final void Function(int serverSeatIndex)? onEmptySeatTap;
   final Map<int, SeatChatMessage> seatChats;
+  final SeatAvatarRegistry? avatarRegistry;
+  final int? myPlayerId;
+  final void Function(Player player)? onPlayerAvatarTap;
 
   const GameTableWidget({
     super.key,
@@ -42,6 +46,9 @@ class GameTableWidget extends StatelessWidget {
     this.isRoundWaiting = false,
     this.onEmptySeatTap,
     this.seatChats = const <int, SeatChatMessage>{},
+    this.avatarRegistry,
+    this.myPlayerId,
+    this.onPlayerAvatarTap,
   });
 
   @override
@@ -376,7 +383,15 @@ class GameTableWidget extends StatelessWidget {
       maxPlayers: maxPlayers,
       chatBubble: _usesConfiguredChatArea(ui, localSeat) ? null : seatChat?.content,
       chatIsEmoji: seatChat?.isEmoji ?? false,
+      avatarKey: avatarRegistry?.keyForSeat(player.seatIndex),
+      onAvatarTap: _avatarTapFor(player),
     );
+  }
+
+  VoidCallback? _avatarTapFor(Player player) {
+    if (onPlayerAvatarTap == null) return null;
+    if (myPlayerId != null && player.id == myPlayerId) return null;
+    return () => onPlayerAvatarTap!(player);
   }
 
   SeatRoundPlay _visibleSeatPlay(int seatIndex) {
@@ -417,6 +432,8 @@ class GameTableWidget extends StatelessWidget {
         chatIsEmoji: seatChat?.isEmoji ?? false,
         maxPlayers: maxPlayers,
         layoutElementId: seatLayoutId,
+        avatarKey: avatarRegistry?.keyForSeat(player.seatIndex),
+        onAvatarTap: _avatarTapFor(player),
       );
 
       if (usesConfiguredPlayArea) {

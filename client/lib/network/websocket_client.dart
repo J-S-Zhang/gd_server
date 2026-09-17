@@ -174,6 +174,15 @@ class WebSocketClient {
         },
         roomId: roomId,
       );
+  bool sendEmotion(String roomId, int targetPlayerId, int emotionType) =>
+      send(
+        'send_emotion',
+        data: {
+          'target_player_id': targetPlayerId,
+          'emotion_type': emotionType,
+        },
+        roomId: roomId,
+      );
   bool sendVoiceSignal(
     String roomId, {
     required int targetPlayerId,

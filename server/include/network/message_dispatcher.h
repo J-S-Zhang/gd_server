@@ -5,6 +5,7 @@
 #include "protocol/message.h"
 #include "auth/auth_service.h"
 #include "network/session_manager.h"
+#include "room/emotion.h"
 #include "room/room_manager.h"
 #include "timer/timer_manager.h"
 #include <functional>
@@ -29,6 +30,7 @@ private:
     TimerManager& timerManager_;
     AuthService& authService_;
     int turnTimeoutSeconds_ = 30;
+    EmotionRateLimiter emotionRateLimiter_;
 
     PlayerId resolvePlayerId(uint64_t sessionId);
     void broadcastToRoom(const std::shared_ptr<Room>& room, const Message& msg);
@@ -69,6 +71,7 @@ private:
     void handleVoteDismiss(uint64_t sessionId, const Message& msg, SendFn send);
     void handleVoiceState(uint64_t sessionId, const Message& msg, SendFn send);
     void handleSeatChat(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleSendEmotion(uint64_t sessionId, const Message& msg, SendFn send);
     void handleVoiceSignal(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePing(SendFn send);
 

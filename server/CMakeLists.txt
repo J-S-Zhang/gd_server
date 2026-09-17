@@ -29,6 +29,7 @@ set(GUANDAN_CORE_SOURCES
     src/room/dismiss_vote.cpp
     src/room/room_manager.cpp
     src/room/room_task_queue.cpp
+    src/room/emotion.cpp
     src/protocol/message.cpp
     src/protocol/game_view_builder.cpp
     src/utils/random.cpp
