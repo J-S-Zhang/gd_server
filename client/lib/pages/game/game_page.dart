@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../config/ui_scale.dart';
 import '../../controller/auth_controller.dart';
 import '../../controller/game_controller.dart';
-import '../../controller/hand_cards_layout_controller.dart';
 import '../../controller/game_notice_controller.dart';
 import '../../controller/emotion_controller.dart';
 import '../../controller/room_controller.dart';
@@ -71,7 +70,6 @@ class _GamePageState extends ConsumerState<GamePage> {
 
   @override
   void dispose() {
-    ref.read(handCardsTopYProvider.notifier).state = double.infinity;
     ref.read(gameNoticeProvider.notifier).clear();
     ref.read(emotionControllerProvider).clear();
     ref.read(voiceChatProvider.notifier).reset();
@@ -463,22 +461,21 @@ class _GamePageState extends ConsumerState<GamePage> {
     final showSelfPlay = hasSelfPlay || selfFinished;
     final organizedGroups =
         isSpectating ? const <Set<int>>[] : gameState.handOrganizedGroups;
-    final reportedHandTopY = ref.watch(handCardsTopYProvider);
-    final computedHandTopY = ui.computeHandCardsAnchorTopY(
+    final handCardsStackTopY = ui.computeHandCardsAnchorTopY(
       cards: showHandCards ? gameState.myCards : const [],
       currentLevel: gameState.currentLevel,
       organizedGroups: organizedGroups,
     );
-    final handCardsTopY = showHandCards && reportedHandTopY.isFinite
-        ? reportedHandTopY
-        : computedHandTopY;
 
     return [
       // 手牌在下层；按钮/出牌区在上层，避免透明手牌区挡住点击。
       if (showHandCards)
         DynamicHandGameLayoutPositioned(
           elementId: 'hand_cards',
-          handCardsTopY: handCardsTopY,
+          handCardsStackTopY: handCardsStackTopY,
+          handCards: gameState.myCards,
+          currentLevel: gameState.currentLevel,
+          organizedGroups: organizedGroups,
           child: RepaintBoundary(
             child: HandCardsWidget(
               cards: gameState.myCards,
@@ -487,15 +484,12 @@ class _GamePageState extends ConsumerState<GamePage> {
               readOnly: isSpectating,
               onCardTap: controller.onHandCardTap,
               onBoxSelect: controller.setCardSelection,
-              onHandTopYChanged: (topY) {
-                ref.read(handCardsTopYProvider.notifier).state = topY;
-              },
             ),
           ),
         ),
       DynamicHandGameLayoutPositioned(
         elementId: 'self_play',
-        handCardsTopY: handCardsTopY,
+        handCardsStackTopY: handCardsStackTopY,
         child: showSelfPlay
             ? SeatPlayedCards(
                 play: selfPlay,
@@ -508,7 +502,7 @@ class _GamePageState extends ConsumerState<GamePage> {
       // 保持布局节点常驻，避免出牌/不要时挂载卸载导致手牌区 AnimatedPositioned 闪动。
       DynamicHandGameLayoutPositioned(
         elementId: 'action_buttons',
-        handCardsTopY: handCardsTopY,
+        handCardsStackTopY: handCardsStackTopY,
         child: _buildPlayActionArea(
           context: context,
           gameState: gameState,

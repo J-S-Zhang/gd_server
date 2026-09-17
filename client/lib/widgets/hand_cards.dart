@@ -11,8 +11,6 @@ class HandCardsWidget extends StatefulWidget {
   final List<Set<int>> organizedGroups;
   final void Function(int cardId) onCardTap;
   final void Function(Set<int> cardIds)? onBoxSelect;
-  /// 最高手牌上边缘相对整个画布的 Y（手牌越高，值越小）。
-  final ValueChanged<double>? onHandTopYChanged;
   final bool readOnly;
 
   const HandCardsWidget({
@@ -22,7 +20,6 @@ class HandCardsWidget extends StatefulWidget {
     this.organizedGroups = const [],
     required this.onCardTap,
     this.onBoxSelect,
-    this.onHandTopYChanged,
     this.readOnly = false,
   });
 
@@ -42,8 +39,6 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
   static const _layoutAnimCurve = Curves.easeOutCubic;
   static const _dragThreshold = 10.0;
 
-  double _lastReportedHandTopY = double.nan;
-
   Offset? _dragStart;
   Offset? _dragCurrent;
   bool _isBoxDragging = false;
@@ -59,18 +54,17 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
     final double hStep = cardWidth * (1 - handCfg.horizontalOverlap);
     final double vStep = cardHeight * (1 - handCfg.verticalOverlap);
 
-    final handCardsTopY = ui.computeHandCardsAnchorTopY(
-      cards: widget.cards,
-      currentLevel: widget.currentLevel,
-      organizedGroups: widget.organizedGroups,
-    );
-    _reportHandCardsTopY(handCardsTopY);
-
     if (widget.cards.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final contentHeight = ui.computeHandCardsContentHeight(
+      cards: widget.cards,
+      currentLevel: widget.currentLevel,
+      organizedGroups: widget.organizedGroups,
+    );
+    final selectionLift = ui.handCardsSelectionLiftPx;
+    final regionContentHeight = ui.computeHandCardsRegionHeight(
       cards: widget.cards,
       currentLevel: widget.currentLevel,
       organizedGroups: widget.organizedGroups,
@@ -102,7 +96,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
       builder: (context, constraints) {
         final regionHeight = constraints.maxHeight.isFinite && constraints.maxHeight > 0
             ? constraints.maxHeight
-            : contentHeight;
+            : regionContentHeight;
         return SizedBox(
           height: regionHeight,
           child: SingleChildScrollView(
@@ -118,9 +112,11 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
                 minWidth: constraints.maxWidth,
                 minHeight: regionHeight,
               ),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Listener(
+              child: Padding(
+                padding: EdgeInsets.only(top: selectionLift),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Listener(
                   behavior: HitTestBehavior.translucent,
                   onPointerDown: widget.readOnly ? null : (e) => _onPointerDown(e.localPosition),
                   onPointerMove: widget.readOnly ? null : (e) => _onPointerMove(e.localPosition, hitTargets),
@@ -190,6 +186,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
               ),
             ),
           ),
+        ),
         );
       },
     );
@@ -296,17 +293,5 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
 
   String _groupKey(List<GameCard> group) {
     return group.map((c) => c.id).join('_');
-  }
-
-  void _reportHandCardsTopY(double handCardsTopY) {
-    if (_lastReportedHandTopY.isFinite &&
-        (handCardsTopY - _lastReportedHandTopY).abs() < 0.5) {
-      return;
-    }
-    _lastReportedHandTopY = handCardsTopY;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      widget.onHandTopYChanged?.call(handCardsTopY);
-    });
   }
 }

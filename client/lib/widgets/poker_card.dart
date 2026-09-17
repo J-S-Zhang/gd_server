@@ -3,6 +3,7 @@ import '../config/ui_scale.dart';
 import '../models/card.dart';
 import '../utils/card_rules.dart';
 import '../utils/card_utils.dart';
+import '../utils/hand_layout.dart';
 
 class PokerCardWidget extends StatelessWidget {
   final GameCard card;
@@ -29,7 +30,7 @@ class PokerCardWidget extends StatelessWidget {
     final cardCfg = ui.config.card;
     final isWild = isWildCard(card, currentLevel);
     final isLevel = !isWild && isLevelCard(card, currentLevel);
-    final selectionLift = ui.h(ui.config.handCards.selectionLift);
+    final selectionLift = handCardSelectionLiftPx(height);
     final radius = ui.r(cardCfg.borderRadius);
     final highlighted = card.selected || previewSelected;
 
