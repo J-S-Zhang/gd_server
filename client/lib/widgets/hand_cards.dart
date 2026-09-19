@@ -105,7 +105,7 @@ class _HandCardsWidgetState extends State<HandCardsWidget> {
                 ? const NeverScrollableScrollPhysics()
                 : const BouncingScrollPhysics(),
             padding: ui.edgeInsetsSymmetric(
-              horizontal: handCfg.scrollPaddingHorizontal,
+              horizontal: ui.canvasFracW(handCfg.scrollPaddingHorizontalRatio),
             ),
             child: ConstrainedBox(
               constraints: BoxConstraints(

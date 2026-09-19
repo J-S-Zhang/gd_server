@@ -28,8 +28,8 @@ class ResultPage extends ConsumerWidget {
         decoration: const BoxDecoration(gradient: GameTheme.pageGradient),
         child: Center(
           child: Container(
-              margin: ui.edgeInsetsAll(ui.config.spacing.page),
-              padding: ui.edgeInsetsAll(ui.config.spacing.page),
+              margin: ui.edgeInsetsAll(32),
+              padding: ui.edgeInsetsAll(32),
               decoration: GameTheme.panelDecoration(ui),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -39,32 +39,32 @@ class ResultPage extends ConsumerWidget {
                     size: ui.sp(80),
                     color: GameTheme.accentGold,
                   ),
-                  SizedBox(height: ui.h(ui.config.spacing.xxl)),
+                  SizedBox(height: ui.h(24)),
                   Text(
                     '本局结束',
                     style: TextStyle(
-                      fontSize: ui.sp(ui.config.font.title),
+                      fontSize: ui.sp(32),
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: ui.h(ui.config.spacing.lg)),
+                  SizedBox(height: ui.h(12)),
                   Text(
                     '感谢参与，期待下一局',
                     style: TextStyle(
                       color: GameTheme.textSecondary,
-                      fontSize: ui.sp(ui.config.font.md2),
+                      fontSize: ui.sp(14),
                     ),
                   ),
-                  SizedBox(height: ui.h(ui.config.spacing.page + 16)),
+                  SizedBox(height: ui.h(32 + 16)),
                   ElevatedButton(
                     onPressed: () => _returnToLobby(ref, context),
                     style: GameTheme.playButtonStyle(ui).copyWith(
                       minimumSize: WidgetStateProperty.all(
-                        Size(ui.w(180), ui.h(ui.config.layout.loginButtonHeight)),
+                        Size(ui.w(180), ui.h(48)),
                       ),
                     ),
-                    child: Text('返回大厅', style: TextStyle(fontSize: ui.sp(ui.config.font.xl))),
+                    child: Text('返回大厅', style: TextStyle(fontSize: ui.sp(18))),
                   ),
                 ],
               ),

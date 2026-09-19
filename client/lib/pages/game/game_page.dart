@@ -33,7 +33,8 @@ import '../../widgets/game/social_toolbar.dart';
 import '../../models/seat_round_play.dart';
 import '../../utils/seat_layout.dart';
 import '../../widgets/game/emotion_effect_layer.dart';
-import '../../widgets/game/emotion_panel.dart';
+import '../../widgets/game/voice_chat_audio_layer.dart';
+import '../../widgets/game/game_layout_debug_overlay.dart';
 import '../../widgets/game/seat_avatar_registry.dart';
 import '../../widgets/game/seat_chat_display.dart';
 import '../../widgets/game/seat_played_cards.dart';
@@ -54,8 +55,8 @@ class _GamePageState extends ConsumerState<GamePage> {
   bool _dismissVoteDialogOpen = false;
   bool _showChatPanel = false;
   ChatPanelTab _chatTab = ChatPanelTab.quick;
+  int? _interactionTargetPlayerId;
   final SeatAvatarRegistry _avatarRegistry = SeatAvatarRegistry();
-  Player? _emotionTarget;
 
   @override
   void initState() {
@@ -150,6 +151,20 @@ class _GamePageState extends ConsumerState<GamePage> {
     final selfChat = seatChats[mySeatIndex];
     final ui = context.ui;
     final layoutPlayers = room?.layoutPlayerCount ?? 4;
+    final isSoloMode = room?.isSoloMode ?? false;
+    final selfFinished = me?.hasFinished ?? false;
+    final showHandCardsForDebug = isPlaying &&
+        gameState.myCards.isNotEmpty &&
+        (gameState.isSpectating || !selfFinished);
+    final handCardsStackTopYForDebug = showHandCardsForDebug
+        ? ui.computeHandCardsAnchorTopY(
+            cards: gameState.myCards,
+            currentLevel: gameState.currentLevel,
+            organizedGroups: gameState.isSpectating
+                ? const <Set<int>>[]
+                : gameState.handOrganizedGroups,
+          )
+        : null;
 
     if (gameState.phase == room_model.GamePhase.finished ||
         gameState.phase == room_model.GamePhase.settlement) {
@@ -210,9 +225,21 @@ class _GamePageState extends ConsumerState<GamePage> {
                       seatChats: seatChats,
                       avatarRegistry: _avatarRegistry,
                       myPlayerId: user?.id,
+                      interactionTargetPlayerId: _interactionTargetPlayerId,
                       onPlayerAvatarTap: (player) {
-                        if (player.id == user?.id) return;
-                        setState(() => _emotionTarget = player);
+                        setState(() {
+                          _interactionTargetPlayerId =
+                              _interactionTargetPlayerId == player.id
+                                  ? null
+                                  : player.id;
+                        });
+                      },
+                      onEmotionSelect: (player, type) {
+                        ref.read(emotionControllerProvider).send(
+                              widget.roomId,
+                              player.id,
+                              type,
+                            );
                       },
                       onEmptySeatTap: isWaitingLobby
                           ? (seatIndex) =>
@@ -234,10 +261,6 @@ class _GamePageState extends ConsumerState<GamePage> {
                     const GameLayoutPositioned(
                       elementId: 'game_notice',
                       child: GameNoticeBanner(),
-                    ),
-                    const GameLayoutPositioned(
-                      elementId: 'social_left',
-                      child: SocialToolbar(side: SocialSide.left),
                     ),
                     GameLayoutPositioned(
                       elementId: 'social_right',
@@ -279,24 +302,22 @@ class _GamePageState extends ConsumerState<GamePage> {
                           onStart: () => roomController.startGame(widget.roomId),
                         ),
                       ),
+                    const Positioned.fill(child: VoiceChatAudioLayer()),
                     Positioned.fill(
                       child: EmotionEffectLayer(
                         avatarRegistry: _avatarRegistry,
                         players: _playersForEmotion(room, gameState),
                       ),
                     ),
-                    if (_emotionTarget != null)
-                      EmotionPanel(
-                        targetNickname: _emotionTarget!.nickname,
-                        onSelect: (type) {
-                          ref.read(emotionControllerProvider).send(
-                                widget.roomId,
-                                _emotionTarget!.id,
-                                type,
-                              );
-                          setState(() => _emotionTarget = null);
-                        },
-                        onClose: () => setState(() => _emotionTarget = null),
+                    if (isSoloMode)
+                      GameLayoutDebugOverlay(
+                        maxPlayers: layoutPlayers,
+                        handCards: showHandCardsForDebug ? gameState.myCards : null,
+                        currentLevel: gameState.currentLevel,
+                        organizedGroups: gameState.isSpectating
+                            ? const <Set<int>>[]
+                            : gameState.handOrganizedGroups,
+                        handCardsStackTopY: handCardsStackTopYForDebug,
                       ),
                 ],
               ),

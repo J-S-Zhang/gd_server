@@ -4,6 +4,7 @@ import '../config/ui_scale.dart';
 import '../controller/seat_chat_controller.dart';
 import 'game/game_layout_positioned.dart';
 import '../models/game_state.dart';
+import '../models/emotion_type.dart';
 import '../models/player.dart';
 import '../models/seat_round_play.dart';
 import '../theme/game_theme.dart';
@@ -16,6 +17,7 @@ import 'game/seat_play_area.dart';
 import 'game/region_child_stack.dart';
 import 'game/region_fit_text.dart';
 import 'game/seat_played_cards.dart';
+import 'game/player_interaction_panel.dart';
 import 'game/seat_avatar_registry.dart';
 import 'player_widget.dart';
 
@@ -32,7 +34,10 @@ class GameTableWidget extends StatelessWidget {
   final Map<int, SeatChatMessage> seatChats;
   final SeatAvatarRegistry? avatarRegistry;
   final int? myPlayerId;
+  /// 当前展开头像互动面板的玩家 id；为 null 时全部隐藏。
+  final int? interactionTargetPlayerId;
   final void Function(Player player)? onPlayerAvatarTap;
+  final void Function(Player player, EmotionType type)? onEmotionSelect;
 
   const GameTableWidget({
     super.key,
@@ -48,7 +53,9 @@ class GameTableWidget extends StatelessWidget {
     this.seatChats = const <int, SeatChatMessage>{},
     this.avatarRegistry,
     this.myPlayerId,
+    this.interactionTargetPlayerId,
     this.onPlayerAvatarTap,
+    this.onEmotionSelect,
   });
 
   @override
@@ -89,6 +96,11 @@ class GameTableWidget extends StatelessWidget {
           ..._positionPlayAreas(ui, _effectivePlayers(), _viewerSeatIndex),
         ],
         ..._positionChatAreas(ui, _playersForChat(), _viewerSeatIndex),
+        ..._positionInteractionAreas(
+          ui,
+          _playersForInteraction(),
+          _viewerSeatIndex,
+        ),
       ],
     );
   }
@@ -100,6 +112,8 @@ class GameTableWidget extends StatelessWidget {
 
   List<Player> _playersForChat() =>
       isWaitingLobby || isRoundWaiting ? lobbyPlayers : _effectivePlayers();
+
+  List<Player> _playersForInteraction() => _playersForChat();
 
   Widget _buildWaitingCenter(UiScale ui) {
     final readyCount = lobbyPlayers.where((p) => p.isReady).length;
@@ -158,8 +172,8 @@ class GameTableWidget extends StatelessWidget {
     final subSize = ui.regionFontSize(_centerId, heightRatio: 0.28);
     return Container(
       padding: ui.edgeInsetsSymmetric(
-        horizontal: ui.config.spacing.xxl,
-        vertical: ui.config.spacing.xl,
+        horizontal: 24,
+        vertical: 16,
       ),
       decoration: GameTheme.panelDecoration(ui),
       child: RegionFitTextBlock(
@@ -174,12 +188,12 @@ class GameTableWidget extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: ui.h(ui.config.spacing.md)),
+            SizedBox(height: ui.h(8)),
             Text(
               '${lobbyPlayers.length}/$maxPlayers 人  ·  $readyCount 人已准备',
               style: TextStyle(color: GameTheme.textSecondary, fontSize: subSize),
             ),
-            SizedBox(height: ui.h(ui.config.spacing.sm + 2)),
+            SizedBox(height: ui.h(4 + 2)),
             Text(
               isSoloMode ? '机器人已就位，点击准备即可开始' : '点击空位可换座',
               style: TextStyle(color: Colors.white38, fontSize: subSize * 0.85),
@@ -208,12 +222,12 @@ class GameTableWidget extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: ui.h(ui.config.spacing.sm)),
+            SizedBox(height: ui.h(4)),
             Text(
               '$readyCount/$maxPlayers 人已准备',
               style: TextStyle(color: GameTheme.textSecondary, fontSize: subSize),
             ),
-            SizedBox(height: ui.h(ui.config.spacing.xs)),
+            SizedBox(height: ui.h(2)),
             Text(
               '全部准备后开始下一局',
               style: TextStyle(color: Colors.white38, fontSize: subSize * 0.9),
@@ -556,6 +570,47 @@ class GameTableWidget extends StatelessWidget {
     return ui.seatChatLayoutElement(localSeat, maxPlayers) != null;
   }
 
+  List<Widget> _positionInteractionAreas(
+    UiScale ui,
+    List<Player> players,
+    int viewerSeatIndex,
+  ) {
+    final targetId = interactionTargetPlayerId;
+    if (targetId == null || onEmotionSelect == null) return const [];
+
+    final widgets = <Widget>[];
+    for (final player in players) {
+      if (player.id != targetId) continue;
+      final localSeat =
+          SeatLayout.toLocalSeat(player.seatIndex, viewerSeatIndex, maxPlayers);
+      if (localSeat == 0) continue;
+      if (ui.seatInteractionLayoutElement(localSeat, maxPlayers) == null) {
+        continue;
+      }
+
+      final interactionLayoutId = 'interaction_$localSeat';
+      final rect =
+          ui.layoutRegionRect(interactionLayoutId, maxPlayers: maxPlayers);
+      if (rect == null || rect.width <= 1 || rect.height <= 1) continue;
+
+      widgets.add(
+        Positioned(
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+          child: PlayerInteractionCard(
+            target: player,
+            localSeat: localSeat,
+            maxPlayers: maxPlayers,
+            onSelect: (type) => onEmotionSelect!(player, type),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
   Widget _legacyTurnCountdown() {
     return CountdownWidget(
       key: ValueKey('turn_${gameState.turnId}'),
@@ -572,8 +627,8 @@ class GameTableWidget extends StatelessWidget {
     Widget? playedCards,
     Widget? countdown,
   }) {
-    final gapW = SizedBox(width: ui.w(ui.config.spacing.sm));
-    final gapH = SizedBox(height: ui.h(ui.config.spacing.sm));
+    final gapW = SizedBox(width: ui.w(4));
+    final gapH = SizedBox(height: ui.h(4));
     final items = <Widget>[];
 
     void addIf(Widget? widget) {

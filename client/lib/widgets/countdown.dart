@@ -58,47 +58,58 @@ class _CountdownWidgetState extends State<CountdownWidget> {
     final ui = context.ui;
     final color = _remaining <= 10 ? Colors.redAccent : GameTheme.accentGold;
 
-    if (widget.circular) {
-      final size = ui.w(ui.config.countdown.circularSize);
-      final progress = widget.seconds <= 0 ? 0.0 : _remaining / widget.seconds;
-      return SizedBox(
-        width: size,
-        height: size,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            CustomPaint(
-              size: Size(size, size),
-              painter: _RingPainter(
-                progress: progress,
-                color: color,
-                strokeWidth: ui.r(ui.config.countdown.strokeWidth),
-              ),
-            ),
-            Text(
-              '$_remaining',
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: ui.sp(ui.config.font.md2),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final box = math.min(
+          constraints.maxWidth.isFinite ? constraints.maxWidth : ui.w(48),
+          constraints.maxHeight.isFinite ? constraints.maxHeight : ui.w(48),
+        );
 
-    return Container(
-      padding: ui.edgeInsetsSymmetric(horizontal: ui.config.spacing.lg, vertical: ui.config.spacing.sm),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(ui.r(ui.config.radius.xl)),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        '$_remaining s',
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: ui.sp(ui.config.font.md)),
-      ),
+        if (widget.circular) {
+          final size = box > 0 ? box : ui.w(48);
+          final progress = widget.seconds <= 0 ? 0.0 : _remaining / widget.seconds;
+          final strokeWidth = size * 0.06;
+          return SizedBox(
+            width: size,
+            height: size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: Size(size, size),
+                  painter: _RingPainter(
+                    progress: progress,
+                    color: color,
+                    strokeWidth: strokeWidth,
+                  ),
+                ),
+                Text(
+                  '$_remaining',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: size * 0.38,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final fontSize = box > 0 ? box * 0.35 : ui.sp(13);
+        return Container(
+          padding: ui.edgeInsetsSymmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(ui.r(16)),
+            border: Border.all(color: color),
+          ),
+          child: Text(
+            '$_remaining s',
+            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: fontSize),
+          ),
+        );
+      },
     );
   }
 }

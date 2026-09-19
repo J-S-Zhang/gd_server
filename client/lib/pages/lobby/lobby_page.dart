@@ -151,7 +151,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                 page: page,
                 text: '游戏大厅',
                 fontFactor: 0.42,
-                fallbackFont: ui.config.font.xl,
+                fallbackFont: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white.withValues(alpha: 0.85),
               ),
@@ -176,8 +176,8 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
 
   Widget _buildConnectionError(UiScale ui) {
     final region = ui.layoutRect(PageLayoutKind.lobby, 'connection_error');
-    final pad = region != null ? region.width * 0.04 : ui.w(ui.config.spacing.lg);
-    final fontSize = region != null ? region.height * 0.22 : ui.sp(ui.config.font.md);
+    final pad = region != null ? region.width * 0.04 : ui.w(12);
+    final fontSize = region != null ? region.height * 0.22 : ui.sp(13);
 
     return Container(
       padding: EdgeInsets.all(pad),
@@ -225,7 +225,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                 page: page,
                 text: '快速开始',
                 fontFactor: 0.55,
-                fallbackFont: ui.config.font.lg,
+                fallbackFont: 16,
                 fontWeight: FontWeight.bold,
                 color: GameTheme.accentGold,
               ),
@@ -273,7 +273,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     final btnRect = ui.elementChildRect(parentId, 'join_button', page: page);
     final fieldFont = inputRect != null
         ? inputRect.height * 0.28
-        : ui.sp(ui.config.font.md2);
+        : ui.sp(14);
     final btnSize = btnRect != null
         ? Size(btnRect.width, btnRect.height)
         : Size(region.width * 0.92, region.height * 0.22);
@@ -298,7 +298,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                 page: page,
                 text: '加入房间',
                 fontFactor: 0.55,
-                fallbackFont: ui.config.font.lg,
+                fallbackFont: 16,
                 fontWeight: FontWeight.bold,
                 color: GameTheme.accentGold,
               ),
@@ -384,12 +384,12 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
         color = Colors.redAccent;
         label = '离线';
     }
-    final fontSize = region != null ? region.height * 0.28 : ui.sp(ui.config.font.sm2 + 1);
+    final fontSize = region != null ? region.height * 0.28 : ui.sp(11 + 1);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.circle, color: color, size: fontSize * 0.8),
-        SizedBox(width: region != null ? region.width * 0.01 : ui.w(ui.config.spacing.sm)),
+        SizedBox(width: region != null ? region.width * 0.01 : ui.w(4)),
         Text(label, style: TextStyle(color: color, fontSize: fontSize)),
       ],
     );
@@ -401,8 +401,8 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     required PageLayoutKind page,
   }) {
     final rect = ui.elementChildRect(parentId, 'mode_selector', page: page);
-    final spacing = rect != null ? rect.width * 0.02 : ui.w(ui.config.spacing.md);
-    final chipFont = rect != null ? rect.height * 0.22 : ui.sp(ui.config.font.md2);
+    final spacing = rect != null ? rect.width * 0.02 : ui.w(8);
+    final chipFont = rect != null ? rect.height * 0.22 : ui.sp(14);
 
     return Align(
       alignment: Alignment.center,

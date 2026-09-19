@@ -48,8 +48,8 @@ class RoomPage extends ConsumerWidget {
 
   Widget _buildHeader(UiScale ui) {
     final region = ui.layoutRect(PageLayoutKind.room, 'header');
-    final titleSize = region != null ? region.height * 0.45 : ui.sp(ui.config.font.xxl);
-    final subtitleSize = region != null ? region.height * 0.28 : ui.sp(ui.config.font.md);
+    final titleSize = region != null ? region.height * 0.45 : ui.sp(20);
+    final subtitleSize = region != null ? region.height * 0.28 : ui.sp(13);
 
     return Container(
       width: double.infinity,
@@ -73,9 +73,9 @@ class RoomPage extends ConsumerWidget {
 
   Widget _buildPlayerGrid(UiScale ui, List<Player> players) {
     final region = ui.layoutRect(PageLayoutKind.room, 'player_grid');
-    final pad = region != null ? region.width * 0.04 : ui.w(ui.config.spacing.xl);
-    final titleSize = region != null ? region.height * 0.07 : ui.sp(ui.config.font.xl);
-    final gap = region != null ? region.width * 0.02 : ui.w(ui.config.spacing.lg);
+    final pad = region != null ? region.width * 0.04 : ui.w(16);
+    final titleSize = region != null ? region.height * 0.07 : ui.sp(18);
+    final gap = region != null ? region.width * 0.02 : ui.w(12);
 
     final cellW = region != null ? (region.width - pad * 2 - gap * 2) / 3 : 120.0;
     final cellH = region != null ? (region.height - pad * 2 - titleSize - gap * 2) / 2 : 60.0;
@@ -125,11 +125,11 @@ class RoomPage extends ConsumerWidget {
 
   Widget _buildSidePanel(UiScale ui, room, RoomController controller) {
     final region = ui.layoutRect(PageLayoutKind.room, 'side_panel');
-    final pad = region != null ? region.width * 0.08 : ui.w(ui.config.spacing.xl);
-    final btnH = region != null ? region.height * 0.16 : ui.h(ui.config.button.largeHeight);
+    final pad = region != null ? region.width * 0.08 : ui.w(16);
+    final btnH = region != null ? region.height * 0.16 : ui.h(52);
     final btnFont = btnH * 0.38;
-    final gap = region != null ? region.height * 0.06 : ui.h(ui.config.spacing.xl);
-    final hintSize = region != null ? region.height * 0.07 : ui.sp(ui.config.font.md);
+    final gap = region != null ? region.height * 0.06 : ui.h(16);
+    final hintSize = region != null ? region.height * 0.07 : ui.sp(13);
 
     return Container(
       padding: EdgeInsets.all(pad),

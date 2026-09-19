@@ -115,18 +115,17 @@ class PlayerWidget extends StatelessWidget {
   }
 
   Widget _buildInGameInfo(UiScale ui) {
-    final cfg = ui.config.player;
     final region = _layoutRegion(ui);
     if (region != null && _usesChildRegions(ui)) {
       return _buildConfiguredInGame(ui, region);
     }
     final avatarRadius = region != null
         ? region.height * 0.34
-        : ui.r(cfg.compactAvatarRadius);
-    final borderRadius = region != null ? region.height * 0.12 : ui.r(cfg.borderRadius);
+        : ui.r(18);
+    final borderRadius = region != null ? region.height * 0.12 : ui.r(10);
     final nicknameStyle = TextStyle(
       color: GameTheme.textPrimary,
-      fontSize: ui.sp(ui.config.font.sm2),
+      fontSize: ui.sp(11),
     );
     final finishLabel = player.hasFinished
         ? SeatLayout.finishRankLabel(player.finishRank, maxPlayers)
@@ -165,7 +164,7 @@ class PlayerWidget extends StatelessWidget {
 
     final nickname = RegionFitText(
       text: player.nickname,
-      width: region?.width ?? ui.w(cfg.width),
+      width: region?.width ?? ui.w(88),
       fontSize: region != null ? region.height * 0.16 : nicknameStyle.fontSize,
       color: nicknameStyle.color,
       fontWeight: nicknameStyle.fontWeight,
@@ -174,8 +173,8 @@ class PlayerWidget extends StatelessWidget {
           nicknamePlacement == PlayerNicknamePlacement.trailing ? TextAlign.left : TextAlign.center,
     );
 
-    final gapW = SizedBox(width: ui.w(ui.config.spacing.sm));
-    final gapH = SizedBox(height: ui.h(ui.config.spacing.xs));
+    final gapW = SizedBox(width: ui.w(4));
+    final gapH = SizedBox(height: ui.h(2));
     final rankBadge = finishLabel.isNotEmpty ? FinishRankBadge(label: finishLabel) : null;
 
     final avatarBlock = _wrapAvatarWithChatBubble(
@@ -283,7 +282,7 @@ class PlayerWidget extends StatelessWidget {
     final avatarRect = ui.elementChildRect(parentId, 'avatar', maxPlayers: maxPlayers);
     final avatarRadius = avatarRect != null
         ? (avatarRect.width < avatarRect.height ? avatarRect.width : avatarRect.height) * 0.42
-        : ui.r(ui.config.player.compactAvatarRadius);
+        : ui.r(18);
     final finishLabel = player.hasFinished
         ? SeatLayout.finishRankLabel(player.finishRank, maxPlayers)
         : '';
@@ -291,8 +290,8 @@ class PlayerWidget extends StatelessWidget {
     final avatar = _buildAvatarCircle(ui, avatarRadius);
     final avatarBlock = _wrapAvatarWithChatBubble(
       avatar: avatar,
-      gapW: SizedBox(width: ui.w(ui.config.spacing.sm)),
-      gapH: SizedBox(height: ui.h(ui.config.spacing.xs)),
+      gapW: SizedBox(width: ui.w(4)),
+      gapH: SizedBox(height: ui.h(2)),
       chatMaxWidth: avatarRect?.width ?? region.width * 0.95,
     );
 
@@ -350,10 +349,10 @@ class PlayerWidget extends StatelessWidget {
     final nicknameRect = ui.elementChildRect(parentId, 'nickname', maxPlayers: maxPlayers);
     final avatarRadius = avatarRect != null
         ? (avatarRect.width < avatarRect.height ? avatarRect.width : avatarRect.height) * 0.42
-        : ui.r(compact ? ui.config.player.compactAvatarRadius : ui.config.player.avatarRadius);
+        : ui.r(compact ? 18 : 22);
     final nicknameFontSize = nicknameRect?.height != null
         ? nicknameRect!.height * 0.28
-        : ui.sp(ui.config.font.sm2);
+        : ui.sp(11);
     return SizedBox(
       width: region.width,
       height: region.height,
@@ -442,18 +441,17 @@ class PlayerWidget extends StatelessWidget {
   }
 
   Widget _buildLobbyInfo(UiScale ui) {
-    final cfg = ui.config.player;
     final region = _layoutRegion(ui);
     if (region != null && _usesChildRegions(ui)) {
       return _buildConfiguredLobby(ui, region);
     }
     final level = (player.id % 15) + 5;
     final coins = _formatCoins((player.id * 1379) % 99999 + 1000);
-    final width = region?.width ?? ui.w(compact ? cfg.compactWidth : cfg.width);
+    final width = region?.width ?? ui.w(compact ? 72 : 88);
     final avatarRadius = region != null
         ? region.height * (compact ? 0.34 : 0.3)
-        : ui.r(compact ? cfg.compactAvatarRadius : cfg.avatarRadius);
-    final borderRadius = region != null ? region.height * 0.12 : ui.r(cfg.borderRadius);
+        : ui.r(compact ? 18 : 22);
+    final borderRadius = region != null ? region.height * 0.12 : ui.r(10);
     final statusText = _buildStatusText();
 
     if (showLobbyState) {
@@ -471,8 +469,8 @@ class PlayerWidget extends StatelessWidget {
             SizedBox(height: ui.h(compact ? 2 : 4)),
             RegionFitText(
               text: player.nickname,
-              width: ui.w(compact ? ui.config.player.compactWidth : ui.config.player.width),
-              fontSize: ui.sp(ui.config.font.sm2),
+              width: ui.w(compact ? 72 : 88),
+              fontSize: ui.sp(11),
               color: GameTheme.textPrimary,
               overflowMode: RegionTextOverflow.ellipsis,
             ),
@@ -519,26 +517,26 @@ class PlayerWidget extends StatelessWidget {
           SizedBox(height: ui.h(compact ? 2 : 4)),
           RegionFitText(
             text: player.nickname,
-            width: ui.w(compact ? ui.config.player.compactWidth : ui.config.player.width),
-            fontSize: ui.sp(ui.config.font.sm2),
+            width: ui.w(compact ? 72 : 88),
+            fontSize: ui.sp(11),
             color: GameTheme.textPrimary,
             overflowMode: RegionTextOverflow.ellipsis,
           ),
           if (player.isBot)
             RegionFitText(
               text: '机器人',
-              width: ui.w(compact ? ui.config.player.compactWidth : ui.config.player.width),
-              fontSize: ui.sp(ui.config.font.xs),
+              width: ui.w(compact ? 72 : 88),
+              fontSize: ui.sp(9),
               color: Colors.cyanAccent,
             ),
           if (!compact) ...[
             Text(
               'LV$level',
-              style: TextStyle(color: GameTheme.textSecondary, fontSize: ui.sp(ui.config.font.sm)),
+              style: TextStyle(color: GameTheme.textSecondary, fontSize: ui.sp(10)),
             ),
             Text(
               coins,
-              style: TextStyle(color: GameTheme.accentGold, fontSize: ui.sp(ui.config.font.sm)),
+              style: TextStyle(color: GameTheme.accentGold, fontSize: ui.sp(10)),
             ),
           ],
           if (statusText != null)
@@ -548,7 +546,7 @@ class PlayerWidget extends StatelessWidget {
                 color: player.hasFinished
                     ? GameTheme.accentGold
                     : GameTheme.textSecondary,
-                fontSize: ui.sp(ui.config.font.sm),
+                fontSize: ui.sp(10),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -610,7 +608,7 @@ class _CardCountBadge extends StatelessWidget {
         '$count',
         style: TextStyle(
           color: Colors.white,
-          fontSize: ui.sp(compact ? ui.config.font.xs : ui.config.font.sm),
+          fontSize: ui.sp(compact ? 9 : 10),
           fontWeight: FontWeight.bold,
           height: 1,
         ),

@@ -1,44 +1,24 @@
 {
-  "breakpoints": {
-    "tabletMinShortSide": 600,
-    "largeTabletMinShortSide": 900
-  },
   "layoutCanvas": {
     "aspectRatio": 2.2222222222222223,
     "elementId": "canvas"
   },
-  "designWidth": 844,
-  "designHeight": 390,
-  "fontScaleMode": "min",
   "card": {
-    "playedWidth": 23.33,
-    "playedHeight": 33.33,
     "aspectRatio": 0.7,
     "playedOverlap": 0.38,
-    "borderRadius": 6,
-    "clipRadius": 5,
-    "selectedBorderWidth": 2.5,
+    "borderRadiusRatio": 0.125,
+    "clipRadiusRatio": 0.104,
+    "selectedBorderWidthRatio": 0.052,
     "labelFontRatio": 0.22,
     "cornerMarkCharWidthRatio": 0.3,
     "cornerMarkFontScale": 0.88
   },
   "handCards": {
-    "width": 25.7,
-    "height": 36.72,
-    "aspectRatio": 0.7,
     "horizontalOverlap": 0.1,
     "verticalOverlap": 0.7,
-    "selectionLift": 14,
-    "extraPadding": 1,
-    "emptyPlaceholderHeight": 90,
-    "scrollPaddingHorizontal": 8
+    "scrollPaddingHorizontalRatio": 0.009478672985781991
   },
   "seatLayout": {
-    "tableWidthFactor": 0.45,
-    "tableHeightFactor": 0.55,
-    "tableExtraWidthFactor": 0.15,
-    "tableExtraHeightFactor": 0.1,
-    "seatPadding": 12,
     "fourPlayerSeats": [
       {
         "x": 0.5,
@@ -64,10 +44,10 @@
         }
       },
       {
-        "x": 0.97,
+        "x": 0.95,
         "y": 0.5,
-        "w": 0.05,
-        "h": 0.24,
+        "w": 0.1,
+        "h": 0.4,
         "aspectRatio": 0.5,
         "children": {
           "avatar": {
@@ -88,9 +68,9 @@
       },
       {
         "x": 0.5,
-        "y": 0.06,
-        "w": 0.1,
-        "h": 0.12,
+        "y": 0.12,
+        "w": 0.2,
+        "h": 0.24,
         "aspectRatio": 2,
         "children": {
           "avatar": {
@@ -110,10 +90,10 @@
         }
       },
       {
-        "x": 0.03,
+        "x": 0.05,
         "y": 0.5,
-        "w": 0.05,
-        "h": 0.24,
+        "w": 0.1,
+        "h": 0.4,
         "aspectRatio": 0.5,
         "children": {
           "avatar": {
@@ -158,10 +138,10 @@
         }
       },
       {
-        "x": 0.05,
-        "y": 0.5,
-        "w": 0.1,
-        "h": 0.12,
+        "x": 0.1,
+        "y": 0.6,
+        "w": 0.2,
+        "h": 0.24,
         "aspectRatio": 2,
         "children": {
           "avatar": {
@@ -181,10 +161,10 @@
         }
       },
       {
-        "x": 0.05,
-        "y": 0.2,
-        "w": 0.1,
-        "h": 0.12,
+        "x": 0.1,
+        "y": 0.28,
+        "w": 0.2,
+        "h": 0.24,
         "aspectRatio": 2,
         "children": {
           "avatar": {
@@ -205,9 +185,9 @@
       },
       {
         "x": 0.5,
-        "y": 0.06,
-        "w": 0.1,
-        "h": 0.12,
+        "y": 0.12,
+        "w": 0.2,
+        "h": 0.24,
         "aspectRatio": 2,
         "children": {
           "avatar": {
@@ -227,10 +207,10 @@
         }
       },
       {
-        "x": 0.95,
-        "y": 0.2,
-        "w": 0.1,
-        "h": 0.11,
+        "x": 0.9,
+        "y": 0.28,
+        "w": 0.2,
+        "h": 0.24,
         "aspectRatio": 2,
         "children": {
           "avatar": {
@@ -250,10 +230,10 @@
         }
       },
       {
-        "x": 0.95,
-        "y": 0.5,
-        "w": 0.1,
-        "h": 0.12,
+        "x": 0.9,
+        "y": 0.6,
+        "w": 0.2,
+        "h": 0.24,
         "aspectRatio": 2,
         "children": {
           "avatar": {
@@ -298,7 +278,7 @@
         }
       },
       {
-        "x": 0.72,
+        "x": 0.67,
         "y": 0.5,
         "w": 0.45,
         "h": 0.2,
@@ -322,7 +302,7 @@
       },
       {
         "x": 0.5,
-        "y": 0.22,
+        "y": 0.34,
         "w": 0.45,
         "h": 0.2,
         "aspectRatio": 5,
@@ -344,7 +324,7 @@
         }
       },
       {
-        "x": 0.28,
+        "x": 0.33,
         "y": 0.5,
         "w": 0.45,
         "h": 0.2,
@@ -392,8 +372,8 @@
         }
       },
       {
-        "x": 0.33,
-        "y": 0.5,
+        "x": 0.43,
+        "y": 0.6,
         "w": 0.45,
         "h": 0.2,
         "aspectRatio": 5,
@@ -415,8 +395,8 @@
         }
       },
       {
-        "x": 0.33,
-        "y": 0.2,
+        "x": 0.43,
+        "y": 0.28,
         "w": 0.45,
         "h": 0.2,
         "aspectRatio": 5,
@@ -461,8 +441,8 @@
         }
       },
       {
-        "x": 0.67,
-        "y": 0.2,
+        "x": 0.57,
+        "y": 0.28,
         "w": 0.45,
         "h": 0.2,
         "aspectRatio": 5,
@@ -484,8 +464,8 @@
         }
       },
       {
-        "x": 0.67,
-        "y": 0.5,
+        "x": 0.57,
+        "y": 0.6,
         "w": 0.45,
         "h": 0.2,
         "aspectRatio": 5,
@@ -509,8 +489,8 @@
     ],
     "fourPlayerChatAreas": [
       {
-        "x": 0.16,
-        "y": 0.82,
+        "x": 0.2,
+        "y": 0.69,
         "w": 0.14,
         "h": 0.15,
         "aspectRatio": 2,
@@ -532,7 +512,7 @@
         }
       },
       {
-        "x": 0.88,
+        "x": 0.83,
         "y": 0.32,
         "w": 0.14,
         "h": 0.15,
@@ -578,7 +558,7 @@
         }
       },
       {
-        "x": 0.12,
+        "x": 0.17,
         "y": 0.32,
         "w": 0.14,
         "h": 0.15,
@@ -603,8 +583,8 @@
     ],
     "sixPlayerChatAreas": [
       {
-        "x": 0.16,
-        "y": 0.82,
+        "x": 0.2,
+        "y": 0.68,
         "w": 0.14,
         "h": 0.15,
         "aspectRatio": 2,
@@ -626,8 +606,8 @@
         }
       },
       {
-        "x": 0.16,
-        "y": 0.38,
+        "x": 0.21,
+        "y": 0.48,
         "w": 0.14,
         "h": 0.15,
         "aspectRatio": 2,
@@ -649,7 +629,7 @@
         }
       },
       {
-        "x": 0.16,
+        "x": 0.21,
         "y": 0.2,
         "w": 0.14,
         "h": 0.15,
@@ -695,7 +675,7 @@
         }
       },
       {
-        "x": 0.84,
+        "x": 0.8,
         "y": 0.2,
         "w": 0.14,
         "h": 0.15,
@@ -718,8 +698,8 @@
         }
       },
       {
-        "x": 0.84,
-        "y": 0.38,
+        "x": 0.79,
+        "y": 0.45,
         "w": 0.14,
         "h": 0.15,
         "aspectRatio": 2,
@@ -740,16 +720,371 @@
           }
         }
       }
+    ],
+    "fourPlayerInteractionAreas": [
+      {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 0.01,
+        "h": 0.01,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.78,
+        "y": 0.5,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.5,
+        "y": 0.47,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.22,
+        "y": 0.5,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      }
+    ],
+    "sixPlayerInteractionAreas": [
+      {
+        "x": 0.5,
+        "y": 0.5,
+        "w": 0.01,
+        "h": 0.01,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.26,
+        "y": 0.6,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.26,
+        "y": 0.48,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.5,
+        "y": 0.47,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.74,
+        "y": 0.48,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      },
+      {
+        "x": 0.74,
+        "y": 0.6,
+        "w": 0.32,
+        "h": 0.7,
+        "aspectRatio": 1,
+        "children": {
+          "avatar": {
+            "x": 0.15,
+            "y": 0.15,
+            "w": 0.2,
+            "h": 0.2,
+            "aspectRatio": 1
+          },
+          "nickname": {
+            "x": 0.6,
+            "y": 0.15,
+            "w": 0.6,
+            "h": 0.2,
+            "aspectRatio": 4
+          },
+          "panel": {
+            "x": 0.5,
+            "y": 0.63,
+            "w": 0.9,
+            "h": 0.66
+          },
+          "emotion_cell": {
+            "x": 0.15,
+            "y": 0.5,
+            "w": 0.18,
+            "h": 0.28,
+            "aspectRatio": 1
+          }
+        }
+      }
     ]
-  },
-  "chatBubble": {
-    "maxWidth": 160,
-    "paddingHorizontal": 8,
-    "paddingVertical": 6,
-    "fontSize": 11,
-    "emojiSize": 28,
-    "gapFromAvatar": 4,
-    "aspectRatio": 4
   },
   "login": {
     "title": "掼蛋"
@@ -1235,6 +1570,28 @@
                   }
                 }
               },
+              "card_counter": {
+                "x": 0.27,
+                "y": 0.5,
+                "w": 0.23,
+                "h": 1,
+                "aspectRatio": 4,
+                "children": {
+                  "icon": {
+                    "x": 0.125,
+                    "y": 0.5,
+                    "w": 0.25,
+                    "h": 1,
+                    "aspectRatio": 1
+                  },
+                  "content": {
+                    "x": 0.625,
+                    "y": 0.5,
+                    "w": 0.75,
+                    "h": 1
+                  }
+                }
+              },
               "opp_team_badge": {
                 "x": 0.14,
                 "y": 0.5,
@@ -1274,16 +1631,16 @@
           },
           "game_notice": {
             "x": 0.5,
-            "y": 0.14,
+            "y": 0.28,
             "w": 0.55,
             "h": 0.07,
             "aspectRatio": 7.86
           },
           "table_center": {
             "x": 0.5,
-            "y": 0.5,
-            "w": 0.2,
-            "h": 0.25,
+            "y": 0.45,
+            "w": 0.4,
+            "h": 0.4,
             "aspectRatio": 1,
             "children": {
               "title": {
@@ -1333,18 +1690,11 @@
             }
           },
           "spectate_bar": {
-            "x": 0.55,
+            "x": 0.5,
             "y": 0.84,
             "w": 0.42,
             "h": 0.07,
             "aspectRatio": 6
-          },
-          "social_left": {
-            "x": 0.03,
-            "y": 0.22,
-            "w": 0.06,
-            "h": 0.24,
-            "aspectRatio": 0.54
           },
           "social_right": {
             "x": 0.975,
@@ -1429,18 +1779,18 @@
             "children": {
               "card_sample": {
                 "x": 0.5,
-                "y": 0.575,
+                "y": 0.6,
                 "w": 0.7,
-                "h": 0.85,
+                "h": 0.8,
                 "aspectRatio": 0.7
               }
             }
           },
           "self_seat": {
-            "x": 0.05,
-            "y": 0.94,
-            "w": 0.1,
-            "h": 0.12,
+            "x": 0.1,
+            "y": 0.88,
+            "w": 0.2,
+            "h": 0.24,
             "aspectRatio": 2,
             "children": {
               "avatar": {
@@ -1674,239 +2024,38 @@
       }
     }
   },
-  "player": {
-    "width": 88,
-    "compactWidth": 72,
-    "avatarRadius": 22,
-    "compactAvatarRadius": 14,
-    "borderRadius": 10,
-    "avatarAspectRatio": 1,
-    "aspectRatio": 2.2
-  },
-  "emptySeat": {
-    "iconSize": 32,
-    "compactIconSize": 28
-  },
-  "button": {
-    "passWidth": 88,
-    "passHeight": 44,
-    "hintWidth": 88,
-    "hintHeight": 44,
-    "playWidth": 67.5,
-    "playHeight": 15.3,
-    "largeHeight": 52,
-    "borderRadius": 22,
-    "aspectRatio": {
-      "pass": 2,
-      "hint": 2,
-      "play": 4.41,
-      "toolbarCompact": 2.2
-    }
-  },
-  "socialToolbar": {
-    "width": 43.2,
-    "iconSize": 20,
-    "borderRadius": 10,
-    "aspectRatio": 1
-  },
-  "countdown": {
-    "circularSize": 48,
-    "strokeWidth": 3
-  },
-  "font": {
-    "xs": 9,
-    "sm": 10,
-    "sm2": 11,
-    "md": 13,
-    "md2": 14,
-    "lg": 16,
-    "xl": 18,
-    "xxl": 20,
-    "title": 32
-  },
-  "spacing": {
-    "xs": 2,
-    "sm": 4,
-    "md": 8,
-    "lg": 12,
-    "xl": 16,
-    "xxl": 24,
-    "page": 32
-  },
-  "layout": {
-    "loginMaxWidth": 420,
-    "lobbyMaxWidth": 520,
-    "roomSidePanelWidth": 200,
-    "playedCardsMaxWidth": 420,
-    "gameSocialTop": 240,
-    "gameSocialSide": 21.6,
-    "gameBottomBar": 8,
-    "gameActionHandGap": 2,
-    "topBarIconSize": 22,
-    "topBarIconMinSize": 36,
-    "topBarLevelBadgeWidth": 28,
-    "topBarLevelBadgeHeight": 38,
-    "topBarMyTeamLabel": "我方",
-    "topBarOppTeamLabel": "对方",
-    "handToolbarAvatarRadius": 20,
-    "handToolbarHeight": 79.3,
-    "handToolbarSuitPanelHeight": 34,
-    "handToolbarSuitIconSize": 20,
-    "handToolbarProfileFlex": 1,
-    "handToolbarActionsFlex": 1,
-    "handToolbarSuitGap": 12,
-    "handToolbarSuitPanelMarginHorizontal": 4,
-    "handToolbarSuitPanelPaddingHorizontal": 12,
-    "handToolbarSuitIconTapPaddingHorizontal": 2,
-    "handToolbarButtonWidth": 0,
-    "handToolbarButtonPaddingHorizontal": 8,
-    "handToolbarButtonGap": 4,
-    "handToolbarButtonIconLabelGap": 4,
-    "handToolbarHandGap": 1,
-    "handToolbarBottomPadding": 13.88,
-    "handToolbarSuitPanelExtendBottom": 0,
-    "handToolbarSortButtonHeight": 34,
-    "handToolbarMessageSize": 40,
-    "chatPopupWidth": 160,
-    "chatPopupHeight": 144,
-    "chatPopupTabWidth": 44,
-    "chatPopupTabIconSize": 20,
-    "chatPopupCellHeight": 36,
-    "chatPopupEmojiCellSize": 52,
-    "chatPopupGapAboveToolbar": -118.95,
-    "chatPopupAspectRatio": 1.11,
-    "handToolbarAspectRatio": 20,
-    "loginIconSize": 64,
-    "loginButtonHeight": 48
-  },
-  "radius": {
-    "sm": 8,
-    "md": 10,
-    "lg": 12,
-    "xl": 16,
-    "panel": 12
-  },
-  "tiers": {
-    "tablet": {
-      "designWidth": 1024,
-      "designHeight": 640,
-      "card": {
-        "playedWidth": 54,
-        "playedHeight": 76
-      },
-      "handCards": {
-        "width": 58,
-        "height": 81,
-        "selectionLift": 16
-      },
-      "player": {
-        "width": 100,
-        "compactWidth": 82,
-        "avatarRadius": 26,
-        "compactAvatarRadius": 21
-      },
-      "emptySeat": {
-        "iconSize": 36,
-        "compactIconSize": 32
-      },
-      "button": {
-        "passWidth": 100,
-        "passHeight": 48,
-        "hintWidth": 100,
-        "hintHeight": 48,
-        "playWidth": 110,
-        "playHeight": 52,
-        "largeHeight": 56
-      },
-      "socialToolbar": {
-        "width": 60,
-        "iconSize": 24
-      },
-      "countdown": {
-        "circularSize": 54,
-        "strokeWidth": 3.5
-      },
-      "font": {
-        "md": 14,
-        "md2": 15,
-        "lg": 18,
-        "xl": 20,
-        "xxl": 22,
-        "title": 36
-      },
-      "spacing": {
-        "md": 10,
-        "lg": 14,
-        "xl": 18,
-        "xxl": 28,
-        "page": 36
-      },
-      "layout": {
-        "loginMaxWidth": 480,
-        "lobbyMaxWidth": 600,
-        "roomSidePanelWidth": 240,
-        "playedCardsMaxWidth": 520,
-        "gameSocialTop": 96,
-        "topBarIconSize": 26,
-        "topBarIconMinSize": 42,
-        "handToolbarAvatarRadius": 26,
-        "loginIconSize": 72,
-        "loginButtonHeight": 52
-      }
-    },
-    "largeTablet": {
-      "designWidth": 1280,
-      "designHeight": 800,
-      "card": {
-        "playedWidth": 62,
-        "playedHeight": 87
-      },
-      "handCards": {
-        "width": 66,
-        "height": 92,
-        "horizontalOverlap": 0.1,
-        "selectionLift": 18
-      },
-      "player": {
-        "width": 112,
-        "compactWidth": 92,
-        "avatarRadius": 30,
-        "compactAvatarRadius": 24
-      },
-      "button": {
-        "passWidth": 112,
-        "passHeight": 52,
-        "hintWidth": 112,
-        "hintHeight": 52,
-        "playWidth": 124,
-        "playHeight": 56,
-        "largeHeight": 60
-      },
-      "font": {
-        "md": 15,
-        "md2": 16,
-        "lg": 20,
-        "xl": 22,
-        "xxl": 24,
-        "title": 40
-      },
-      "layout": {
-        "loginMaxWidth": 540,
-        "lobbyMaxWidth": 680,
-        "roomSidePanelWidth": 280,
-        "playedCardsMaxWidth": 620,
-        "loginIconSize": 80,
-        "loginButtonHeight": 56
-      }
-    }
-  },
   "layoutEditor": {
     "hidden": {
       "game": [
         "chat_quick",
-        "chat_emoji"
+        "chat_emoji",
+        "interaction_4",
+        "interaction_3",
+        "interaction_2",
+        "play_3",
+        "chat_3",
+        "game_notice",
+        "table_center",
+        "ready_area",
+        "spectate_bar",
+        "chat_0",
+        "play_1",
+        "chat_2",
+        "chat_1",
+        "interaction_1",
+        "play_2",
+        "play_4",
+        "interaction_5",
+        "chat_5"
       ],
       "profile": []
     }
+  },
+  "labels": {
+    "topBarMyTeamLabel": "我方",
+    "topBarOppTeamLabel": "对方"
+  },
+  "player": {
+    "compactAvatarRadius": 28
   }
 }

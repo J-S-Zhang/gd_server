@@ -181,7 +181,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   double _regionRadius(GameLayoutRect? region, UiScale ui) {
     if (region != null) return region.height * 0.14;
-    return ui.r(ui.config.radius.lg);
+    return ui.r(12);
   }
 
   InputDecoration _fieldDecoration(
@@ -190,8 +190,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
     String label,
     IconData icon,
   ) {
-    final fieldFont = _regionFont(region, 0.38, ui, ui.config.font.md2);
-    final iconSize = _regionFont(region, 0.48, ui, ui.config.font.lg);
+    final fieldFont = _regionFont(region, 0.38, ui, 14);
+    final iconSize = _regionFont(region, 0.48, ui, 16);
     final radius = _regionRadius(region, ui);
     return InputDecoration(
       labelText: label,
@@ -217,7 +217,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   Widget _buildTitleHeader(UiScale ui) {
     final region = ui.layoutRect(PageLayoutKind.login, 'logo_header');
-    final titleSize = _regionFont(region, 0.55, ui, ui.config.font.title);
+    final titleSize = _regionFont(region, 0.55, ui, 32);
 
     return Center(
       child: Text(
@@ -234,7 +234,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   Widget _buildTabBar(UiScale ui) {
     final region = ui.layoutRect(PageLayoutKind.login, 'tab_bar');
-    final tabFont = _regionFont(region, 0.55, ui, ui.config.font.md2);
+    final tabFont = _regionFont(region, 0.55, ui, 14);
     final radius = _regionRadius(region, ui);
 
     return Container(
@@ -259,8 +259,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
   Widget _buildCheckUpdateButton(UiScale ui) {
     const elementId = 'check_update_button';
     final region = ui.layoutRect(PageLayoutKind.login, elementId);
-    final btnH = region?.height ?? ui.h(ui.config.layout.loginButtonHeight);
-    final btnFont = _regionFont(region, 0.38, ui, ui.config.font.md2);
+    final btnH = region?.height ?? ui.h(48);
+    final btnFont = _regionFont(region, 0.38, ui, 14);
     final radius = _regionRadius(region, ui);
 
     return SizedBox(
@@ -305,7 +305,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     bool obscure = false,
   }) {
     final region = ui.layoutRect(PageLayoutKind.login, elementId);
-    final fieldFont = _regionFont(region, 0.38, ui, ui.config.font.md2);
+    final fieldFont = _regionFont(region, 0.38, ui, 14);
 
     return TextField(
       controller: controller,
@@ -318,8 +318,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   Widget _buildSubmitButton(UiScale ui, bool isRegister) {
     final region = ui.layoutRect(PageLayoutKind.login, 'submit_button');
-    final btnH = region?.height ?? ui.h(ui.config.layout.loginButtonHeight);
-    final btnFont = _regionFont(region, 0.38, ui, ui.config.font.lg);
+    final btnH = region?.height ?? ui.h(48);
+    final btnFont = _regionFont(region, 0.38, ui, 16);
 
     return SizedBox(
       width: double.infinity,

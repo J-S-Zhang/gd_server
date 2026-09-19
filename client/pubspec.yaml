@@ -1,7 +1,7 @@
 name: guandan_client
 description: 六人掼蛋移动端游戏客户端
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -36,4 +36,26 @@ flutter:
     - assets/images/avatars/
     - assets/images/bgs/
     - assets/images/cards/
+    - assets/images/ui/
     - assets/sounds/
+    - assets/sounds/bgm/
+    - assets/sounds/effects/
+    - assets/sounds/voices/female/alert/
+    - assets/sounds/voices/female/beat/
+    - assets/sounds/voices/female/bid/
+    - assets/sounds/voices/female/misc/
+    - assets/sounds/voices/female/msgs/
+    - assets/sounds/voices/female/pair/
+    - assets/sounds/voices/female/pass/
+    - assets/sounds/voices/female/single/
+    - assets/sounds/voices/female/trio/
+    - assets/sounds/voices/female/type/
+    - assets/sounds/voices/male/alert/
+    - assets/sounds/voices/male/beat/
+    - assets/sounds/voices/male/bid/
+    - assets/sounds/voices/male/msgs/
+    - assets/sounds/voices/male/pair/
+    - assets/sounds/voices/male/pass/
+    - assets/sounds/voices/male/single/
+    - assets/sounds/voices/male/trio/
+    - assets/sounds/voices/male/type/

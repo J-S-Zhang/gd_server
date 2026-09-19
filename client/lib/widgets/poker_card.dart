@@ -31,7 +31,7 @@ class PokerCardWidget extends StatelessWidget {
     final isWild = isWildCard(card, currentLevel);
     final isLevel = !isWild && isLevelCard(card, currentLevel);
     final selectionLift = handCardSelectionLiftPx(height);
-    final radius = ui.r(cardCfg.borderRadius);
+    final radius = width * cardCfg.borderRadiusRatio;
     final highlighted = card.selected || previewSelected;
 
     return GestureDetector(
@@ -45,7 +45,7 @@ class PokerCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(radius),
           border: Border.all(
             color: highlighted ? const Color(0xFF64B5F6) : Colors.transparent,
-            width: highlighted ? ui.r(cardCfg.selectedBorderWidth) : 0,
+            width: highlighted ? width * cardCfg.selectedBorderWidthRatio : 0,
           ),
           boxShadow: [
             BoxShadow(
@@ -56,7 +56,7 @@ class PokerCardWidget extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(ui.r(cardCfg.clipRadius)),
+          borderRadius: BorderRadius.circular(width * cardCfg.clipRadiusRatio),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -84,7 +84,7 @@ class PokerCardWidget extends StatelessWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: const Color(0xFF64B5F6).withValues(alpha: 0.38),
-                      borderRadius: BorderRadius.circular(ui.r(cardCfg.clipRadius)),
+                      borderRadius: BorderRadius.circular(width * cardCfg.clipRadiusRatio),
                     ),
                   ),
                 ),
