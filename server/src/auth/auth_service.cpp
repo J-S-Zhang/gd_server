@@ -138,7 +138,9 @@ AvatarUpdateResult AuthService::updateAvatar(const std::string& token,
 namespace {
 
 bool isAllowedAvatarPreset(const std::string& presetId) {
-    return presetId == "avatar_1" || presetId == "avatar_2";
+    return presetId == "avatar_1" || presetId == "avatar_2" ||
+           presetId == "avatar_3" || presetId == "avatar_4" ||
+           presetId == "avatar_5";
 }
 
 }  // namespace

@@ -95,6 +95,16 @@ class GameController {
   void pass(String roomId) {
     final state = _ref.read(gameStateProvider);
     GameSoundService.instance.playPassVoice();
+
+    final seat = state.mySeatIndex;
+    final seatRoundPlays = _applyPassToSeats(
+      state.seatRoundPlays,
+      seat,
+      roundReset: false,
+    );
+    _ref.read(gameStateProvider.notifier).state =
+        state.copyWith(seatRoundPlays: seatRoundPlays);
+
     _ws.pass(roomId, state.turnId);
   }
 
@@ -120,8 +130,12 @@ class GameController {
     if (!canSubmitTribute || cardId == 0) return;
 
     final nextCards = state.myCards.where((c) => c.id != cardId).toList();
+    final seat = state.ownSeatIndex;
+    final nextPlays = Map<int, SeatRoundPlay>.from(state.seatRoundPlays);
+    nextPlays[seat] = SeatRoundPlay(cardIds: [cardId]);
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       myCards: nextCards,
+      seatRoundPlays: nextPlays,
       handOrganizedGroups: filterOrganizedGroups(
         state.handOrganizedGroups,
         nextCards.map((c) => c.id).toSet(),
@@ -137,8 +151,12 @@ class GameController {
     final cardId = selectedCardIds.first;
 
     final nextCards = state.myCards.where((c) => c.id != cardId).toList();
+    final seat = state.ownSeatIndex;
+    final nextPlays = Map<int, SeatRoundPlay>.from(state.seatRoundPlays);
+    nextPlays[seat] = SeatRoundPlay(cardIds: [cardId]);
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       myCards: nextCards,
+      seatRoundPlays: nextPlays,
       handOrganizedGroups: filterOrganizedGroups(
         state.handOrganizedGroups,
         nextCards.map((c) => c.id).toSet(),
@@ -233,6 +251,9 @@ class GameController {
             )
             .toList(),
       );
+    }
+    if (!newState.isInTributeFlow) {
+      newState = newState.copyWith(seatRoundPlays: const {});
     }
     return newState;
   }
@@ -478,6 +499,11 @@ class GameController {
         }
         break;
       case 'tribute_resolved':
+        final tributeState = _ref.read(gameStateProvider);
+        if (tributeState.seatRoundPlays.isNotEmpty) {
+          _ref.read(gameStateProvider.notifier).state =
+              tributeState.copyWith(seatRoundPlays: const {});
+        }
         break;
       case 'game_over':
         final state = _ref.read(gameStateProvider);
@@ -711,14 +737,16 @@ class GameController {
     return next;
   }
 
-  /// 仅展示最新一手出牌；新出牌时取消上一出牌玩家的显示。
+  /// 本墩内记录该座位本次出牌，保留其他座位已出的牌/不要。
   Map<int, SeatRoundPlay> _applyPlayToSeats(
     Map<int, SeatRoundPlay> current,
     int seatIndex,
     List<int> cardIds,
   ) {
     if (seatIndex < 0 || cardIds.isEmpty) return current;
-    return {seatIndex: SeatRoundPlay(cardIds: cardIds)};
+    final next = Map<int, SeatRoundPlay>.from(current);
+    next[seatIndex] = SeatRoundPlay(cardIds: cardIds);
+    return next;
   }
 
   Map<int, SeatRoundPlay> _applyPassToSeats(

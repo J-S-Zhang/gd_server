@@ -30,7 +30,6 @@ import '../../widgets/game/game_layout_positioned.dart';
 import '../../widgets/game/game_settings_sheet.dart';
 import '../../widgets/game/hand_toolbar.dart';
 import '../../widgets/game/social_toolbar.dart';
-import '../../models/seat_round_play.dart';
 import '../../utils/seat_layout.dart';
 import '../../widgets/game/emotion_effect_layer.dart';
 import '../../widgets/game/voice_chat_audio_layer.dart';
@@ -469,10 +468,8 @@ class _GamePageState extends ConsumerState<GamePage> {
   }) {
     final selfFinished = me?.hasFinished ?? false;
     final isSpectating = gameState.isSpectating;
-    final selfPlay =
-        gameState.seatRoundPlays[mySeatIndex] ?? const SeatRoundPlay();
-    final isSelfSeatTurn = gameState.currentPlayerIndex == mySeatIndex;
-    final hasSelfPlay = !selfPlay.isEmpty && !isSelfSeatTurn;
+    final selfPlay = gameState.visibleSeatPlay(mySeatIndex);
+    final hasSelfPlay = !selfPlay.isEmpty;
     final selfFinishLabel = selfFinished
         ? SeatLayout.finishRankLabel(me!.finishRank, maxPlayers)
         : '';

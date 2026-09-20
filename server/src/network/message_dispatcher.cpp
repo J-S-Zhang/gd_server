@@ -904,7 +904,10 @@ void MessageDispatcher::handleSubmitReturn(uint64_t sessionId, const Message& ms
     broadcastTributePhaseUpdate(room);
 
     auto& engine = room->engine();
-    if (engine.hasPendingTributeAction()) {
+    if (result.tributeRoundComplete) {
+        engine.finalizeTributePhase();
+        onTributePhaseCompleted(room);
+    } else if (engine.hasPendingTributeAction()) {
         scheduleTributeTimer(room);
     } else if (engine.getState().phase == GamePhase::PLAYING) {
         onTributePhaseCompleted(room);

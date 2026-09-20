@@ -4,6 +4,36 @@ import 'room.dart';
 import 'seat_round_play.dart';
 import '../utils/card_utils.dart';
 
+Map<int, SeatRoundPlay> seatPlaysFromTributeJson(
+  dynamic raw,
+  GamePhase phase,
+) {
+  if (phase != GamePhase.tribute && phase != GamePhase.returnTribute) {
+    return const {};
+  }
+  if (raw is! List) return const {};
+
+  final plays = <int, SeatRoundPlay>{};
+  for (final item in raw) {
+    if (item is! Map) continue;
+    final seat = item['seat_index'];
+    final cardId = item['card_id'];
+    final seatIndex = seat is int
+        ? seat
+        : seat is num
+            ? seat.toInt()
+            : null;
+    final card = cardId is int
+        ? cardId
+        : cardId is num
+            ? cardId.toInt()
+            : null;
+    if (seatIndex == null || card == null || card <= 0) continue;
+    plays[seatIndex] = SeatRoundPlay(cardIds: [card]);
+  }
+  return plays;
+}
+
 GamePhase parsePhase(String? phase) {
   if (phase == null) return GamePhase.waiting;
   switch (phase.toUpperCase()) {
@@ -104,6 +134,17 @@ class ClientGameState {
 
   bool get isInTributeFlow =>
       phase == GamePhase.tribute || phase == GamePhase.returnTribute;
+
+  /// 出牌区展示：本墩已出牌/不要则显示；轮到自己且尚未操作时不显示旧内容。
+  SeatRoundPlay visibleSeatPlay(int seatIndex) {
+    final play = seatRoundPlays[seatIndex] ?? const SeatRoundPlay();
+    if (isInTributeFlow) return play;
+    if (phase != GamePhase.playing) return play;
+    if (currentPlayerIndex == seatIndex && play.isEmpty) {
+      return const SeatRoundPlay();
+    }
+    return play;
+  }
 
   /// 轮到自己且拥有牌权（新墩或本墩领出），可任意出牌。
   bool canLeadFreely(int? myUserId) {
@@ -247,9 +288,10 @@ class ClientGameState {
             .toList() ??
         const <int>[];
     final lastPlayedSeatIndex = json['last_played_player_index'] as int? ?? -1;
+    final phase = parsePhase(json['phase'] as String?);
 
     return ClientGameState(
-      phase: parsePhase(json['phase'] as String?),
+      phase: phase,
       stateVersion: json['state_version'] as int? ?? 0,
       turnId: json['turn_id'] as int? ?? 0,
       currentLevel: json['current_level'] as int? ?? 2,
@@ -276,6 +318,10 @@ class ClientGameState {
       ),
       lastPlayedSeatIndex: lastPlayedSeatIndex,
       players: players,
+      seatRoundPlays: seatPlaysFromTributeJson(
+        json['tribute_seat_plays'],
+        phase,
+      ),
       pendingTributerSeats: (json['pending_tributer_seats'] as List<dynamic>?)
               ?.map((e) => e as int)
               .toList() ??

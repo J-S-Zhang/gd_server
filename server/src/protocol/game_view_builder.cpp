@@ -101,6 +101,15 @@ std::string buildGameSnapshotJson(const PlayerView& view, const Room& room) {
     oss << ",\"required_tribute_card_id\":" << view.requiredTributeCardId;
     oss << ",\"must_return_tribute\":" << (view.mustReturnTribute ? "true" : "false");
     oss << ",\"valid_return_card_ids\":" << cardIdsToJsonArray(view.validReturnCardIds);
+    oss << ",\"tribute_seat_plays\":[";
+    for (size_t i = 0; i < view.tributeSeatPlays.size(); ++i) {
+        const auto& play = view.tributeSeatPlays[i];
+        if (i > 0) oss << ",";
+        oss << "{\"seat_index\":" << play.seatIndex;
+        oss << ",\"card_id\":" << play.cardId;
+        oss << ",\"kind\":\"" << escapeJson(play.kind) << "\"}";
+    }
+    oss << "]";
 
     oss << ",\"players\":[";
     for (size_t i = 0; i < view.others.size(); ++i) {

@@ -408,14 +408,8 @@ class GameTableWidget extends StatelessWidget {
     return () => onPlayerAvatarTap!(player);
   }
 
-  SeatRoundPlay _visibleSeatPlay(int seatIndex) {
-    final play =
-        gameState.seatRoundPlays[seatIndex] ?? const SeatRoundPlay();
-    if (gameState.currentPlayerIndex == seatIndex) {
-      return const SeatRoundPlay();
-    }
-    return play;
-  }
+  SeatRoundPlay _visibleSeatPlay(int seatIndex) =>
+      gameState.visibleSeatPlay(seatIndex);
 
   List<Widget> _positionPlayers(UiScale ui, List<Player> players, int mySeatIndex) {
     final seatElements = ui.config.seatLayout.seatElementsFor(maxPlayers);

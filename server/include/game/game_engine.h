@@ -22,6 +22,7 @@ struct PlayResult {
     ErrorCode code = ErrorCode::OK;
     std::string message;
     bool gameOver = false;
+    bool tributeRoundComplete = false;
     SettlementResult settlement;
 };
 
@@ -53,6 +54,13 @@ struct PlayerView {
     std::vector<CardId> validReturnCardIds;
     bool mustReturnTribute = false;
 
+    struct TributeSeatPlay {
+        int seatIndex = -1;
+        CardId cardId = 0;
+        std::string kind;
+    };
+    std::vector<TributeSeatPlay> tributeSeatPlays;
+
     struct OtherPlayer {
         PlayerId id;
         int seatIndex;
@@ -82,6 +90,7 @@ public:
     PlayResult pass(PlayerId playerId);
     PlayResult submitTribute(PlayerId playerId, CardId cardId);
     PlayResult submitReturn(PlayerId playerId, CardId cardId);
+    PlayResult finalizeTributePhase();
 
     std::optional<std::vector<CardId>> chooseBotPlay(PlayerId playerId) const;
     std::optional<CardId> chooseBotTributeCard(PlayerId playerId) const;

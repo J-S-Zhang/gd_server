@@ -272,6 +272,11 @@ PlayResult GameEngine::submitReturn(PlayerId playerId, CardId cardId) {
         return result;
     }
 
+    result.tributeRoundComplete = true;
+    return result;
+}
+
+PlayResult GameEngine::finalizeTributePhase() {
     return finishTributePhaseAndStartPlay();
 }
 
@@ -520,6 +525,31 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId, int anchorSeatOverride) c
                         state_.players[viewerSeat].hand, state_, ruleContext());
                 }
             }
+        }
+    }
+
+    if (state_.phase == GamePhase::TRIBUTE) {
+        for (const auto& entry : tributeState_.tributeSubmissions) {
+            PlayerView::TributeSeatPlay play;
+            play.seatIndex = entry.first;
+            play.cardId = entry.second;
+            play.kind = "tribute";
+            view.tributeSeatPlays.push_back(play);
+        }
+    } else if (state_.phase == GamePhase::RETURN_TRIBUTE) {
+        for (const auto& tr : lastTribute_.tributes) {
+            PlayerView::TributeSeatPlay play;
+            play.seatIndex = tr.fromSeat;
+            play.cardId = tr.cardId;
+            play.kind = "tribute";
+            view.tributeSeatPlays.push_back(play);
+        }
+        for (const auto& ret : lastTribute_.returns) {
+            PlayerView::TributeSeatPlay play;
+            play.seatIndex = ret.fromSeat;
+            play.cardId = ret.cardId;
+            play.kind = "return";
+            view.tributeSeatPlays.push_back(play);
         }
     }
 
