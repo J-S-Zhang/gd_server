@@ -177,7 +177,8 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
   Widget _buildConnectionError(UiScale ui) {
     final region = ui.layoutRect(PageLayoutKind.lobby, 'connection_error');
     final pad = region != null ? region.width * 0.04 : ui.w(12);
-    final fontSize = region != null ? region.height * 0.22 : ui.sp(13);
+    final btnH = region?.height ?? ui.h(40);
+    final fontSize = GameTheme.buttonLabelFontSize(btnH);
 
     return Container(
       padding: EdgeInsets.all(pad),
@@ -185,7 +186,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
       child: Center(
         child: OutlinedButton.icon(
           onPressed: _connectWebSocket,
-          icon: Icon(Icons.refresh, color: Colors.white70, size: fontSize * 1.2),
+          icon: Icon(Icons.refresh, color: Colors.white70, size: fontSize * 0.75),
           label: Text('重新连接', style: TextStyle(color: Colors.white70, fontSize: fontSize)),
         ),
       ),
@@ -204,7 +205,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     final btnSize = btnRect != null
         ? Size(btnRect.width, btnRect.height)
         : Size(region.width * 0.92, region.height * 0.18);
-    final btnFont = btnSize.height * 0.38;
+    final btnFont = GameTheme.buttonLabelFontSize(btnSize.height);
 
     return SizedBox(
       width: region.width,
@@ -277,7 +278,7 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     final btnSize = btnRect != null
         ? Size(btnRect.width, btnRect.height)
         : Size(region.width * 0.92, region.height * 0.22);
-    final btnFont = btnSize.height * 0.38;
+    final btnFont = GameTheme.buttonLabelFontSize(btnSize.height);
 
     return SizedBox(
       width: region.width,
@@ -402,7 +403,8 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
   }) {
     final rect = ui.elementChildRect(parentId, 'mode_selector', page: page);
     final spacing = rect != null ? rect.width * 0.02 : ui.w(8);
-    final chipFont = rect != null ? rect.height * 0.22 : ui.sp(14);
+    final chipH = rect?.height ?? ui.h(36);
+    final chipFont = GameTheme.buttonLabelFontSize(chipH);
 
     return Align(
       alignment: Alignment.center,

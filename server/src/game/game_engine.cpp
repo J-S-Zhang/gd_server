@@ -155,7 +155,12 @@ void GameEngine::beginPlayingFromDeal(int firstPlayerSeat) {
 PlayResult GameEngine::finishTributePhaseAndStartPlay() {
     PlayResult result;
     const int firstPlayerSeat = tributeManager_.computeFirstPlayerSeat(
-        lastTribute_, tributeState_.plan.headSeat);
+        lastTribute_,
+        tributeState_.plan.headSeat,
+        state_,
+        ruleContext(),
+        previousRound_,
+        state_.playerCount);
     lastTribute_.firstPlayerSeat = firstPlayerSeat;
     lastTribute_.headTributerSeat = -1;
     for (const auto& tr : lastTribute_.tributes) {
@@ -468,8 +473,13 @@ PlayerView GameEngine::buildViewFor(PlayerId viewerId, int anchorSeatOverride) c
     view.teamLevels = progress_.levels;
     view.inPassAPhase = progress_.inPassAPhase;
     view.passAFailCounts = progress_.passAFailCounts;
-    view.currentPlayerIndex = state_.currentPlayerIndex;
-    view.firstPlayerIndex = state_.firstPlayerIndex;
+    if (tributeState_.active) {
+        view.currentPlayerIndex = -1;
+        view.firstPlayerIndex = -1;
+    } else {
+        view.currentPlayerIndex = state_.currentPlayerIndex;
+        view.firstPlayerIndex = state_.firstPlayerIndex;
+    }
     view.lastPlayedCards = state_.lastPlayedCards;
     view.lastPlayedPlayerIndex = state_.lastPlayedPlayerIndex;
     view.lastPattern = state_.lastPattern;

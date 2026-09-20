@@ -150,6 +150,10 @@ void VoiceServer::run() {
 
                 const auto peers = rooms.peersExcept(header.userId, roomId);
                 for (const auto& peer : peers) {
+                    if (peer.sin_addr.s_addr == from.sin_addr.s_addr &&
+                        peer.sin_port == from.sin_port) {
+                        continue;
+                    }
                     sendto(sock,
                            reinterpret_cast<const char*>(buffer.data()),
                            received,

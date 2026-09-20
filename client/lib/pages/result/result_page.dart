@@ -64,7 +64,12 @@ class ResultPage extends ConsumerWidget {
                         Size(ui.w(180), ui.h(48)),
                       ),
                     ),
-                    child: Text('返回大厅', style: TextStyle(fontSize: ui.sp(18))),
+                    child: Text(
+                      '返回大厅',
+                      style: TextStyle(
+                        fontSize: GameTheme.buttonLabelFontSize(ui.h(48)),
+                      ),
+                    ),
                   ),
                 ],
               ),

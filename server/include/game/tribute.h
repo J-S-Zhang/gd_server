@@ -111,7 +111,14 @@ public:
         CardId cardId
     ) const;
 
-    int computeFirstPlayerSeat(const TributeRoundResult& result, int headSeat) const;
+    int computeFirstPlayerSeat(
+        const TributeRoundResult& result,
+        int headSeat,
+        const GameState& state,
+        const RuleContext& ctx,
+        const PreviousRoundInfo& previous,
+        int playerCount
+    ) const;
 
     CardId pickBestTributeCard(
         const Hand& hand,

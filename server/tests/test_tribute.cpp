@@ -69,6 +69,29 @@ TEST(test_tribute_four_single_down) {
     ASSERT(result.firstPlayerSeat == 3);
 }
 
+TEST(test_tribute_four_double_down_tied_cards_last_place_leads) {
+    TributeManager manager;
+    GameRuleConfig config;
+    config.playerCount = 4;
+    config.playersPerTeam = 2;
+    config.enableTribute = true;
+
+    std::array<int, 6> ranks{1, 2, 3, 4, 0, 0};
+    std::vector<std::vector<Card>> hands(6);
+    hands[2] = {makeCard(0, Suit::SPADE, Rank::K)};
+    hands[3] = {makeCard(0, Suit::CLUB, Rank::K)};
+    hands[0] = {makeCard(0, Suit::DIAMOND, Rank::R5), makeCard(0, Suit::HEART, Rank::R3)};
+    hands[1] = {makeCard(0, Suit::DIAMOND, Rank::R4)};
+
+    GameState state = makeStateWithHands(4, ranks, hands);
+    PreviousRoundInfo previous = previousFromState(state, 0);
+    RuleContext ctx;
+
+    auto result = manager.resolveRound(state, config, previous, ctx);
+    ASSERT(result.tributes.size() == 2);
+    ASSERT(result.firstPlayerSeat == 3);
+}
+
 TEST(test_tribute_four_double_down) {
     TributeManager manager;
     GameRuleConfig config;

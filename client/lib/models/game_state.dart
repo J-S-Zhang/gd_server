@@ -120,7 +120,10 @@ class ClientGameState {
   });
 
   bool get isMyTurn =>
-      !isSpectating && currentPlayerIndex == ownSeatIndex;
+      !isSpectating &&
+      !isInTributeFlow &&
+      currentPlayerIndex >= 0 &&
+      currentPlayerIndex == ownSeatIndex;
 
   bool get mustSubmitTribute =>
       !isSpectating &&

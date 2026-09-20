@@ -395,13 +395,36 @@ void TributeManager::assignTributes(
     result.summary = plan.summary;
 }
 
-int TributeManager::computeFirstPlayerSeat(const TributeRoundResult& result, int headSeat) const {
+int TributeManager::computeFirstPlayerSeat(
+    const TributeRoundResult& result,
+    int headSeat,
+    const GameState& state,
+    const RuleContext& ctx,
+    const PreviousRoundInfo& previous,
+    int playerCount
+) const {
+    if (result.antiTribute || result.skipped || result.tributes.empty()) {
+        return headSeat;
+    }
+
+    int maxOrder = -1;
+    std::vector<int> maxSeats;
     for (const auto& tr : result.tributes) {
-        if (tr.toSeat == headSeat) {
-            return tr.fromSeat;
+        const int order = rankOrderForTribute(state.getCardById(tr.cardId), ctx);
+        if (order > maxOrder) {
+            maxOrder = order;
+            maxSeats = {tr.fromSeat};
+        } else if (order == maxOrder) {
+            maxSeats.push_back(tr.fromSeat);
         }
     }
-    return headSeat;
+
+    if (maxSeats.size() == 1) {
+        return maxSeats[0];
+    }
+
+    const int lastSeat = seatByFinishRank(previous, playerCount, playerCount);
+    return lastSeat >= 0 ? lastSeat : headSeat;
 }
 
 TributeRoundResult TributeManager::resolveRound(
@@ -453,7 +476,8 @@ TributeRoundResult TributeManager::resolveRound(
             break;
         }
     }
-    result.firstPlayerSeat = computeFirstPlayerSeat(result, plan.headSeat);
+    result.firstPlayerSeat = computeFirstPlayerSeat(
+        result, plan.headSeat, state, ctx, previous, state.playerCount);
     return result;
 }
 

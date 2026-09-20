@@ -239,6 +239,9 @@ class GameTableWidget extends StatelessWidget {
   }
 
   Widget _buildPlayingCenter(UiScale ui) {
+    if (gameState.isInTributeFlow) {
+      return _buildTributeCenter(ui);
+    }
     if (_currentPlayer() != null) return const SizedBox.shrink();
 
     final fontSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.5);
@@ -277,13 +280,31 @@ class GameTableWidget extends StatelessWidget {
     return merged.values.toList();
   }
 
+  Widget _buildTributeCenter(UiScale ui) {
+    final text = gameState.phase == GamePhase.tribute ? '进贡阶段' : '还贡阶段';
+    final fontSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.5);
+    return DecoratedBox(
+      decoration: GameTheme.panelDecoration(ui),
+      child: RegionFitText(
+        text: text,
+        fontSize: fontSize,
+        layoutParentId: _centerId,
+        layoutChildId: 'title',
+        color: GameTheme.textSecondary,
+      ),
+    );
+  }
+
   Player? _currentPlayer() {
+    if (gameState.isInTributeFlow || gameState.currentPlayerIndex < 0) {
+      return null;
+    }
     final players = _effectivePlayers();
     if (players.isEmpty) return null;
     for (final p in players) {
       if (p.seatIndex == gameState.currentPlayerIndex) return p;
     }
-    return players.first;
+    return null;
   }
 
   /// 将座位组件定位在 20:9 画布坐标系内（与出牌区、顶栏等一致）。
@@ -418,7 +439,9 @@ class GameTableWidget extends StatelessWidget {
           SeatLayout.toLocalSeat(player.seatIndex, mySeatIndex, maxPlayers);
       final isSelf = localSeat == 0;
       final seatPlay = _visibleSeatPlay(player.seatIndex);
-      final isCurrentTurn = gameState.currentPlayerIndex == player.seatIndex;
+      final isCurrentTurn = !gameState.isInTributeFlow &&
+          gameState.currentPlayerIndex >= 0 &&
+          gameState.currentPlayerIndex == player.seatIndex;
       final playBefore = SeatLayout.playBeforePlayer(localSeat, maxPlayers);
       final horizontal = SeatLayout.playHorizontal(localSeat, maxPlayers);
       final hasPlayed = !seatPlay.isEmpty;
@@ -494,7 +517,9 @@ class GameTableWidget extends StatelessWidget {
       }
 
       final seatPlay = _visibleSeatPlay(player.seatIndex);
-      final isCurrentTurn = gameState.currentPlayerIndex == player.seatIndex;
+      final isCurrentTurn = !gameState.isInTributeFlow &&
+          gameState.currentPlayerIndex >= 0 &&
+          gameState.currentPlayerIndex == player.seatIndex;
       if (seatPlay.isEmpty && !isCurrentTurn) {
         return const SizedBox.shrink();
       }

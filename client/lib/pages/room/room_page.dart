@@ -127,7 +127,7 @@ class RoomPage extends ConsumerWidget {
     final region = ui.layoutRect(PageLayoutKind.room, 'side_panel');
     final pad = region != null ? region.width * 0.08 : ui.w(16);
     final btnH = region != null ? region.height * 0.16 : ui.h(52);
-    final btnFont = btnH * 0.38;
+    final btnFont = GameTheme.buttonLabelFontSize(btnH);
     final gap = region != null ? region.height * 0.06 : ui.h(16);
     final hintSize = region != null ? region.height * 0.07 : ui.sp(13);
 

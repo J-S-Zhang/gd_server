@@ -260,7 +260,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     const elementId = 'check_update_button';
     final region = ui.layoutRect(PageLayoutKind.login, elementId);
     final btnH = region?.height ?? ui.h(48);
-    final btnFont = _regionFont(region, 0.38, ui, 14);
+    final btnFont = GameTheme.buttonLabelFontSize(btnH);
     final radius = _regionRadius(region, ui);
 
     return SizedBox(
@@ -319,7 +319,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   Widget _buildSubmitButton(UiScale ui, bool isRegister) {
     final region = ui.layoutRect(PageLayoutKind.login, 'submit_button');
     final btnH = region?.height ?? ui.h(48);
-    final btnFont = _regionFont(region, 0.38, ui, 16);
+    final btnFont = GameTheme.buttonLabelFontSize(btnH);
 
     return SizedBox(
       width: double.infinity,

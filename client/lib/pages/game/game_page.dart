@@ -563,6 +563,9 @@ class _GamePageState extends ConsumerState<GamePage> {
         ),
       ]);
     }
+    if (gameState.isInTributeFlow) {
+      return const SizedBox.shrink();
+    }
 
     return IgnorePointer(
       ignoring: !gameState.isMyTurn,
