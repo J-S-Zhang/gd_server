@@ -183,19 +183,10 @@ class WebSocketClient {
         },
         roomId: roomId,
       );
-  bool sendVoiceSignal(
-    String roomId, {
-    required int targetPlayerId,
-    required String signalType,
-    required Map<String, dynamic> payload,
-  }) =>
+  bool sendVoiceSpeaking(String roomId, {required bool speaking}) =>
       send(
-        'voice_signal',
-        data: {
-          'target_player_id': targetPlayerId,
-          'signal_type': signalType,
-          ...payload,
-        },
+        'voice_speaking',
+        data: {'speaking': speaking},
         roomId: roomId,
       );
 

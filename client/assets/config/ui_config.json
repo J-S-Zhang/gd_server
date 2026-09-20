@@ -214,14 +214,14 @@
         "aspectRatio": 2,
         "children": {
           "avatar": {
-            "x": 0.25,
+            "x": 0.75,
             "y": 0.5,
             "w": 0.5,
             "h": 1,
             "aspectRatio": 1
           },
           "nickname": {
-            "x": 0.75,
+            "x": 0.25,
             "y": 0.5,
             "w": 0.5,
             "h": 1,
@@ -237,14 +237,14 @@
         "aspectRatio": 2,
         "children": {
           "avatar": {
-            "x": 0.25,
+            "x": 0.75,
             "y": 0.5,
             "w": 0.5,
             "h": 1,
             "aspectRatio": 1
           },
           "nickname": {
-            "x": 0.75,
+            "x": 0.25,
             "y": 0.5,
             "w": 0.5,
             "h": 1,
@@ -978,7 +978,7 @@
       },
       {
         "x": 0.5,
-        "y": 0.47,
+        "y": 0.59,
         "w": 0.32,
         "h": 0.7,
         "aspectRatio": 1,
@@ -2029,9 +2029,6 @@
       "game": [
         "chat_quick",
         "chat_emoji",
-        "interaction_4",
-        "interaction_3",
-        "interaction_2",
         "play_3",
         "chat_3",
         "game_notice",
@@ -2046,7 +2043,9 @@
         "play_2",
         "play_4",
         "interaction_5",
-        "chat_5"
+        "chat_5",
+        "interaction_4",
+        "interaction_2"
       ],
       "profile": []
     }

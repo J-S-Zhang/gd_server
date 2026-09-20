@@ -72,7 +72,7 @@ private:
     void handleVoiceState(uint64_t sessionId, const Message& msg, SendFn send);
     void handleSeatChat(uint64_t sessionId, const Message& msg, SendFn send);
     void handleSendEmotion(uint64_t sessionId, const Message& msg, SendFn send);
-    void handleVoiceSignal(uint64_t sessionId, const Message& msg, SendFn send);
+    void handleVoiceSpeaking(uint64_t sessionId, const Message& msg, SendFn send);
     void handlePing(SendFn send);
 
     bool validateTurn(const std::shared_ptr<Room>& room, const Message& msg);

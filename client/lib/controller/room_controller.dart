@@ -251,7 +251,7 @@ class RoomController {
           final reqType = _ws.requestTypeFor(msg['request_id']);
           if (reqType == 'seat_chat' ||
               reqType == 'voice_state' ||
-              reqType == 'voice_signal') {
+              reqType == 'voice_speaking') {
             debugPrint('[WS] ignored $reqType unsupported on server (4002)');
             return;
           }

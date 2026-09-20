@@ -32,7 +32,6 @@ import '../../widgets/game/hand_toolbar.dart';
 import '../../widgets/game/social_toolbar.dart';
 import '../../utils/seat_layout.dart';
 import '../../widgets/game/emotion_effect_layer.dart';
-import '../../widgets/game/voice_chat_audio_layer.dart';
 import '../../widgets/game/game_layout_debug_overlay.dart';
 import '../../widgets/game/seat_avatar_registry.dart';
 import '../../widgets/game/seat_chat_display.dart';
@@ -287,6 +286,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                         maxPlayers: layoutPlayers,
                         me: me,
                       ),
+                    if (_showChatPanel) ..._buildChatPopupOverlay(),
                     if (showReadyArea)
                       GameLayoutPositioned(
                         elementId: ReadyArea.parentId,
@@ -301,7 +301,6 @@ class _GamePageState extends ConsumerState<GamePage> {
                           onStart: () => roomController.startGame(widget.roomId),
                         ),
                       ),
-                    const Positioned.fill(child: VoiceChatAudioLayer()),
                     Positioned.fill(
                       child: EmotionEffectLayer(
                         avatarRegistry: _avatarRegistry,
@@ -437,22 +436,27 @@ class _GamePageState extends ConsumerState<GamePage> {
           onEmoji: (emoji) => _sendSeatChat(emoji, isEmoji: true),
         ),
       ),
-      if (_showChatPanel)
-        GameLayoutPositioned(
-          elementId: 'chat_popup',
-          child: ChatPopupPanel(
-            selectedTab: _chatTab,
-            onTabChanged: (tab) => setState(() => _chatTab = tab),
-            onQuickMessageSelected: (message) {
-              _sendSeatChat(message);
-              setState(() => _showChatPanel = false);
-            },
-            onEmojiSelected: (emoji) {
-              _sendSeatChat(emoji, isEmoji: true);
-              setState(() => _showChatPanel = false);
-            },
-          ),
+    ];
+  }
+
+  /// 快捷消息 / 表情面板：置于手牌区、出牌按钮之上，避免被遮挡。
+  List<Widget> _buildChatPopupOverlay() {
+    return [
+      GameLayoutPositioned(
+        elementId: 'chat_popup',
+        child: ChatPopupPanel(
+          selectedTab: _chatTab,
+          onTabChanged: (tab) => setState(() => _chatTab = tab),
+          onQuickMessageSelected: (message) {
+            _sendSeatChat(message);
+            setState(() => _showChatPanel = false);
+          },
+          onEmojiSelected: (emoji) {
+            _sendSeatChat(emoji, isEmoji: true);
+            setState(() => _showChatPanel = false);
+          },
         ),
+      ),
     ];
   }
 

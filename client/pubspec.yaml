@@ -19,9 +19,12 @@ dependencies:
   package_info_plus: ^8.0.0
   ota_update: ^7.1.0
   permission_handler: ^11.3.1
-  flutter_webrtc: ^0.12.12
   image_picker: ^1.1.2
   image: ^4.5.4
+  record: ^7.1.1
+  opus_dart: ^3.0.1
+  opus_flutter: ^3.0.3
+  flutter_pcm_sound: ^3.3.3
 
 dev_dependencies:
   flutter_test:

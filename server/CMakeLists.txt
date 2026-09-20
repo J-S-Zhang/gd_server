@@ -60,6 +60,17 @@ set(GUANDAN_SERVER_SOURCES
 add_executable(guandan_server ${GUANDAN_SERVER_SOURCES})
 target_link_libraries(guandan_server PRIVATE guandan_core ${PLATFORM_LIBS})
 
+set(GUANDAN_VOICE_SOURCES
+    src/voice/voice_room_manager.cpp
+    src/voice/voice_server.cpp
+    src/voice/main.cpp
+    src/utils/logger.cpp
+)
+
+add_executable(guandan_voice_server ${GUANDAN_VOICE_SOURCES})
+target_include_directories(guandan_voice_server PUBLIC ${GUANDAN_INCLUDE_DIR})
+target_link_libraries(guandan_voice_server PRIVATE ${PLATFORM_LIBS})
+
 enable_testing()
 
 set(GUANDAN_TEST_SOURCES

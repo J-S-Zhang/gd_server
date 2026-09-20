@@ -8,7 +8,9 @@ HTTP_PORT="${3:-8080}"
 USERS_JSON="${4:-$ROOT/server/data/users.json}"
 APP_VERSION_JSON="${5:-$ROOT/server/config/app_version.json}"
 AVATARS_DIR="${6:-$ROOT/downloads/avatars}"
+VOICE_PORT="${7:-9002}"
 BINARY="$ROOT/build/guandan_server"
+VOICE_BINARY="$ROOT/build/guandan_voice_server"
 
 echo "==> 工作目录: $ROOT"
 cd "$ROOT"
@@ -39,8 +41,14 @@ if [ -z "${BINARY:-}" ] || [ ! -x "$BINARY" ]; then
 fi
 
 echo "==> 停止旧进程..."
+pkill -f guandan_voice_server || true
 pkill -f guandan_server || true
 sleep 1
+
+if [ -x "$VOICE_BINARY" ]; then
+  echo "==> 启动语音服 UDP $VOICE_PORT"
+  nohup "$VOICE_BINARY" "$VOICE_PORT" > "$ROOT/logs/voice.log" 2>&1 &
+fi
 
 echo "==> 启动: $BINARY $WS_PORT $HTTP_PORT $USERS_JSON $APP_VERSION_JSON $AVATARS_DIR"
 nohup "$BINARY" "$WS_PORT" "$HTTP_PORT" "$USERS_JSON" "$APP_VERSION_JSON" "$AVATARS_DIR" > "$ROOT/logs/server.log" 2>&1 &
