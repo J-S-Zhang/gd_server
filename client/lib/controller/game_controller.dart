@@ -3,6 +3,7 @@ import '../utils/card_pattern.dart';
 import '../utils/card_rules.dart';
 import '../utils/card_utils.dart';
 import '../utils/hand_layout.dart';
+import '../utils/match_score.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/game_state.dart';
@@ -17,6 +18,7 @@ import '../models/quick_chat_message.dart';
 import '../services/game_sound_service.dart';
 import 'auth_controller.dart';
 import 'room_controller.dart';
+import 'level_reveal_controller.dart';
 import 'voice_pack_controller.dart';
 
 final gameStateProvider = StateProvider<ClientGameState>((ref) {
@@ -35,6 +37,7 @@ class GameController {
   int? _lastPlaySoundKey;
   List<int>? _straightFlushHandSignature;
   final Map<Suit, int> _straightFlushClickIndex = {};
+  int _dealCountInMatch = 0;
 
   WebSocketClient get _ws => _ref.read(wsClientProvider);
 
@@ -293,6 +296,19 @@ class GameController {
     }
   }
 
+  /// 整局第一小局不发牌动画；从第二小局起在发牌时展示级牌。
+  void _maybeTriggerLevelReveal(ClientGameState newState) {
+    if (_dealCountInMatch == 0) {
+      _dealCountInMatch = 1;
+      return;
+    }
+    _dealCountInMatch++;
+    _ref.read(levelRevealProvider.notifier).trigger(
+          level: newState.currentLevel,
+          flyToMyTeam: newState.isPlayingOwnRound,
+        );
+  }
+
   bool _listEquals(List<int> a, List<int> b) {
     if (a.length != b.length) return false;
     for (var i = 0; i < a.length; i++) {
@@ -428,6 +444,12 @@ class GameController {
           msg['data'] as Map<String, dynamic>,
         );
         newState = _mergeRoomPlayerInfo(newState);
+        final prevState = _ref.read(gameStateProvider);
+        if (type == 'cards_dealt' && _dealCountInMatch == 0) {
+          newState = _resetMatchScores(newState);
+        } else {
+          newState = _preserveMatchScores(prevState, newState);
+        }
         newState = _applyDealtSnapshot(
           newState,
           resetTrick: type == 'cards_dealt',
@@ -448,6 +470,9 @@ class GameController {
         }
         _ref.read(gameStateProvider.notifier).state = newState;
         _resetStraightFlushCycleIfHandChanged(newState.myCards);
+        if (type == 'cards_dealt') {
+          _maybeTriggerLevelReveal(newState);
+        }
         if (type == 'cards_dealt' || type == 'tribute_phase_updated') {
           final room = _ref.read(roomProvider);
           if (room != null) {
@@ -470,9 +495,17 @@ class GameController {
         final data = msg['data'] as Map<String, dynamic>? ?? {};
         final matchWon = data['match_won'] == true;
         final state = _ref.read(gameStateProvider);
-        final playersAfterSettlement = _applyFinishRanksFromSettlement(
+        final room = _ref.read(roomProvider);
+        final playerCount =
+            room?.maxPlayers ?? state.players.length.clamp(2, 6);
+        var playersAfterSettlement = _applyFinishRanksFromSettlement(
           data,
           _resetReadyAfterSettlement(state.players),
+        );
+        playersAfterSettlement = _applyMatchScoresFromSettlement(
+          data,
+          playersAfterSettlement,
+          playerCount: playerCount,
         );
         _ref.read(gameStateProvider.notifier).state = state.copyWith(
           phase: matchWon ? GamePhase.settlement : GamePhase.roundEnd,
@@ -486,6 +519,10 @@ class GameController {
           lastPlayedSeatIndex: matchWon ? state.lastPlayedSeatIndex : -1,
           seatRoundPlays: matchWon ? state.seatRoundPlays : const {},
           handOrganizedGroups: matchWon ? state.handOrganizedGroups : const [],
+          showMatchSettlementPanel: matchWon,
+          matchWinningTeam: matchWon ? data['winning_team'] as int? : null,
+          matchLevelUpgrade:
+              matchWon ? data['level_upgrade'] as int? : null,
         );
         if (!matchWon) {
           final room = _ref.read(roomProvider);
@@ -506,13 +543,18 @@ class GameController {
         }
         break;
       case 'game_over':
+        _dealCountInMatch = 0;
         final state = _ref.read(gameStateProvider);
-        _ref.read(gameStateProvider.notifier).state =
-            state.copyWith(phase: GamePhase.finished);
+        _ref.read(gameStateProvider.notifier).state = state.copyWith(
+          phase: GamePhase.finished,
+          showMatchSettlementPanel: true,
+        );
         break;
       case 'room_dismissed':
+        _dealCountInMatch = 0;
         _ref.read(seatChatProvider.notifier).clearAll();
         _ref.read(emotionControllerProvider).clear();
+        _ref.read(levelRevealProvider.notifier).clear();
         _ref.read(gameStateProvider.notifier).state = const ClientGameState();
         break;
     }
@@ -547,6 +589,7 @@ class GameController {
         isReady: p.isReady,
         isBot: p.isBot,
         status: p.status,
+        matchScore: p.matchScore,
       );
     }).toList();
 
@@ -787,9 +830,106 @@ class GameController {
             isReady: p.isBot,
             isBot: p.isBot,
             status: p.status,
+            matchScore: p.matchScore,
           ),
         )
         .toList();
+  }
+
+  ClientGameState _preserveMatchScores(
+    ClientGameState prev,
+    ClientGameState newState,
+  ) {
+    if (prev.players.isEmpty) return newState;
+    final scores = {for (final p in prev.players) p.id: p.matchScore};
+    var changed = false;
+    final players = newState.players.map((p) {
+      final score = scores[p.id] ?? 0;
+      if (score == p.matchScore) return p;
+      changed = true;
+      return Player(
+        id: p.id,
+        nickname: p.nickname,
+        avatar: p.avatar,
+        avatarPreset: p.avatarPreset,
+        seatIndex: p.seatIndex,
+        team: p.team,
+        cardCount: p.cardCount,
+        hasFinished: p.hasFinished,
+        finishRank: p.finishRank,
+        isReady: p.isReady,
+        isBot: p.isBot,
+        status: p.status,
+        matchScore: score,
+      );
+    }).toList();
+    return changed ? newState.copyWith(players: players) : newState;
+  }
+
+  ClientGameState _resetMatchScores(ClientGameState state) {
+    if (state.players.isEmpty) return state;
+    final players = state.players
+        .map(
+          (p) => Player(
+            id: p.id,
+            nickname: p.nickname,
+            avatar: p.avatar,
+            avatarPreset: p.avatarPreset,
+            seatIndex: p.seatIndex,
+            team: p.team,
+            cardCount: p.cardCount,
+            hasFinished: p.hasFinished,
+            finishRank: p.finishRank,
+            isReady: p.isReady,
+            isBot: p.isBot,
+            status: p.status,
+            matchScore: 0,
+          ),
+        )
+        .toList();
+    return state.copyWith(players: players);
+  }
+
+  List<Player> _applyMatchScoresFromSettlement(
+    Map<String, dynamic> data,
+    List<Player> players, {
+    required int playerCount,
+  }) {
+    final ranks = data['finish_ranks'];
+    if (ranks is! List || ranks.isEmpty) return players;
+
+    final rankById = <int, int>{};
+    for (final item in ranks) {
+      if (item is! Map) continue;
+      final id = item['player_id'];
+      final rank = item['finish_rank'];
+      if (id is int && rank is int && rank > 0) {
+        rankById[id] = rank;
+      }
+    }
+    if (rankById.isEmpty) return players;
+
+    return players.map((p) {
+      final rank = rankById[p.id] ?? p.finishRank;
+      if (rank <= 0) return p;
+      final delta = matchScoreDeltaForFinishRank(rank, playerCount);
+      if (delta == 0) return p;
+      return Player(
+        id: p.id,
+        nickname: p.nickname,
+        avatar: p.avatar,
+        avatarPreset: p.avatarPreset,
+        seatIndex: p.seatIndex,
+        team: p.team,
+        cardCount: p.cardCount,
+        hasFinished: p.hasFinished,
+        finishRank: p.finishRank,
+        isReady: p.isReady,
+        isBot: p.isBot,
+        status: p.status,
+        matchScore: p.matchScore + delta,
+      );
+    }).toList();
   }
 
   List<Player> _applyFinishRanksFromSettlement(
@@ -813,6 +953,8 @@ class GameController {
       return Player(
         id: p.id,
         nickname: p.nickname,
+        avatar: p.avatar,
+        avatarPreset: p.avatarPreset,
         seatIndex: p.seatIndex,
         team: p.team,
         cardCount: 0,
@@ -821,6 +963,7 @@ class GameController {
         isReady: p.isReady,
         isBot: p.isBot,
         status: p.status,
+        matchScore: p.matchScore,
       );
     }).toList();
   }
@@ -834,6 +977,7 @@ class GameController {
     final state = _ref.read(gameStateProvider);
     var newState = ClientGameState.fromSnapshot(data);
     newState = _mergeRoomPlayerInfo(newState);
+    newState = _preserveMatchScores(state, newState);
     _ref.read(gameStateProvider.notifier).state = state.copyWith(
       mySeatIndex: newState.mySeatIndex,
       ownSeatIndex: newState.ownSeatIndex,
@@ -867,6 +1011,8 @@ class GameController {
       return Player(
         id: p.id,
         nickname: nick,
+        avatar: p.avatar,
+        avatarPreset: p.avatarPreset,
         seatIndex: p.seatIndex,
         team: p.team,
         cardCount: p.cardCount,
@@ -875,6 +1021,7 @@ class GameController {
         isReady: p.isReady,
         isBot: p.isBot,
         status: p.status,
+        matchScore: p.matchScore,
       );
     }).toList();
     return state.copyWith(players: players);

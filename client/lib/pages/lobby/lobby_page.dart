@@ -10,6 +10,7 @@ import '../../theme/game_theme.dart';
 import '../../widgets/game/game_layout_positioned.dart';
 import '../../utils/region_layout.dart';
 import '../../widgets/game/region_child_stack.dart';
+import '../../widgets/lobby_bottom_toolbar.dart';
 import '../../widgets/lobby_user_header.dart';
 
 class LobbyPage extends ConsumerStatefulWidget {
@@ -110,6 +111,11 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
                 page: PageLayoutKind.lobby,
                 elementId: 'join_room',
                 child: _buildJoinRoom(ui, isConnected),
+              ),
+              const PageLayoutPositioned(
+                page: PageLayoutKind.lobby,
+                elementId: 'bottom_toolbar',
+                child: LobbyBottomToolbar(),
               ),
           ],
         ),

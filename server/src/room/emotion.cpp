@@ -5,8 +5,8 @@ namespace guandan {
 bool isValidEmotionType(int value) {
     switch (static_cast<EmotionType>(value)) {
         case EmotionType::Flower:
-        case EmotionType::Heart:
-        case EmotionType::Like:
+        case EmotionType::Tomato:
+        case EmotionType::BoxingGlove:
             return true;
         default:
             return false;

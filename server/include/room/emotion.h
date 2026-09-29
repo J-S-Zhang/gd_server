@@ -9,8 +9,8 @@ namespace guandan {
 
 enum class EmotionType : uint8_t {
     Flower = 1,
-    Heart = 2,
-    Like = 3,
+    Tomato = 2,
+    BoxingGlove = 3,
 };
 
 bool isValidEmotionType(int value);

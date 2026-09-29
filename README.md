@@ -1,16 +1,16 @@
-# 掼蛋
+# 六人掼蛋
 
 同时支持 iOS 和 Android 的六人在线掼蛋手机游戏。
 
 ## 技术栈
 
-| 层级   | 技术                             |
-| ------ | -------------------------------- |
-| 客户端 | Flutter + Dart + Riverpod        |
+| 层级 | 技术 |
+|------|------|
+| 客户端 | Flutter + Dart + Riverpod |
 | 服务端 | C++20 + Boost.Asio + Boost.Beast |
-| 数据库 | PostgreSQL（MVP 阶段可选）       |
-| 通信   | HTTPS + WebSocket Secure (WSS)   |
-| 部署   | Linux + Nginx + Docker           |
+| 数据库 | PostgreSQL（MVP 阶段可选） |
+| 通信 | HTTPS + WebSocket Secure (WSS) |
+| 部署 | Linux + Nginx + Docker |
 
 ## 项目结构
 

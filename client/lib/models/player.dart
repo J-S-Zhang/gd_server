@@ -15,6 +15,7 @@ class Player {
   final bool isReady;
   final bool isBot;
   final PlayerStatus status;
+  final int matchScore;
 
   const Player({
     required this.id,
@@ -29,6 +30,7 @@ class Player {
     this.isReady = false,
     this.isBot = false,
     this.status = PlayerStatus.online,
+    this.matchScore = 0,
   });
 
   String? get avatarUrl {
@@ -52,6 +54,7 @@ class Player {
       status: json['status'] == 'offline'
           ? PlayerStatus.offline
           : PlayerStatus.online,
+      matchScore: json['match_score'] as int? ?? 0,
     );
   }
 }

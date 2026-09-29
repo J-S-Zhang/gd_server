@@ -34,6 +34,16 @@ List<GameCard> cardsFromIds(List<int> ids) {
   return ids.map(cardFromId).toList();
 }
 
+/// 当前级牌对应的红心牌面（展示用）。
+GameCard heartLevelCard(int level) {
+  final clamped = level.clamp(2, 14);
+  return GameCard(
+    id: -1,
+    suit: Suit.heart,
+    rank: Rank.values[clamped - 2],
+  );
+}
+
 /// 牌面 PNG 资源路径（与 assets/images/cards/ 命名一致）
 String cardAssetPath(GameCard card) {
   if (card.suit == Suit.joker) {

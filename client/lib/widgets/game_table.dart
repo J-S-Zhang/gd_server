@@ -7,15 +7,12 @@ import '../models/game_state.dart';
 import '../models/emotion_type.dart';
 import '../models/player.dart';
 import '../models/seat_round_play.dart';
-import '../theme/game_theme.dart';
 import '../utils/constants.dart';
 import 'countdown.dart';
 import '../utils/seat_layout.dart';
 import 'game/empty_seat.dart';
 import 'game/seat_chat_display.dart';
 import 'game/seat_play_area.dart';
-import 'game/region_child_stack.dart';
-import 'game/region_fit_text.dart';
 import 'game/seat_played_cards.dart';
 import 'game/player_interaction_panel.dart';
 import 'game/seat_avatar_registry.dart';
@@ -62,31 +59,9 @@ class GameTableWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = context.ui;
 
-    final centerRect = ui.layoutRegionRect('table_center', maxPlayers: maxPlayers);
-
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (centerRect != null)
-          Positioned(
-            left: centerRect.left,
-            top: centerRect.top,
-            width: centerRect.width,
-            height: centerRect.height,
-            child: isWaitingLobby
-                ? _buildWaitingCenter(ui)
-                : isRoundWaiting
-                    ? _buildRoundWaitingCenter(ui)
-                    : _buildPlayingCenter(ui),
-          )
-        else
-          Center(
-            child: isWaitingLobby
-                ? _buildWaitingCenter(ui)
-                : isRoundWaiting
-                    ? _buildRoundWaitingCenter(ui)
-                    : _buildPlayingCenter(ui),
-          ),
         if (isWaitingLobby)
           ..._positionLobbySeats(ui)
         else if (isRoundWaiting)
@@ -105,8 +80,6 @@ class GameTableWidget extends StatelessWidget {
     );
   }
 
-  static const _centerId = 'table_center';
-
   int get _viewerSeatIndex =>
       isWaitingLobby || isRoundWaiting ? lobbyMySeatIndex : gameState.ownSeatIndex;
 
@@ -114,148 +87,6 @@ class GameTableWidget extends StatelessWidget {
       isWaitingLobby || isRoundWaiting ? lobbyPlayers : _effectivePlayers();
 
   List<Player> _playersForInteraction() => _playersForChat();
-
-  Widget _buildWaitingCenter(UiScale ui) {
-    final readyCount = lobbyPlayers.where((p) => p.isReady).length;
-    final parentEl = ui.config.gamePageLayout.element(_centerId);
-    final useChildren = parentEl != null && parentEl.children.containsKey('title');
-
-    if (useChildren) {
-      final titleSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.55);
-      final subSize = ui.regionFontSize(_centerId, childId: 'subtitle', heightRatio: 0.5);
-      final hintSize = ui.regionFontSize(_centerId, childId: 'hint', heightRatio: 0.45);
-
-      return DecoratedBox(
-        decoration: GameTheme.panelDecoration(ui),
-        child: Stack(
-          children: [
-            RegionChildPositioned(
-              parentId: _centerId,
-              childId: 'title',
-              child: RegionFitText(
-                text: '等待玩家准备',
-                fontSize: titleSize,
-                layoutParentId: _centerId,
-                layoutChildId: 'title',
-                color: GameTheme.accentGold,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            RegionChildPositioned(
-              parentId: _centerId,
-              childId: 'subtitle',
-              child: RegionFitText(
-                text: '${lobbyPlayers.length}/$maxPlayers 人  ·  $readyCount 人已准备',
-                fontSize: subSize,
-                layoutParentId: _centerId,
-                layoutChildId: 'subtitle',
-                color: GameTheme.textSecondary,
-              ),
-            ),
-            RegionChildPositioned(
-              parentId: _centerId,
-              childId: 'hint',
-              child: RegionFitText(
-                text: isSoloMode ? '机器人已就位，点击准备即可开始' : '点击空位可换座',
-                fontSize: hintSize,
-                layoutParentId: _centerId,
-                layoutChildId: 'hint',
-                color: Colors.white38,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final titleSize = ui.regionFontSize(_centerId, heightRatio: 0.42);
-    final subSize = ui.regionFontSize(_centerId, heightRatio: 0.28);
-    return Container(
-      padding: ui.edgeInsetsSymmetric(
-        horizontal: 24,
-        vertical: 16,
-      ),
-      decoration: GameTheme.panelDecoration(ui),
-      child: RegionFitTextBlock(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '等待玩家准备',
-              style: TextStyle(
-                color: GameTheme.accentGold,
-                fontSize: titleSize,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: ui.h(8)),
-            Text(
-              '${lobbyPlayers.length}/$maxPlayers 人  ·  $readyCount 人已准备',
-              style: TextStyle(color: GameTheme.textSecondary, fontSize: subSize),
-            ),
-            SizedBox(height: ui.h(4 + 2)),
-            Text(
-              isSoloMode ? '机器人已就位，点击准备即可开始' : '点击空位可换座',
-              style: TextStyle(color: Colors.white38, fontSize: subSize * 0.85),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoundWaitingCenter(UiScale ui) {
-    final readyCount = lobbyPlayers.where((p) => p.isReady).length;
-    final fontSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.5);
-    final subSize = ui.regionFontSize(_centerId, childId: 'subtitle', heightRatio: 0.45);
-    return DecoratedBox(
-      decoration: GameTheme.panelDecoration(ui),
-      child: RegionFitTextBlock(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '本局结束',
-              style: TextStyle(
-                color: GameTheme.accentGold,
-                fontSize: fontSize,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: ui.h(4)),
-            Text(
-              '$readyCount/$maxPlayers 人已准备',
-              style: TextStyle(color: GameTheme.textSecondary, fontSize: subSize),
-            ),
-            SizedBox(height: ui.h(2)),
-            Text(
-              '全部准备后开始下一局',
-              style: TextStyle(color: Colors.white38, fontSize: subSize * 0.9),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlayingCenter(UiScale ui) {
-    if (gameState.isInTributeFlow) {
-      return _buildTributeCenter(ui);
-    }
-    if (_currentPlayer() != null) return const SizedBox.shrink();
-
-    final fontSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.5);
-    return DecoratedBox(
-      decoration: GameTheme.panelDecoration(ui),
-      child: RegionFitText(
-        text: '等待出牌',
-        fontSize: fontSize,
-        layoutParentId: _centerId,
-        layoutChildId: 'title',
-        color: GameTheme.textSecondary,
-      ),
-    );
-  }
 
   List<Player> _effectivePlayers() {
     final merged = <int, Player>{};
@@ -275,36 +106,10 @@ class GameTableWidget extends StatelessWidget {
         isReady: roomPlayer?.isReady ?? p.isReady,
         isBot: p.isBot,
         status: p.status,
+        matchScore: p.matchScore,
       );
     }
     return merged.values.toList();
-  }
-
-  Widget _buildTributeCenter(UiScale ui) {
-    final text = gameState.phase == GamePhase.tribute ? '进贡阶段' : '还贡阶段';
-    final fontSize = ui.regionFontSize(_centerId, childId: 'title', heightRatio: 0.5);
-    return DecoratedBox(
-      decoration: GameTheme.panelDecoration(ui),
-      child: RegionFitText(
-        text: text,
-        fontSize: fontSize,
-        layoutParentId: _centerId,
-        layoutChildId: 'title',
-        color: GameTheme.textSecondary,
-      ),
-    );
-  }
-
-  Player? _currentPlayer() {
-    if (gameState.isInTributeFlow || gameState.currentPlayerIndex < 0) {
-      return null;
-    }
-    final players = _effectivePlayers();
-    if (players.isEmpty) return null;
-    for (final p in players) {
-      if (p.seatIndex == gameState.currentPlayerIndex) return p;
-    }
-    return null;
   }
 
   /// 将座位组件定位在 20:9 画布坐标系内（与出牌区、顶栏等一致）。

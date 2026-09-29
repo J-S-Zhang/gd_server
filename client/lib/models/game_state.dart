@@ -88,6 +88,9 @@ class ClientGameState {
   final int requiredTributeCardId;
   final List<int> validReturnCardIds;
   final bool mustReturnTribute;
+  final bool showMatchSettlementPanel;
+  final int? matchWinningTeam;
+  final int? matchLevelUpgrade;
 
   const ClientGameState({
     this.phase = GamePhase.waiting,
@@ -117,6 +120,9 @@ class ClientGameState {
     this.requiredTributeCardId = 0,
     this.validReturnCardIds = const [],
     this.mustReturnTribute = false,
+    this.showMatchSettlementPanel = false,
+    this.matchWinningTeam,
+    this.matchLevelUpgrade,
   });
 
   bool get isMyTurn =>
@@ -208,6 +214,9 @@ class ClientGameState {
     int? requiredTributeCardId,
     List<int>? validReturnCardIds,
     bool? mustReturnTribute,
+    bool? showMatchSettlementPanel,
+    int? matchWinningTeam,
+    int? matchLevelUpgrade,
   }) {
     return ClientGameState(
       phase: phase ?? this.phase,
@@ -239,6 +248,10 @@ class ClientGameState {
           requiredTributeCardId ?? this.requiredTributeCardId,
       validReturnCardIds: validReturnCardIds ?? this.validReturnCardIds,
       mustReturnTribute: mustReturnTribute ?? this.mustReturnTribute,
+      showMatchSettlementPanel:
+          showMatchSettlementPanel ?? this.showMatchSettlementPanel,
+      matchWinningTeam: matchWinningTeam ?? this.matchWinningTeam,
+      matchLevelUpgrade: matchLevelUpgrade ?? this.matchLevelUpgrade,
     );
   }
 

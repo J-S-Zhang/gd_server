@@ -33,7 +33,10 @@ import '../../widgets/game/social_toolbar.dart';
 import '../../utils/seat_layout.dart';
 import '../../widgets/game/emotion_effect_layer.dart';
 import '../../widgets/game/game_layout_debug_overlay.dart';
+import '../../widgets/game/level_card_reveal_overlay.dart';
+import '../../widgets/game/match_settlement_panel.dart';
 import '../../widgets/game/seat_avatar_registry.dart';
+import '../../widgets/game/top_bar_badge_registry.dart';
 import '../../widgets/game/seat_chat_display.dart';
 import '../../widgets/game/seat_played_cards.dart';
 import '../../widgets/game_table.dart';
@@ -55,6 +58,7 @@ class _GamePageState extends ConsumerState<GamePage> {
   ChatPanelTab _chatTab = ChatPanelTab.quick;
   int? _interactionTargetPlayerId;
   final SeatAvatarRegistry _avatarRegistry = SeatAvatarRegistry();
+  final TopBarBadgeRegistry _badgeRegistry = TopBarBadgeRegistry();
 
   @override
   void initState() {
@@ -126,6 +130,7 @@ class _GamePageState extends ConsumerState<GamePage> {
       isReady: roomPlayer.isReady,
       isBot: roomPlayer.isBot,
       status: roomPlayer.status,
+      matchScore: gamePlayer.matchScore,
     );
   }
 
@@ -163,13 +168,6 @@ class _GamePageState extends ConsumerState<GamePage> {
                 : gameState.handOrganizedGroups,
           )
         : null;
-
-    if (gameState.phase == room_model.GamePhase.finished ||
-        gameState.phase == room_model.GamePhase.settlement) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.go('/result/${widget.roomId}');
-      });
-    }
 
     ref.listen(dismissVoteProvider, (prev, next) {
       if (!mounted) return;
@@ -252,6 +250,7 @@ class _GamePageState extends ConsumerState<GamePage> {
                         myTeamLevel: gameState.myTeamLevel(mySeatIndex % 2),
                         opponentTeamLevel:
                             gameState.opponentTeamLevel(mySeatIndex % 2),
+                        badgeRegistry: _badgeRegistry,
                         onSettings: () =>
                             _showSettingsMenu(context, roomController),
                       ),
@@ -306,6 +305,13 @@ class _GamePageState extends ConsumerState<GamePage> {
                         avatarRegistry: _avatarRegistry,
                         players: _playersForEmotion(room, gameState),
                       ),
+                    ),
+                    LevelCardRevealOverlay(
+                      badgeRegistry: _badgeRegistry,
+                      maxPlayers: layoutPlayers,
+                    ),
+                    Positioned.fill(
+                      child: MatchSettlementPanel(roomId: widget.roomId),
                     ),
                     if (isSoloMode)
                       GameLayoutDebugOverlay(

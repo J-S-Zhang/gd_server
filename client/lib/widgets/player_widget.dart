@@ -5,6 +5,7 @@ import 'game/game_layout_positioned.dart';
 import 'game/region_child_stack.dart';
 import '../models/player.dart';
 import '../theme/game_theme.dart';
+import '../utils/match_score.dart';
 import '../utils/seat_layout.dart';
 import 'game/finish_rank_badge.dart';
 import 'game/region_fit_text.dart';
@@ -333,6 +334,24 @@ class PlayerWidget extends StatelessWidget {
                 color: GameTheme.textPrimary,
                 fontWeight: FontWeight.w600,
                 overflowMode: RegionTextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            RegionChildPositioned(
+              parentId: parentId,
+              childId: 'match_score',
+              maxPlayers: maxPlayers,
+              child: RegionFitText(
+                text: formatMatchScore(player.matchScore),
+                layoutParentId: parentId,
+                layoutChildId: 'match_score',
+                layoutMaxPlayers: maxPlayers,
+                heightRatio: 0.5,
+                color: player.matchScore >= 0
+                    ? GameTheme.accentGold
+                    : const Color(0xFFFF5252),
+                fontWeight: FontWeight.w700,
+                overflowMode: RegionTextOverflow.scaleDown,
                 textAlign: TextAlign.center,
               ),
             ),

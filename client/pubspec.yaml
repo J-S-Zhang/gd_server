@@ -40,6 +40,7 @@ flutter:
     - assets/images/bgs/
     - assets/images/cards/
     - assets/images/ui/
+    - assets/images/interact/
     - assets/sounds/
     - assets/sounds/bgm/
     - assets/sounds/effects/
