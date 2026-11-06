@@ -8,10 +8,9 @@ namespace guandan {
 
 /// 实现 prepareNextRound 相关逻辑
 void TeamProgress::prepareNextRound() {
+    // 有上一局胜方则以其为攻方；否则保留当前 attackingTeam（勿强行改回 0）
     if (lastWinningTeam >= 0) {
         attackingTeam = lastWinningTeam;
-    } else {
-        attackingTeam = 0;
     }
 }
 

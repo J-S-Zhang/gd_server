@@ -90,10 +90,13 @@ TEST(test_opponent_round_not_pass_a) {
     TeamProgress progress;
     progress.levels[0] = kLevelA;
     progress.inPassAPhase[0] = true;
-    progress.attackingTeam = 1;
     progress.levels[1] = 10;
+    // 上一局队1胜 → 本局攻方为队1，虽队0在过A阶段也不算过A局
+    progress.lastWinningTeam = 1;
+    progress.attackingTeam = 1;
 
     progress.prepareNextRound();
+    ASSERT(progress.attackingTeam == 1);
     ASSERT(!progress.isPassARound());
     ASSERT(progress.isPlayingOwnRound(1));
     ASSERT(!progress.isPlayingOwnRound(0));
