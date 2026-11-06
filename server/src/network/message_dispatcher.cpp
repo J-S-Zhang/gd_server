@@ -534,7 +534,7 @@ void MessageDispatcher::handleLogin(uint64_t sessionId, const Message& msg, Send
     if (room && room->phase() != RoomPhase::FINISHED) {
         const auto roomPhase = room->phase();
         const RoomId roomId = room->id();
-        room->taskQueue().post([this, room, playerId, roomPhase, profile, send]() {
+        room->taskQueue().post([this, room, playerId, roomPhase, roomId, profile, send]() {
             room->syncPlayerProfile(playerId, profile);
             // 对局/结算中优先补快照
             if (roomPhase == RoomPhase::PLAYING || roomPhase == RoomPhase::SETTLEMENT) {
