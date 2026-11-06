@@ -7,6 +7,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -154,35 +155,39 @@ static bool readWebSocketMessage(SocketHandle sock, std::string& message) {
     return true;
 }
 
-/// 构造 WebSocketServer 实例
-WebSocketServer::WebSocketServer(int port) : port_(port) {}
+struct WebSocketServer::Impl {
+    int port = 0;
+    bool running = false;
+    MessageHandler messageHandler;
+    ConnectHandler connectHandler;
+    DisconnectHandler disconnectHandler;
+};
 
-/// 析构并释放资源
+WebSocketServer::WebSocketServer(int port, std::size_t /*ioThreadCount*/)
+    : impl_(std::make_unique<Impl>()) {
+    impl_->port = port;
+}
+
 WebSocketServer::~WebSocketServer() {
     stop();
 }
 
-/// 实现 setMessageHandler 相关逻辑
 void WebSocketServer::setMessageHandler(MessageHandler handler) {
-    messageHandler_ = std::move(handler);
+    impl_->messageHandler = std::move(handler);
 }
 
-/// 实现 setConnectHandler 相关逻辑
 void WebSocketServer::setConnectHandler(ConnectHandler handler) {
-    connectHandler_ = std::move(handler);
+    impl_->connectHandler = std::move(handler);
 }
 
-/// 实现 setDisconnectHandler 相关逻辑
 void WebSocketServer::setDisconnectHandler(DisconnectHandler handler) {
-    disconnectHandler_ = std::move(handler);
+    impl_->disconnectHandler = std::move(handler);
 }
 
-/// 向指定会话发送消息
 void WebSocketServer::sendTo(uint64_t sessionId, const std::string& message) {
     g_connections.send(sessionId, message);
 }
 
-/// 运行主循环
 void WebSocketServer::run() {
     if (!initNetwork()) {
         Logger::error("Failed to initialize network");
@@ -202,24 +207,25 @@ void WebSocketServer::run() {
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(static_cast<uint16_t>(port_));
+    addr.sin_port = htons(static_cast<uint16_t>(impl_->port));
 
     if (bind(serverSock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
-        Logger::error("Failed to bind port " + std::to_string(port_));
+        Logger::error("Failed to bind port " + std::to_string(impl_->port));
         closeSocket(serverSock);
         return;
     }
 
-    if (listen(serverSock, 64) != 0) {
+    if (listen(serverSock, 512) != 0) {
         Logger::error("Failed to listen");
         closeSocket(serverSock);
         return;
     }
 
-    running_ = true;
-    Logger::info("WebSocket server listening on port " + std::to_string(port_));
+    impl_->running = true;
+    Logger::info("WebSocket server (native one-thread-per-connection) listening on port " +
+                 std::to_string(impl_->port));
 
-    while (running_) {
+    while (impl_->running) {
         fd_set readSet;
         FD_ZERO(&readSet);
         FD_SET(serverSock, &readSet);
@@ -247,15 +253,15 @@ void WebSocketServer::run() {
             }
 
             g_connections.add(sessionId, clientSock);
-            if (connectHandler_) connectHandler_(sessionId);
+            if (impl_->connectHandler) impl_->connectHandler(sessionId);
 
-            while (running_) {
+            while (impl_->running) {
                 std::string msg;
                 if (!readWebSocketMessage(clientSock, msg)) break;
-                if (messageHandler_) messageHandler_(sessionId, msg);
+                if (impl_->messageHandler) impl_->messageHandler(sessionId, msg);
             }
 
-            if (disconnectHandler_) disconnectHandler_(sessionId);
+            if (impl_->disconnectHandler) impl_->disconnectHandler(sessionId);
             g_connections.remove(sessionId);
             closeSocket(clientSock);
         }).detach();
@@ -265,9 +271,8 @@ void WebSocketServer::run() {
     cleanupNetwork();
 }
 
-/// 停止服务
 void WebSocketServer::stop() {
-    running_ = false;
+    if (impl_) impl_->running = false;
 }
 
 }  // namespace guandan

@@ -9,6 +9,8 @@ if(WIN32)
     set(PLATFORM_LIBS ws2_32)
 endif()
 
+find_package(Threads REQUIRED)
+
 set(GUANDAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set(GUANDAN_CORE_SOURCES
@@ -51,18 +53,47 @@ set(GUANDAN_CORE_SOURCES
 add_library(guandan_core STATIC ${GUANDAN_CORE_SOURCES})
 target_include_directories(guandan_core PUBLIC ${GUANDAN_INCLUDE_DIR})
 
+# -----------------------------------------------------------------------------
+# 网络模型开关（编译期二选一）
+#   OFF（默认）：原生 socket，一连接一线程  → websocket_server.cpp
+#   ON         ：Boost.Asio/Beast I/O 线程池 → websocket_server_asio.cpp
+#
+# 配置示例：
+#   cmake -DGUANDAN_ENABLE_BOOST=ON ..
+#   cmake -DGUANDAN_ENABLE_BOOST=OFF ..
+# -----------------------------------------------------------------------------
+option(GUANDAN_ENABLE_BOOST
+    "Use Boost.Asio/Beast WebSocket I/O thread pool instead of native one-thread-per-connection"
+    OFF)
+
 set(GUANDAN_SERVER_SOURCES
-    src/network/websocket_server.cpp
     src/network/http_server.cpp
-    src/network/connection_manager.cpp
     src/network/session_manager.cpp
     src/network/message_dispatcher.cpp
     src/timer/timer_manager.cpp
     src/main.cpp
 )
 
+if(GUANDAN_ENABLE_BOOST)
+    list(APPEND GUANDAN_SERVER_SOURCES src/network/websocket_server_asio.cpp)
+    message(STATUS "Guandan network model: Boost.Asio/Beast I/O thread pool (GUANDAN_ENABLE_BOOST=ON)")
+else()
+    list(APPEND GUANDAN_SERVER_SOURCES
+        src/network/websocket_server.cpp
+        src/network/connection_manager.cpp
+    )
+    message(STATUS "Guandan network model: native socket one-thread-per-connection (GUANDAN_ENABLE_BOOST=OFF)")
+endif()
+
 add_executable(guandan_server ${GUANDAN_SERVER_SOURCES})
-target_link_libraries(guandan_server PRIVATE guandan_core ${PLATFORM_LIBS})
+target_link_libraries(guandan_server PRIVATE guandan_core ${PLATFORM_LIBS} Threads::Threads)
+
+if(GUANDAN_ENABLE_BOOST)
+    find_package(Boost REQUIRED COMPONENTS system)
+    target_compile_definitions(guandan_server PRIVATE GUANDAN_USE_BOOST)
+    target_include_directories(guandan_server PRIVATE ${Boost_INCLUDE_DIRS})
+    target_link_libraries(guandan_server PRIVATE Boost::system)
+endif()
 
 set(GUANDAN_VOICE_SOURCES
     src/voice/voice_room_manager.cpp
@@ -97,10 +128,3 @@ set(GUANDAN_TEST_SOURCES
 add_executable(guandan_tests ${GUANDAN_TEST_SOURCES})
 target_link_libraries(guandan_tests PRIVATE guandan_core)
 add_test(NAME guandan_tests COMMAND guandan_tests)
-
-option(GUANDAN_ENABLE_BOOST "Enable Boost.Beast WebSocket (alternative)" OFF)
-if(GUANDAN_ENABLE_BOOST)
-    find_package(Boost REQUIRED COMPONENTS system)
-    target_compile_definitions(guandan_server PRIVATE GUANDAN_USE_BOOST)
-    target_link_libraries(guandan_server PRIVATE Boost::system)
-endif()

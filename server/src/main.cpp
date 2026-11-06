@@ -49,6 +49,11 @@ int main(int argc, char* argv[]) {
 
     guandan::Logger::info("六人掼蛋游戏服务器启动");
     guandan::Logger::info("规则版本: six_player_guandan_v1");
+#ifdef GUANDAN_USE_BOOST
+    guandan::Logger::info("网络模型: Boost.Asio/Beast I/O 线程池 (GUANDAN_ENABLE_BOOST=ON)");
+#else
+    guandan::Logger::info("网络模型: 原生 socket 一连接一线程 (GUANDAN_ENABLE_BOOST=OFF)");
+#endif
     guandan::Logger::info("WebSocket 端口: " + std::to_string(wsPort));
     guandan::Logger::info("HTTP 端口: " + std::to_string(httpPort));
     guandan::Logger::info("用户数据库: " + dbPath);
@@ -85,7 +90,8 @@ int main(int argc, char* argv[]) {
     httpServer.setAvatarStorageConfig(avatarConfig);
     std::thread httpThread([&]() { httpServer.run(); });
 
-    guandan::WebSocketServer server(wsPort);
+    // 第二参数仅 Asio 模式生效：I/O 工作线程数；0 = 按 CPU 核数自动选择
+    guandan::WebSocketServer server(wsPort, 0);
 
     sessionManager.setSendCallback([&](uint64_t sessionId, const std::string& message) {
         server.sendTo(sessionId, message);
