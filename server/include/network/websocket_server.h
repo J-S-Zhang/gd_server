@@ -7,12 +7,16 @@
 
 namespace guandan {
 
+class BeastSession;  // Asio 实现中的会话（需访问 Impl）
+
 /// WebSocket 游戏长连接服务
 ///
 /// 编译开关 GUANDAN_USE_BOOST（CMake: GUANDAN_ENABLE_BOOST）：
 /// - OFF：原生 socket，一连接一线程（websocket_server.cpp）
 /// - ON ：Boost.Asio/Beast，固定 I/O 线程池（websocket_server_asio.cpp）
 class WebSocketServer {
+    friend class BeastSession;
+
 public:
     using MessageHandler = std::function<void(uint64_t sessionId, const std::string& message)>;  ///< 收到消息
     using ConnectHandler = std::function<void(uint64_t sessionId)>;                             ///< 新连接

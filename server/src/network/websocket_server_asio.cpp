@@ -30,8 +30,7 @@ namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 
 using MessagePtr = std::shared_ptr<const std::string>;
-
-class BeastSession;
+using Strand = net::strand<net::io_context::executor_type>;
 
 struct WebSocketServer::Impl {
     int port = 0;
@@ -58,11 +57,15 @@ struct WebSocketServer::Impl {
 
 class BeastSession : public std::enable_shared_from_this<BeastSession> {
 public:
-    BeastSession(tcp::socket socket, WebSocketServer::Impl* server, uint64_t sessionId)
-        : ws_(std::move(socket)),
-          strand_(net::make_strand(ws_.get_executor())),
+    BeastSession(net::io_context& ioc, tcp::socket socket, WebSocketServer::Impl* server,
+                 uint64_t sessionId)
+        : strand_(net::make_strand(ioc.get_executor())),
+          ws_(strand_),
           server_(server),
-          sessionId_(sessionId) {}
+          sessionId_(sessionId) {
+        // 将已 accept 的 socket 挂到带 strand 的 tcp_stream 上
+        beast::get_lowest_layer(ws_).socket() = std::move(socket);
+    }
 
     void start() {
         auto self = shared_from_this();
@@ -72,7 +75,7 @@ public:
                 res.set(http::field::server, "guandan-asio");
             }));
 
-        ws_.async_accept(net::bind_executor(strand_, [self](beast::error_code ec) {
+        ws_.async_accept([self](beast::error_code ec) {
             if (ec) {
                 Logger::error("WS handshake failed: " + ec.message());
                 return;
@@ -81,20 +84,20 @@ public:
                 self->server_->connectHandler(self->sessionId_);
             }
             self->doRead();
-        }));
+        });
     }
 
     void send(std::string message) {
         auto self = shared_from_this();
         auto msg = std::make_shared<const std::string>(std::move(message));
-        net::post(strand_, [self, msg = std::move(msg)]() mutable {
+        net::post(self->strand_, [self, msg = std::move(msg)]() mutable {
             self->enqueueOnStrand(std::move(msg));
         });
     }
 
     void requestClose() {
         auto self = shared_from_this();
-        net::post(strand_, [self]() {
+        net::post(self->strand_, [self]() {
             if (self->closed_) return;
             self->closed_ = true;
             beast::error_code ec;
@@ -121,7 +124,7 @@ private:
         ws_.text(true);
         ws_.async_write(
             net::buffer(*sendQueue_.front()),
-            net::bind_executor(strand_, [self](beast::error_code ec, std::size_t) {
+            [self](beast::error_code ec, std::size_t) {
                 if (ec) {
                     self->fail("write", ec);
                     return;
@@ -132,31 +135,29 @@ private:
                 } else {
                     self->writing_ = false;
                 }
-            }));
+            });
     }
 
     void doRead() {
         auto self = shared_from_this();
-        ws_.async_read(
-            buffer_,
-            net::bind_executor(strand_, [self](beast::error_code ec, std::size_t) {
-                if (ec == websocket::error::closed) {
-                    self->onClosed();
-                    return;
-                }
-                if (ec) {
-                    self->fail("read", ec);
-                    return;
-                }
+        ws_.async_read(buffer_, [self](beast::error_code ec, std::size_t) {
+            if (ec == websocket::error::closed) {
+                self->onClosed();
+                return;
+            }
+            if (ec) {
+                self->fail("read", ec);
+                return;
+            }
 
-                std::string message = beast::buffers_to_string(self->buffer_.data());
-                self->buffer_.consume(self->buffer_.size());
+            std::string message = beast::buffers_to_string(self->buffer_.data());
+            self->buffer_.consume(self->buffer_.size());
 
-                if (self->server_->messageHandler) {
-                    self->server_->messageHandler(self->sessionId_, message);
-                }
-                self->doRead();
-            }));
+            if (self->server_->messageHandler) {
+                self->server_->messageHandler(self->sessionId_, message);
+            }
+            self->doRead();
+        });
     }
 
     void fail(const char* what, beast::error_code ec) {
@@ -178,8 +179,8 @@ private:
         server_->unregisterSession(sessionId_);
     }
 
-    websocket::stream<tcp::socket> ws_;
-    net::strand<websocket::stream<tcp::socket>::executor_type> strand_;
+    Strand strand_;
+    websocket::stream<beast::tcp_stream> ws_;
     beast::flat_buffer buffer_;
     std::deque<MessagePtr> sendQueue_;
     bool writing_ = false;
@@ -284,7 +285,7 @@ void WebSocketServer::run() {
                 if (!acceptEc) {
                     const uint64_t sessionId = impl_->nextSessionId.fetch_add(1);
                     auto session = std::make_shared<BeastSession>(
-                        std::move(socket), impl_.get(), sessionId);
+                        impl_->ioc, std::move(socket), impl_.get(), sessionId);
                     impl_->registerSession(sessionId, session);
                     session->start();
                 } else if (acceptEc != net::error::operation_aborted) {
