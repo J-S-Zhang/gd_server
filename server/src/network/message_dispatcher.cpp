@@ -330,7 +330,7 @@ void MessageDispatcher::executeBotTributeActions(const std::shared_ptr<Room>& ro
     }
 }
 
-/// 为当前出牌玩家调度回合超时（机器人缩短为 1 秒）
+/// 为当前出牌玩家调度回合：Bot 立即行动，真人按 turnTimeoutSeconds_ 超时
 void MessageDispatcher::scheduleTurnTimer(const std::shared_ptr<Room>& room) {
     cancelTurnTimer(room->id());
     const auto& state = room->engine().getState();
@@ -340,10 +340,16 @@ void MessageDispatcher::scheduleTurnTimer(const std::shared_ptr<Room>& room) {
     if (currentIdx < 0 || currentIdx >= state.playerCount) return;
     PlayerId currentPlayer = state.players[currentIdx].id;
 
-    const int botDelaySeconds = isBotPlayer(currentPlayer) ? 1 : turnTimeoutSeconds_;
+    // Bot 立即出牌（0 延迟）；真人仍走 turnTimeoutSeconds_
+    if (isBotPlayer(currentPlayer)) {
+        room->taskQueue().post([this, room, currentPlayer]() {
+            executeBotTurn(room, currentPlayer);
+        });
+        return;
+    }
 
-    // 超时后在房间队列执行机器人/托管逻辑
-    timerManager_.schedule("turn:" + room->id(), botDelaySeconds, [this, room, currentPlayer]() {
+    // 超时后在房间队列执行托管/超时逻辑
+    timerManager_.schedule("turn:" + room->id(), turnTimeoutSeconds_, [this, room, currentPlayer]() {
         room->taskQueue().post([this, room, currentPlayer]() {
             executeBotTurn(room, currentPlayer);
         });
