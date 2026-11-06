@@ -1,8 +1,12 @@
 #include "auth/token_manager.h"
 #include "utils/uuid.h"
 
+/// @file token_manager.cpp
+/// @brief 登录令牌签发、校验与撤销
+
 namespace guandan {
 
+/// 签发新登录令牌
 std::string TokenManager::issueToken(PlayerId userId) {
     std::lock_guard lock(mutex_);
     for (auto it = tokens_.begin(); it != tokens_.end();) {
@@ -22,6 +26,7 @@ std::string TokenManager::issueToken(PlayerId userId) {
     return token;
 }
 
+/// 校验令牌并返回用户
 std::optional<PlayerId> TokenManager::validateToken(const std::string& token) {
     if (token.empty()) return std::nullopt;
     std::lock_guard lock(mutex_);
@@ -34,11 +39,13 @@ std::optional<PlayerId> TokenManager::validateToken(const std::string& token) {
     return it->second.userId;
 }
 
+/// 撤销指定令牌
 void TokenManager::revokeToken(const std::string& token) {
     std::lock_guard lock(mutex_);
     tokens_.erase(token);
 }
 
+/// 撤销某用户全部令牌
 void TokenManager::revokeAllForUser(PlayerId userId) {
     for (auto it = tokens_.begin(); it != tokens_.end();) {
         if (it->second.userId == userId) {

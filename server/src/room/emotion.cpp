@@ -1,5 +1,8 @@
 #include "room/emotion.h"
 
+/// @file emotion.cpp
+/// @brief 表情发送频率限制
+
 namespace guandan {
 
 bool isValidEmotionType(int value) {
@@ -13,6 +16,7 @@ bool isValidEmotionType(int value) {
     }
 }
 
+/// 实现 tryAcquire 相关逻辑
 bool EmotionRateLimiter::tryAcquire(uint64_t playerId) {
     const auto now = std::chrono::steady_clock::now();
     std::lock_guard<std::mutex> lock(mutex_);
@@ -27,6 +31,7 @@ bool EmotionRateLimiter::tryAcquire(uint64_t playerId) {
     return true;
 }
 
+/// 实现 remove 相关逻辑
 void EmotionRateLimiter::remove(uint64_t playerId) {
     std::lock_guard<std::mutex> lock(mutex_);
     lastSendTime_.erase(playerId);

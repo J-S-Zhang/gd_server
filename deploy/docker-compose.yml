@@ -33,5 +33,27 @@ services:
       - game-server
     restart: unless-stopped
 
+  # 文档 WebRTC 方案 SFU（VOICE_BACKEND=webrtc 时使用，端口 4444）
+  webrtc-sfu:
+    build:
+      context: ../server/webrtc-sfu
+      dockerfile: Dockerfile
+    ports:
+      - "4444:4444"
+    environment:
+      SFU_PORT: "4444"
+    restart: unless-stopped
+
+  # LiveKit SFU（开发模式：api_key=devkey, api_secret=secret，与 server/config/livekit.json.example 一致）
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+      - "50000-50100:50000-50100/udp"
+    restart: unless-stopped
+
 volumes:
   pgdata:

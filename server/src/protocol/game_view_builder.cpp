@@ -2,6 +2,9 @@
 #include "room/room.h"
 #include <sstream>
 
+/// @file game_view_builder.cpp
+/// @brief 对局快照与事件 JSON 构建
+
 namespace guandan {
 
 static std::string phaseToString(GamePhase phase) {

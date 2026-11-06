@@ -1,11 +1,16 @@
 #include "game/rule_engine.h"
 
+/// @file rule_engine.cpp
+/// @brief 出牌合法性校验引擎
+
 namespace guandan {
 
+/// 实现 isBombType 相关逻辑
 bool RuleEngine::isBombType(CardType type) const {
     return type == CardType::BOMB || type == CardType::JOKER_BOMB;
 }
 
+/// 实现 sameTypeBeat 相关逻辑
 bool RuleEngine::sameTypeBeat(const CardPattern& cur, const CardPattern& prev) const {
     if (cur.type != prev.type) return false;
 
@@ -38,6 +43,7 @@ bool RuleEngine::sameTypeBeat(const CardPattern& cur, const CardPattern& prev) c
     }
 }
 
+/// 实现 canBeat 相关逻辑
 bool RuleEngine::canBeat(
     const CardPattern& current,
     const CardPattern& previous,

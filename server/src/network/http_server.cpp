@@ -26,12 +26,16 @@
 #include <string>
 #include <thread>
 
+/// @file http_server.cpp
+/// @brief HTTP API：注册登录、版本与静态头像
+
 namespace fs = std::filesystem;
 
 namespace guandan {
 
 namespace {
 
+/// 初始化网络库（Windows Winsock）
 bool initNetwork() {
 #ifdef _WIN32
     WSADATA wsa;
@@ -41,12 +45,14 @@ bool initNetwork() {
 #endif
 }
 
+/// 清理网络库资源
 void cleanupNetwork() {
 #ifdef _WIN32
     WSACleanup();
 #endif
 }
 
+/// 关闭套接字句柄
 void closeSocket(SocketHandle sock) {
 #ifdef _WIN32
     closesocket(sock);
@@ -55,6 +61,7 @@ void closeSocket(SocketHandle sock) {
 #endif
 }
 
+/// 从套接字读取一行 HTTP 头
 bool recvLine(SocketHandle sock, std::string& line) {
     char c;
     line.clear();
@@ -69,6 +76,7 @@ bool recvLine(SocketHandle sock, std::string& line) {
     }
 }
 
+/// 解析 HTTP 头行的值部分
 std::string extractHeaderValue(const std::string& line) {
     auto colon = line.find(':');
     if (colon == std::string::npos) return "";
@@ -77,6 +85,7 @@ std::string extractHeaderValue(const std::string& line) {
     return value;
 }
 
+/// 从 JSON 文本解析字符串字段
 std::string extractJsonStringValue(const std::string& json, const std::string& key) {
     const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
@@ -100,6 +109,7 @@ std::string extractJsonStringValue(const std::string& json, const std::string& k
     return json.substr(pos, end - pos);
 }
 
+/// extractJsonIntValue 辅助函数
 int extractJsonIntValue(const std::string& json, const std::string& key, int defaultValue) {
     const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
@@ -118,6 +128,7 @@ int extractJsonIntValue(const std::string& json, const std::string& key, int def
     }
 }
 
+/// extractJsonBoolValue 辅助函数
 bool extractJsonBoolValue(const std::string& json, const std::string& key, bool defaultValue) {
     const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
@@ -129,6 +140,7 @@ bool extractJsonBoolValue(const std::string& json, const std::string& key, bool 
     return defaultValue;
 }
 
+/// 转义 JSON 字符串特殊字符
 std::string escapeJson(const std::string& s) {
     std::string out;
     out.reserve(s.size());
@@ -145,6 +157,7 @@ std::string escapeJson(const std::string& s) {
     return out;
 }
 
+/// buildUserJson 辅助函数
 std::string buildUserJson(const UserRecord& user, const std::string& token) {
     std::ostringstream oss;
     oss << "{";
@@ -167,6 +180,7 @@ std::string buildUserJson(const UserRecord& user, const std::string& token) {
     return oss.str();
 }
 
+/// extractBearerToken 辅助函数
 std::string extractBearerToken(const std::string& authorizationHeader) {
     const std::string prefix = "Bearer ";
     if (authorizationHeader.size() <= prefix.size()) return "";
@@ -181,11 +195,13 @@ std::string extractBearerToken(const std::string& authorizationHeader) {
     return token;
 }
 
+/// 构建错误 JSON 响应体
 std::string buildErrorJson(const std::string& errorCode, const std::string& message) {
     return "{\"error\":\"" + escapeJson(errorCode) + "\",\"message\":\"" +
            escapeJson(message) + "\"}";
 }
 
+/// buildAppVersionJson 辅助函数
 std::string buildAppVersionJson(const AppVersionInfo& info) {
     std::ostringstream oss;
     oss << "{";
@@ -198,6 +214,7 @@ std::string buildAppVersionJson(const AppVersionInfo& info) {
     return oss.str();
 }
 
+/// 发送 HTTP 响应头与正文
 void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& statusText,
                       const std::string& body) {
     std::ostringstream resp;
@@ -214,6 +231,7 @@ void sendHttpResponse(SocketHandle sock, int statusCode, const std::string& stat
     ::send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
 }
 
+/// 发送二进制 HTTP 响应
 void sendHttpBinaryResponse(SocketHandle sock, int code, const std::string& status,
                             const std::string& contentType, const std::string& body) {
     std::ostringstream resp;
@@ -230,6 +248,7 @@ void sendHttpBinaryResponse(SocketHandle sock, int code, const std::string& stat
     ::send(sock, payload.c_str(), static_cast<int>(payload.size()), 0);
 }
 
+/// isSafeAvatarFileName 辅助函数
 bool isSafeAvatarFileName(const std::string& name) {
     if (name.empty()) return false;
     if (name.find("..") != std::string::npos) return false;
@@ -237,6 +256,7 @@ bool isSafeAvatarFileName(const std::string& name) {
     return true;
 }
 
+/// guessImageContentType 辅助函数
 std::string guessImageContentType(const std::string& extLower) {
     if (extLower == ".jpg" || extLower == ".jpeg") return "image/jpeg";
     if (extLower == ".png") return "image/png";
@@ -244,6 +264,7 @@ std::string guessImageContentType(const std::string& extLower) {
     return "application/octet-stream";
 }
 
+/// tryServeAvatarFile 辅助函数
 bool tryServeAvatarFile(SocketHandle sock, const std::string& path,
                         const AvatarStorageConfig& avatarConfig) {
     std::string prefix = avatarConfig.publicPathPrefix;
@@ -280,6 +301,7 @@ bool tryServeAvatarFile(SocketHandle sock, const std::string& path,
     return true;
 }
 
+/// 处理单个 HTTP 客户端连接
 void handleClient(SocketHandle sock, AuthService* authService, const AppVersionInfo& appVersionInfo,
                   const AvatarStorageConfig& avatarConfig) {
     std::string requestLine;
@@ -443,17 +465,21 @@ bool loadAppVersionInfo(const std::string& path, AppVersionInfo& out) {
         out.changelog = changelog;
     }
 
+    /// 实现 info 相关逻辑
     Logger::info("App version config loaded: " + out.version +
                  " (code " + std::to_string(out.versionCode) + ")");
     return true;
 }
 
+/// 构造 HttpServer 实例
 HttpServer::HttpServer(int port) : port_(port) {}
 
+/// 析构并释放资源
 HttpServer::~HttpServer() {
     stop();
 }
 
+/// 运行主循环
 void HttpServer::run() {
     if (!initNetwork()) {
         Logger::error("HTTP: failed to initialize network");
@@ -517,6 +543,7 @@ void HttpServer::run() {
     cleanupNetwork();
 }
 
+/// 停止服务
 void HttpServer::stop() {
     running_ = false;
 }

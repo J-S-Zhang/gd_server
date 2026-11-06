@@ -4,10 +4,14 @@
 #include <map>
 #include <sstream>
 
+/// @file tribute.cpp
+/// @brief 贡牌阶段规则与牌权转移
+
 namespace guandan {
 
 namespace {
 
+/// rankOrderForTribute 辅助函数
 int rankOrderForTribute(const Card& card, const RuleContext& ctx) {
     if (isJoker(card.rank)) return rankValue(card.rank);
     if (ctx.isWildCard(card)) return rankValue(ctx.levelRank());
@@ -26,6 +30,7 @@ PreviousRoundInfo buildPreviousRoundInfo(const GameState& state, int winningTeam
     return info;
 }
 
+/// 实现 seatByFinishRank 相关逻辑
 int TributeManager::seatByFinishRank(const PreviousRoundInfo& previous, int rank, int playerCount) const {
     for (int seat = 0; seat < playerCount; ++seat) {
         if (previous.finishRankBySeat[seat] == rank) return seat;
@@ -33,15 +38,18 @@ int TributeManager::seatByFinishRank(const PreviousRoundInfo& previous, int rank
     return -1;
 }
 
+/// 实现 isValidTributeCard 相关逻辑
 bool TributeManager::isValidTributeCard(const Card& card, const RuleContext& ctx) const {
     return !ctx.isWildCard(card);
 }
 
+/// 实现 isValidReturnCard 相关逻辑
 bool TributeManager::isValidReturnCard(const Card& card, const RuleContext& ctx) const {
     if (ctx.isLevelCard(card) || isJoker(card.rank)) return false;
     return rankValue(card.rank) <= rankValue(Rank::R10);
 }
 
+/// 实现 requiredTributeCard 相关逻辑
 CardId TributeManager::requiredTributeCard(
     const Hand& hand,
     const GameState& state,
@@ -50,6 +58,7 @@ CardId TributeManager::requiredTributeCard(
     return pickBestTributeCard(hand, state, ctx);
 }
 
+/// 实现 pickBestTributeCard 相关逻辑
 CardId TributeManager::pickBestTributeCard(
     const Hand& hand,
     const GameState& state,
@@ -69,6 +78,7 @@ CardId TributeManager::pickBestTributeCard(
     return best;
 }
 
+/// 实现 minSingleEffectiveRank 相关逻辑
 int TributeManager::minSingleEffectiveRank(
     const Hand& hand,
     const GameState& state,
@@ -83,6 +93,7 @@ int TributeManager::minSingleEffectiveRank(
     return bestOrder == 999 ? 0 : bestOrder;
 }
 
+/// 实现 pickSmallestCard 相关逻辑
 CardId TributeManager::pickSmallestCard(
     const Hand& hand,
     const GameState& state,
@@ -100,6 +111,7 @@ CardId TributeManager::pickSmallestCard(
     return best;
 }
 
+/// 实现 pickBestReturnCard 相关逻辑
 CardId TributeManager::pickBestReturnCard(
     const Hand& hand,
     const GameState& state,
@@ -119,6 +131,7 @@ CardId TributeManager::pickBestReturnCard(
     return best;
 }
 
+/// 实现 pickReturnCard 相关逻辑
 CardId TributeManager::pickReturnCard(
     const Hand& hand,
     const GameState& state,
@@ -129,6 +142,7 @@ CardId TributeManager::pickReturnCard(
     return pickSmallestCard(hand, state, ctx);
 }
 
+/// 实现 validReturnCardIds 相关逻辑
 std::vector<CardId> TributeManager::validReturnCardIds(
     const Hand& hand,
     const GameState& state,
@@ -154,6 +168,7 @@ std::vector<CardId> TributeManager::validReturnCardIds(
     return fallback;
 }
 
+/// 实现 isValidTributeSubmission 相关逻辑
 bool TributeManager::isValidTributeSubmission(
     int seat,
     CardId cardId,
@@ -166,6 +181,7 @@ bool TributeManager::isValidTributeSubmission(
     return cardId == requiredTributeCard(hand, state, ctx);
 }
 
+/// 实现 isValidReturnSubmission 相关逻辑
 bool TributeManager::isValidReturnSubmission(
     int seat,
     CardId cardId,
@@ -180,6 +196,7 @@ bool TributeManager::isValidReturnSubmission(
     return std::find(validIds.begin(), validIds.end(), cardId) != validIds.end();
 }
 
+/// 实现 countBigJokersInSeat 相关逻辑
 int TributeManager::countBigJokersInSeat(const GameState& state, int seat) const {
     int count = 0;
     for (CardId id : state.players[seat].hand.cards()) {
@@ -188,6 +205,7 @@ int TributeManager::countBigJokersInSeat(const GameState& state, int seat) const
     return count;
 }
 
+/// 实现 compareTributeCards 相关逻辑
 int TributeManager::compareTributeCards(
     CardId a,
     CardId b,
@@ -210,6 +228,7 @@ int TributeManager::compareTributeCards(
     return 0;
 }
 
+/// 实现 checkAntiTribute4 相关逻辑
 bool TributeManager::checkAntiTribute4(
     const GameState& state,
     bool doubleDown,
@@ -233,6 +252,7 @@ bool TributeManager::checkAntiTribute4(
     return total >= 2;
 }
 
+/// 实现 checkAntiTribute6 相关逻辑
 bool TributeManager::checkAntiTribute6(
     const GameState& state,
     bool tripleDown,
@@ -255,6 +275,7 @@ bool TributeManager::checkAntiTribute6(
     return false;
 }
 
+/// 实现 transferCard 相关逻辑
 void TributeManager::transferCard(GameState& state, int fromSeat, int toSeat, CardId cardId) const {
     if (fromSeat < 0 || toSeat < 0 || cardId == 0) return;
     std::vector<CardId> one{cardId};
@@ -263,6 +284,7 @@ void TributeManager::transferCard(GameState& state, int fromSeat, int toSeat, Ca
     state.players[toSeat].hand.add(cardId);
 }
 
+/// 实现 applyReturnTransfer 相关逻辑
 void TributeManager::applyReturnTransfer(
     GameState& state,
     int fromSeat,
@@ -272,6 +294,7 @@ void TributeManager::applyReturnTransfer(
     transferCard(state, fromSeat, toSeat, cardId);
 }
 
+/// 实现 planRound 相关逻辑
 TributePhasePlan TributeManager::planRound(
     const GameState& state,
     const GameRuleConfig& config,
@@ -352,6 +375,7 @@ TributePhasePlan TributeManager::planRound(
     return plan;
 }
 
+/// 实现 assignTributes 相关逻辑
 void TributeManager::assignTributes(
     GameState& state,
     const RuleContext& ctx,
@@ -378,6 +402,7 @@ void TributeManager::assignTributes(
         return;
     }
 
+    /// 实现 sort 相关逻辑
     std::sort(pending.begin(), pending.end(), [&](const PendingTribute& a, const PendingTribute& b) {
         return compareTributeCards(
             a.cardId, b.cardId, state, ctx, a.fromSeat, b.fromSeat, plan.headSeat, n) < 0;
@@ -395,6 +420,7 @@ void TributeManager::assignTributes(
     result.summary = plan.summary;
 }
 
+/// 实现 computeFirstPlayerSeat 相关逻辑
 int TributeManager::computeFirstPlayerSeat(
     const TributeRoundResult& result,
     int headSeat,
@@ -427,6 +453,7 @@ int TributeManager::computeFirstPlayerSeat(
     return lastSeat >= 0 ? lastSeat : headSeat;
 }
 
+/// 实现 resolveRound 相关逻辑
 TributeRoundResult TributeManager::resolveRound(
     GameState& state,
     const GameRuleConfig& config,

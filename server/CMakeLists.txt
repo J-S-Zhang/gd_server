@@ -29,6 +29,7 @@ set(GUANDAN_CORE_SOURCES
     src/room/dismiss_vote.cpp
     src/room/room_manager.cpp
     src/room/room_task_queue.cpp
+    src/room/room_executor.cpp
     src/room/emotion.cpp
     src/protocol/message.cpp
     src/protocol/game_view_builder.cpp
@@ -36,6 +37,9 @@ set(GUANDAN_CORE_SOURCES
     src/utils/logger.cpp
     src/utils/uuid.cpp
     src/utils/sha1.cpp
+    src/utils/hmac_sha256.cpp
+    src/livekit/livekit_config.cpp
+    src/livekit/livekit_token.cpp
     src/user/user_store.cpp
     src/user/avatar_storage.cpp
     src/auth/password_hash.cpp
@@ -86,6 +90,7 @@ set(GUANDAN_TEST_SOURCES
     tests/test_pass_a.cpp
     tests/test_tribute.cpp
     tests/test_message.cpp
+    tests/test_multi_room_bot_perf.cpp
 )
 
 add_executable(guandan_tests ${GUANDAN_TEST_SOURCES})

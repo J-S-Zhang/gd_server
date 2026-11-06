@@ -3,6 +3,9 @@
 #include <cstring>
 #include <vector>
 
+/// @file sha1.cpp
+/// @brief SHA-1 哈希与十六进制/Base64
+
 namespace guandan {
 
 static uint32_t rol(uint32_t v, int bits) {

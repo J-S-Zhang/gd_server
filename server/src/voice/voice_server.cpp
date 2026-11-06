@@ -32,29 +32,37 @@ namespace guandan::voice {
 
 namespace {
 
+/// 初始化网络库（Windows Winsock）
 bool initNetwork() {
 #ifdef _WIN32
     WSADATA wsa;
+   /// WSAStartup 辅助函数
     return WSAStartup(MAKEWORD(2, 2), &wsa) == 0;
 #else
     return true;
 #endif
 }
 
+/// 清理网络库资源
 void cleanupNetwork() {
 #ifdef _WIN32
     WSACleanup();
 #endif
 }
 
+/// 关闭套接字句柄
 void closeSocket(SocketHandle sock) {
 #ifdef _WIN32
     closesocket(sock);
 #else
     close(sock);
 #endif
+/// @file voice_server.cpp
+/// @brief UDP 语音包转发服务
+
 }
 
+/// 将 UDP 载荷转为字符串
 std::string payloadToString(const uint8_t* data, uint16_t len) {
     if (data == nullptr || len == 0) return {};
     return std::string(reinterpret_cast<const char*>(data), len);
@@ -62,16 +70,20 @@ std::string payloadToString(const uint8_t* data, uint16_t len) {
 
 }  // namespace
 
+/// 构造 VoiceServer 实例
 VoiceServer::VoiceServer(int port) : port_(port) {}
 
+/// 析构并释放资源
 VoiceServer::~VoiceServer() {
     stop();
 }
 
+/// 停止服务
 void VoiceServer::stop() {
     running_ = false;
 }
 
+/// 运行主循环
 void VoiceServer::run() {
     if (!initNetwork()) {
         Logger::error("Voice server network init failed");

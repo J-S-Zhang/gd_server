@@ -1,7 +1,11 @@
 #include "game/room_config.h"
 
+/// @file room_config.cpp
+/// @brief 房间/规则配置解析
+
 namespace guandan {
 
+/// 实现 fromModeName 相关逻辑
 RoomConfig RoomConfig::fromModeName(const std::string& mode) {
     RoomConfig config;
     if (mode == "four" || mode == "4") {

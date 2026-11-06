@@ -37,24 +37,31 @@ static bool sendWebSocketFrame(SocketHandle sock, const std::string& message) {
     ssize_t sent = ::send(sock, frame.data(), frame.size(), 0);
     return sent > 0;
 #endif
+/// @file connection_manager.cpp
+/// @brief WebSocket 连接表与按会话发送
+
 }
 
+/// 实现 add 相关逻辑
 void ConnectionManager::add(uint64_t sessionId, SocketHandle socket) {
     std::lock_guard lock(mutex_);
     connections_[sessionId] = Connection{sessionId, socket, true};
 }
 
+/// 实现 remove 相关逻辑
 void ConnectionManager::remove(uint64_t sessionId) {
     std::lock_guard lock(mutex_);
     connections_.erase(sessionId);
 }
 
+/// 实现 get 相关逻辑
 Connection* ConnectionManager::get(uint64_t sessionId) {
     std::lock_guard lock(mutex_);
     auto it = connections_.find(sessionId);
     return it != connections_.end() ? &it->second : nullptr;
 }
 
+/// 实现 send 相关逻辑
 bool ConnectionManager::send(uint64_t sessionId, const std::string& message) {
     Connection* conn = nullptr;
     {

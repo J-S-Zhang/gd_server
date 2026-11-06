@@ -3,11 +3,16 @@
 #include "user/avatar_storage.h"
 #include "utils/sha1.h"
 
+/// @file auth_service.cpp
+/// @brief 认证服务：注册、登录、令牌校验与头像更新
+
 namespace guandan {
 
+/// 构造并注入用户存储与令牌管理器
 AuthService::AuthService(UserStore& userStore, TokenManager& tokenManager)
     : userStore_(userStore), tokenManager_(tokenManager) {}
 
+/// 校验密码长度等规则
 std::string AuthService::validatePassword(const std::string& password) {
     if (password.size() < 6) {
         return "密码长度至少 6 位";
@@ -18,6 +23,7 @@ std::string AuthService::validatePassword(const std::string& password) {
     return "";
 }
 
+/// 注册新用户
 AuthResult AuthService::registerUser(const std::string& nickname,
                                      const std::string& password) {
     AuthResult result;
@@ -54,6 +60,7 @@ AuthResult AuthService::registerUser(const std::string& nickname,
     return result;
 }
 
+/// 用户登录
 AuthResult AuthService::login(const std::string& nickname, const std::string& password) {
     AuthResult result;
     auto user = userStore_.findByNickname(nickname);
@@ -71,12 +78,14 @@ AuthResult AuthService::login(const std::string& nickname, const std::string& pa
     return result;
 }
 
+/// 校验令牌并返回用户
 std::optional<UserRecord> AuthService::validateToken(const std::string& token) {
     auto userId = tokenManager_.validateToken(token);
     if (!userId) return std::nullopt;
     return userStore_.findById(*userId);
 }
 
+/// 更新用户自定义头像
 AvatarUpdateResult AuthService::updateAvatar(const std::string& token,
                                              const std::string& imageBase64,
                                              const std::string& format,
@@ -137,6 +146,7 @@ AvatarUpdateResult AuthService::updateAvatar(const std::string& token,
 
 namespace {
 
+/// 判断头像预设 ID 是否合法
 bool isAllowedAvatarPreset(const std::string& presetId) {
     return presetId == "avatar_1" || presetId == "avatar_2" ||
            presetId == "avatar_3" || presetId == "avatar_4" ||
@@ -145,6 +155,7 @@ bool isAllowedAvatarPreset(const std::string& presetId) {
 
 }  // namespace
 
+/// 更新用户预设头像
 AvatarPresetUpdateResult AuthService::updateAvatarPreset(const std::string& token,
                                                        const std::string& presetId) {
     AvatarPresetUpdateResult result;

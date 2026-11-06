@@ -1,14 +1,21 @@
 #include "room/room.h"
+#include "room/room_executor.h"
 #include <algorithm>
+
+/// @file room.cpp
+/// @brief 房间座位、准备、解散投票与对局状态
 
 namespace guandan {
 
-Room::Room(RoomId roomId, PlayerId ownerId, RoomConfig config)
+/// 构造 Room 实例
+Room::Room(RoomId roomId, PlayerId ownerId, RoomConfig config, RoomExecutor& executor)
     : roomId_(std::move(roomId)),
       ownerId_(ownerId),
       config_(std::move(config)),
-      engine_(toGameRuleConfig(config_)) {}
+      engine_(toGameRuleConfig(config_)),
+      taskQueue_(std::make_shared<RoomTaskQueue>(executor)) {}
 
+/// 实现 isSeatTaken 相关逻辑
 bool Room::isSeatTaken(int seatIndex, PlayerId exceptId) const {
     for (const auto& p : players_) {
         if (p.seatIndex == seatIndex && p.id != exceptId) {
@@ -18,6 +25,7 @@ bool Room::isSeatTaken(int seatIndex, PlayerId exceptId) const {
     return false;
 }
 
+/// 实现 firstEmptySeat 相关逻辑
 int Room::firstEmptySeat() const {
     for (int seat = 0; seat < config_.maxPlayers; ++seat) {
         if (!isSeatTaken(seat)) {
@@ -27,6 +35,7 @@ int Room::firstEmptySeat() const {
     return -1;
 }
 
+/// 实现 addBotAtSeat 相关逻辑
 bool Room::addBotAtSeat(int seatIndex, int botIndex) {
     if (seatIndex < 0 || seatIndex >= config_.maxPlayers) return false;
     if (isSeatTaken(seatIndex)) return false;
@@ -43,6 +52,7 @@ bool Room::addBotAtSeat(int seatIndex, int botIndex) {
     return true;
 }
 
+/// 实现 fillBots 相关逻辑
 void Room::fillBots() {
     int botIndex = 0;
     while (!isFull()) {
@@ -53,6 +63,7 @@ void Room::fillBots() {
     }
 }
 
+/// 加入房间或会话
 bool Room::join(PlayerId playerId, const PlayerJoinInfo& info) {
     if (isBotPlayer(playerId)) return false;
     if (isFull()) return false;
@@ -73,6 +84,7 @@ bool Room::join(PlayerId playerId, const PlayerJoinInfo& info) {
     return true;
 }
 
+/// 实现 syncPlayerProfile 相关逻辑
 bool Room::syncPlayerProfile(PlayerId playerId, const PlayerJoinInfo& info) {
     if (isBotPlayer(playerId)) return false;
     for (auto& p : players_) {
@@ -87,6 +99,7 @@ bool Room::syncPlayerProfile(PlayerId playerId, const PlayerJoinInfo& info) {
     return false;
 }
 
+/// 离开房间或会话
 void Room::leave(PlayerId playerId) {
     if (isBotPlayer(playerId)) return;
     players_.erase(
@@ -95,6 +108,7 @@ void Room::leave(PlayerId playerId) {
         players_.end());
 }
 
+/// 标记玩家已准备
 bool Room::ready(PlayerId playerId) {
     if (phase_ != RoomPhase::WAITING && phase_ != RoomPhase::SETTLEMENT) return false;
     for (auto& p : players_) {
@@ -109,6 +123,7 @@ bool Room::ready(PlayerId playerId) {
     return false;
 }
 
+/// 取消准备状态
 bool Room::unready(PlayerId playerId) {
     if (phase_ != RoomPhase::WAITING && phase_ != RoomPhase::SETTLEMENT) return false;
     if (isBotPlayer(playerId)) return false;
@@ -121,6 +136,7 @@ bool Room::unready(PlayerId playerId) {
     return false;
 }
 
+/// 实现 changeSeat 相关逻辑
 bool Room::changeSeat(PlayerId playerId, int seatIndex) {
     if (phase_ != RoomPhase::WAITING) return false;
     if (isBotPlayer(playerId)) return false;
@@ -137,6 +153,7 @@ bool Room::changeSeat(PlayerId playerId, int seatIndex) {
     return false;
 }
 
+/// 实现 humanVoteEntries 相关逻辑
 std::vector<DismissVoteEntry> Room::humanVoteEntries() const {
     std::vector<DismissVoteEntry> entries;
     for (const auto& p : players_) {
@@ -146,6 +163,7 @@ std::vector<DismissVoteEntry> Room::humanVoteEntries() const {
     return entries;
 }
 
+/// 实现 requestDismiss 相关逻辑
 bool Room::requestDismiss(PlayerId playerId) {
     if (isBotPlayer(playerId)) return false;
     if (dismissVote_.active()) return false;
@@ -162,15 +180,18 @@ bool Room::requestDismiss(PlayerId playerId) {
     return dismissVote_.start(playerId, humans);
 }
 
+/// 实现 voteDismiss 相关逻辑
 bool Room::voteDismiss(PlayerId playerId, bool agree) {
     if (isBotPlayer(playerId)) return false;
     return dismissVote_.recordVote(playerId, agree);
 }
 
+/// 实现 cancelDismissVote 相关逻辑
 void Room::cancelDismissVote() {
     dismissVote_.cancel();
 }
 
+/// 实现 setEnableTribute 相关逻辑
 bool Room::setEnableTribute(PlayerId playerId, bool enabled) {
     if (phase_ != RoomPhase::WAITING) return false;
     if (playerId != ownerId_) return false;
@@ -180,16 +201,19 @@ bool Room::setEnableTribute(PlayerId playerId, bool enabled) {
     return true;
 }
 
+/// 实现 clearSpectateTargets 相关逻辑
 void Room::clearSpectateTargets() {
     spectateTargets_.clear();
 }
 
+/// 实现 spectateTargetFor 相关逻辑
 int Room::spectateTargetFor(PlayerId viewerId) const {
     const auto it = spectateTargets_.find(viewerId);
     if (it == spectateTargets_.end()) return -1;
     return it->second;
 }
 
+/// 实现 spectatableTeammateSeats 相关逻辑
 std::vector<int> Room::spectatableTeammateSeats(PlayerId viewerId) const {
     const auto& state = engine_.getState();
     int viewerSeat = -1;
@@ -214,6 +238,7 @@ std::vector<int> Room::spectatableTeammateSeats(PlayerId viewerId) const {
     return seats;
 }
 
+/// 实现 resolveViewAnchor 相关逻辑
 int Room::resolveViewAnchor(PlayerId viewerId) const {
     const auto& state = engine_.getState();
     int viewerSeat = -1;
@@ -237,6 +262,7 @@ int Room::resolveViewAnchor(PlayerId viewerId) const {
     return teammates.front();
 }
 
+/// 实现 setSpectateTarget 相关逻辑
 bool Room::setSpectateTarget(PlayerId viewerId, int targetSeat) {
     const auto teammates = spectatableTeammateSeats(viewerId);
     if (teammates.empty()) return false;
@@ -247,6 +273,7 @@ bool Room::setSpectateTarget(PlayerId viewerId, int targetSeat) {
     return true;
 }
 
+/// 实现 enterSettlement 相关逻辑
 void Room::enterSettlement() {
     phase_ = RoomPhase::SETTLEMENT;
     for (auto& p : players_) {
@@ -255,6 +282,7 @@ void Room::enterSettlement() {
     }
 }
 
+/// 实现 allReady 相关逻辑
 bool Room::allReady() const {
     if (!isFull()) return false;
     for (const auto& p : players_) {
@@ -263,6 +291,7 @@ bool Room::allReady() const {
     return true;
 }
 
+/// 实现 startNextRound 相关逻辑
 bool Room::startNextRound() {
     if (phase_ != RoomPhase::SETTLEMENT) return false;
     if (!allReady()) return false;
@@ -275,10 +304,12 @@ bool Room::startNextRound() {
     return false;
 }
 
+/// 实现 finishMatch 相关逻辑
 void Room::finishMatch() {
     phase_ = RoomPhase::FINISHED;
 }
 
+/// 开始对局
 bool Room::startGame() {
     if (!isFull()) return false;
     for (const auto& p : players_) {
@@ -307,6 +338,7 @@ bool Room::startGame() {
     return false;
 }
 
+/// 实现 containsPlayer 相关逻辑
 bool Room::containsPlayer(PlayerId playerId) const {
     for (const auto& p : players_) {
         if (p.id == playerId) return true;
@@ -314,6 +346,7 @@ bool Room::containsPlayer(PlayerId playerId) const {
     return false;
 }
 
+/// 实现 nextEmotionEventId 相关逻辑
 uint64_t Room::nextEmotionEventId() {
     return ++emotionEventId_;
 }

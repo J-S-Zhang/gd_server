@@ -31,6 +31,9 @@
     const SocketHandle kInvalidSocket = -1;
 #endif
 
+/// @file websocket_server.cpp
+/// @brief WebSocket 握手、帧收发与连接循环
+
 namespace guandan {
 
 static ConnectionManager g_connections;
@@ -151,28 +154,35 @@ static bool readWebSocketMessage(SocketHandle sock, std::string& message) {
     return true;
 }
 
+/// 构造 WebSocketServer 实例
 WebSocketServer::WebSocketServer(int port) : port_(port) {}
 
+/// 析构并释放资源
 WebSocketServer::~WebSocketServer() {
     stop();
 }
 
+/// 实现 setMessageHandler 相关逻辑
 void WebSocketServer::setMessageHandler(MessageHandler handler) {
     messageHandler_ = std::move(handler);
 }
 
+/// 实现 setConnectHandler 相关逻辑
 void WebSocketServer::setConnectHandler(ConnectHandler handler) {
     connectHandler_ = std::move(handler);
 }
 
+/// 实现 setDisconnectHandler 相关逻辑
 void WebSocketServer::setDisconnectHandler(DisconnectHandler handler) {
     disconnectHandler_ = std::move(handler);
 }
 
+/// 向指定会话发送消息
 void WebSocketServer::sendTo(uint64_t sessionId, const std::string& message) {
     g_connections.send(sessionId, message);
 }
 
+/// 运行主循环
 void WebSocketServer::run() {
     if (!initNetwork()) {
         Logger::error("Failed to initialize network");
@@ -255,6 +265,7 @@ void WebSocketServer::run() {
     cleanupNetwork();
 }
 
+/// 停止服务
 void WebSocketServer::stop() {
     running_ = false;
 }

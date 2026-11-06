@@ -2,6 +2,9 @@
 #include <algorithm>
 #include <set>
 
+/// @file card_analyzer.cpp
+/// @brief 牌型识别与分析
+
 namespace guandan {
 
 namespace {
@@ -13,6 +16,7 @@ constexpr int kThreePairsMaxStart = 12;
 constexpr int kTwoTriplesMinStart = 1;
 constexpr int kTwoTriplesMaxStart = 13;
 
+/// straightSlotToRankValue 辅助函数
 int straightSlotToRankValue(int slot) {
     if (slot == 1) return rankValue(Rank::A);
     if (slot >= 2 && slot <= 14) return slot;
@@ -21,10 +25,12 @@ int straightSlotToRankValue(int slot) {
 
 }  // namespace
 
+/// 实现 effectiveRank 相关逻辑
 int CardAnalyzer::effectiveRank(const Card& card, const RuleContext& ctx) const {
     return singleEffectiveRank(card, ctx);
 }
 
+/// 实现 groupByRank 相关逻辑
 std::vector<CardAnalyzer::RankGroup> CardAnalyzer::groupByRank(
     const std::vector<Card>& cards,
     const RuleContext& context
@@ -54,6 +60,7 @@ std::vector<CardAnalyzer::RankGroup> CardAnalyzer::groupByRank(
     for (auto& [_, g] : groups) {
         result.push_back(g);
     }
+    /// 实现 sort 相关逻辑
     std::sort(result.begin(), result.end(),
               [](const RankGroup& a, const RankGroup& b) { return a.rank < b.rank; });
 
@@ -66,6 +73,7 @@ std::vector<CardAnalyzer::RankGroup> CardAnalyzer::groupByRank(
     return result;
 }
 
+/// 实现 isConsecutive 相关逻辑
 bool CardAnalyzer::isConsecutive(const std::vector<int>& ranks) const {
     if (ranks.size() < 2) return true;
     for (size_t i = 1; i < ranks.size(); ++i) {
@@ -74,6 +82,7 @@ bool CardAnalyzer::isConsecutive(const std::vector<int>& ranks) const {
     return true;
 }
 
+/// 实现 analyzeJokerBomb 相关逻辑
 CardPattern CardAnalyzer::analyzeJokerBomb(const std::vector<Card>& cards) const {
     int smallCount = 0, bigCount = 0;
     for (const auto& c : cards) {
@@ -92,6 +101,7 @@ CardPattern CardAnalyzer::analyzeJokerBomb(const std::vector<Card>& cards) const
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeBomb 相关逻辑
 CardPattern CardAnalyzer::analyzeBomb(
     const std::vector<Card>& cards,
     const std::vector<RankGroup>& groups,
@@ -131,6 +141,7 @@ CardPattern CardAnalyzer::analyzeBomb(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeSingle 相关逻辑
 CardPattern CardAnalyzer::analyzeSingle(
     const std::vector<Card>& cards, const RuleContext& ctx
 ) const {
@@ -143,6 +154,7 @@ CardPattern CardAnalyzer::analyzeSingle(
     return p;
 }
 
+/// 实现 analyzePair 相关逻辑
 CardPattern CardAnalyzer::analyzePair(
     const std::vector<RankGroup>& groups, int wildCount, const RuleContext& ctx
 ) const {
@@ -177,6 +189,7 @@ CardPattern CardAnalyzer::analyzePair(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeTriple 相关逻辑
 CardPattern CardAnalyzer::analyzeTriple(
     const std::vector<RankGroup>& groups, int wildCount, const RuleContext& ctx
 ) const {
@@ -206,6 +219,7 @@ CardPattern CardAnalyzer::analyzeTriple(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeTripleWithPair 相关逻辑
 CardPattern CardAnalyzer::analyzeTripleWithPair(
     const std::vector<RankGroup>& groups, int wildCount, const RuleContext& ctx
 ) const {
@@ -275,6 +289,7 @@ CardPattern CardAnalyzer::analyzeTripleWithPair(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeStraight 相关逻辑
 CardPattern CardAnalyzer::analyzeStraight(
     const std::vector<RankGroup>& groups, int wildCount, size_t total
 ) const {
@@ -318,6 +333,7 @@ CardPattern CardAnalyzer::analyzeStraight(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeThreePairs 相关逻辑
 CardPattern CardAnalyzer::analyzeThreePairs(
     const std::vector<RankGroup>& groups, int wildCount, size_t total
 ) const {
@@ -359,6 +375,7 @@ CardPattern CardAnalyzer::analyzeThreePairs(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeTwoTriples 相关逻辑
 CardPattern CardAnalyzer::analyzeTwoTriples(
     const std::vector<RankGroup>& groups, int wildCount, size_t total
 ) const {
@@ -400,6 +417,7 @@ CardPattern CardAnalyzer::analyzeTwoTriples(
     return CardPattern::invalid();
 }
 
+/// 实现 analyzeStraightFlush 相关逻辑
 CardPattern CardAnalyzer::analyzeStraightFlush(
     const std::vector<Card>& cards, const RuleContext& ctx
 ) const {
@@ -429,6 +447,7 @@ CardPattern CardAnalyzer::analyzeStraightFlush(
     return CardPattern::invalid();
 }
 
+/// 实现 analyze 相关逻辑
 CardPattern CardAnalyzer::analyze(
     const std::vector<Card>& cards,
     const RuleContext& context

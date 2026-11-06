@@ -240,8 +240,41 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
             RegionChildPositioned(
               page: page,
               parentId: parentId,
-              childId: 'mode_selector',
-              child: _buildModeSelector(ui, parentId: parentId, page: page),
+              childId: 'mode_six_btn',
+              child: _buildModeButton(
+                ui,
+                parentId: parentId,
+                childId: 'mode_six_btn',
+                page: page,
+                mode: GameMode.six,
+                label: '六人房间',
+              ),
+            ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'mode_four_btn',
+              child: _buildModeButton(
+                ui,
+                parentId: parentId,
+                childId: 'mode_four_btn',
+                page: page,
+                mode: GameMode.four,
+                label: '四人房间',
+              ),
+            ),
+            RegionChildPositioned(
+              page: page,
+              parentId: parentId,
+              childId: 'mode_solo_btn',
+              child: _buildModeButton(
+                ui,
+                parentId: parentId,
+                childId: 'mode_solo_btn',
+                page: page,
+                mode: GameMode.solo,
+                label: '单测',
+              ),
             ),
             RegionChildPositioned(
               page: page,
@@ -402,37 +435,47 @@ class _LobbyPageState extends ConsumerState<LobbyPage> {
     );
   }
 
-  Widget _buildModeSelector(
+  Widget _buildModeButton(
     UiScale ui, {
     required String parentId,
+    required String childId,
     required PageLayoutKind page,
+    required GameMode mode,
+    required String label,
   }) {
-    final rect = ui.elementChildRect(parentId, 'mode_selector', page: page);
-    final spacing = rect != null ? rect.width * 0.02 : ui.w(8);
-    final chipH = rect?.height ?? ui.h(36);
-    final chipFont = GameTheme.buttonLabelFontSize(chipH);
+    final rect = ui.elementChildRect(parentId, childId, page: page);
+    final fontSize = rect != null
+        ? GameTheme.buttonLabelFontSize(rect.height * 0.55)
+        : ui.sp(13);
+    final radius = rect != null ? rect.height * 0.2 : ui.r(8);
+    final selected = _selectedMode == mode;
 
-    return Align(
-      alignment: Alignment.center,
-      child: Wrap(
-        spacing: spacing,
-        runSpacing: spacing,
-        alignment: WrapAlignment.center,
-        children: GameMode.values.map((mode) {
-        final selected = _selectedMode == mode;
-        return ChoiceChip(
-          label: Text(mode.label, style: TextStyle(fontSize: chipFont)),
-          selected: selected,
-          onSelected: (_) => setState(() => _selectedMode = mode),
-          selectedColor: GameTheme.accentGold.withValues(alpha: 0.35),
-          backgroundColor: Colors.white.withValues(alpha: 0.08),
-          labelStyle: TextStyle(
-            color: selected ? Colors.white : Colors.white70,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+    return Material(
+      color: selected
+          ? GameTheme.accentGold.withValues(alpha: 0.35)
+          : Colors.white.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(radius),
+      child: InkWell(
+        onTap: () => setState(() => _selectedMode = mode),
+        borderRadius: BorderRadius.circular(radius),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: rect != null ? rect.width * 0.06 : ui.w(4),
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.white70,
+                  fontSize: fontSize,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ),
           ),
-          side: BorderSide(color: selected ? GameTheme.accentGold : Colors.white24),
-        );
-      }).toList(),
+        ),
       ),
     );
   }

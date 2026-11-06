@@ -4,6 +4,9 @@
 #include <sstream>
 #include <stdexcept>
 
+/// @file message.cpp
+/// @brief 协议消息 JSON 序列化与解析
+
 namespace guandan {
 
 static std::string extractJsonString(const std::string& json, const std::string& key) {

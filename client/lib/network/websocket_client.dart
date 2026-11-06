@@ -152,6 +152,35 @@ class WebSocketClient {
       send('vote_dismiss', data: {'agree': agree}, roomId: roomId);
   bool setRoomOptions(String roomId, {required bool enableTribute}) =>
       send('set_room_options', data: {'enable_tribute': enableTribute}, roomId: roomId);
+  int? sendVoiceJoin(String roomId) {
+    if (_channel == null || state != WsConnectionState.connected) {
+      debugPrint('[WS] voice_join skipped: not connected');
+      return null;
+    }
+    final requestId = ++_requestId;
+    _requestTypes[requestId] = 'voice_join';
+    final msg = {
+      'protocol_version': Constants.protocolVersion,
+      'type': 'voice_join',
+      'request_id': requestId,
+      'room_id': roomId,
+      'data': <String, dynamic>{},
+    };
+    try {
+      _channel!.sink.add(jsonEncode(msg));
+      return requestId;
+    } catch (e) {
+      debugPrint('[WS] voice_join send failed: $e');
+      return null;
+    }
+  }
+
+  bool sendVoiceSignal(String roomId, Map<String, dynamic> payload) => send(
+        'voice_signal',
+        data: payload,
+        roomId: roomId,
+      );
+
   bool sendVoiceState(
     String roomId, {
     required bool micEnabled,

@@ -7,8 +7,10 @@
 
 namespace guandan {
 
+/// 从一组牌解析牌型（掼蛋规则）
 class CardAnalyzer {
 public:
+    /// 分析牌型；非法则 isValid=false
     CardPattern analyze(
         const std::vector<Card>& cards,
         const RuleContext& context
@@ -16,9 +18,9 @@ public:
 
 private:
     struct RankGroup {
-        int rank = 0;
-        int count = 0;
-        std::vector<const Card*> cards;
+        int rank = 0;                   ///< 有效点数
+        int count = 0;                  ///< 该点数张数
+        std::vector<const Card*> cards; ///< 指向原牌
     };
 
     std::vector<RankGroup> groupByRank(

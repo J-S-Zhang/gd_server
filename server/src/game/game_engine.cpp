@@ -3,11 +3,16 @@
 #include "game/finish_rank.h"
 #include <algorithm>
 
+/// @file game_engine.cpp
+/// @brief 对局引擎：发牌、出牌、贡牌与视图
+
 namespace guandan {
 
+/// 构造 GameEngine 实例
 GameEngine::GameEngine(const GameRuleConfig& config)
     : config_(config), turnManager_(state_) {}
 
+/// 初始化对局状态
 void GameEngine::init(RoomId roomId, const std::vector<PlayerId>& playerIds) {
     state_ = GameState{};
     state_.roomId = roomId;
@@ -26,15 +31,18 @@ void GameEngine::init(RoomId roomId, const std::vector<PlayerId>& playerIds) {
     }
 }
 
+/// 实现 setPlayerReady 相关逻辑
 void GameEngine::setPlayerReady(PlayerId playerId) {
     setPlayerReady(playerId, true);
 }
 
+/// 实现 setPlayerReady 相关逻辑
 void GameEngine::setPlayerReady(PlayerId playerId, bool ready) {
     auto* p = state_.getPlayerById(playerId);
     if (p) p->isReady = ready;
 }
 
+/// 实现 allReady 相关逻辑
 bool GameEngine::allReady() const {
     for (int i = 0; i < state_.playerCount; ++i) {
         if (!state_.players[i].isReady) return false;
@@ -42,6 +50,7 @@ bool GameEngine::allReady() const {
     return state_.playerCount == config_.playerCount;
 }
 
+/// 实现 updateConfig 相关逻辑
 void GameEngine::updateConfig(const GameRuleConfig& config) {
     if (state_.phase == GamePhase::PLAYING || state_.phase == GamePhase::FINISHED ||
         state_.phase == GamePhase::TRIBUTE || state_.phase == GamePhase::RETURN_TRIBUTE) {
@@ -50,6 +59,7 @@ void GameEngine::updateConfig(const GameRuleConfig& config) {
     config_ = config;
 }
 
+/// 实现 ruleContext 相关逻辑
 RuleContext GameEngine::ruleContext() const {
     RuleContext ctx;
     ctx.currentLevel = state_.currentLevel;
@@ -57,10 +67,12 @@ RuleContext GameEngine::ruleContext() const {
     return ctx;
 }
 
+/// 实现 incrementStateVersion 相关逻辑
 void GameEngine::incrementStateVersion() {
     state_.stateVersion++;
 }
 
+/// 实现 cardsFromIds 相关逻辑
 std::vector<Card> GameEngine::cardsFromIds(const std::vector<CardId>& ids) const {
     std::vector<Card> result;
     result.reserve(ids.size());
@@ -70,6 +82,7 @@ std::vector<Card> GameEngine::cardsFromIds(const std::vector<CardId>& ids) const
     return result;
 }
 
+/// 实现 seatOf 相关逻辑
 int GameEngine::seatOf(PlayerId id) const {
     for (int i = 0; i < state_.playerCount; ++i) {
         if (state_.players[i].id == id) return i;
@@ -77,6 +90,7 @@ int GameEngine::seatOf(PlayerId id) const {
     return -1;
 }
 
+/// 实现 dealAndStartPlaying 相关逻辑
 PlayResult GameEngine::dealAndStartPlaying(bool applyTribute) {
     PlayResult result;
 
@@ -141,10 +155,12 @@ PlayResult GameEngine::dealAndStartPlaying(bool applyTribute) {
     return result;
 }
 
+/// 实现 clearTributeState 相关逻辑
 void GameEngine::clearTributeState() {
     tributeState_ = {};
 }
 
+/// 实现 beginPlayingFromDeal 相关逻辑
 void GameEngine::beginPlayingFromDeal(int firstPlayerSeat) {
     state_.phase = GamePhase::PLAYING;
     state_.firstPlayerIndex = firstPlayerSeat;
@@ -152,6 +168,7 @@ void GameEngine::beginPlayingFromDeal(int firstPlayerSeat) {
     incrementStateVersion();
 }
 
+/// 实现 finishTributePhaseAndStartPlay 相关逻辑
 PlayResult GameEngine::finishTributePhaseAndStartPlay() {
     PlayResult result;
     const int firstPlayerSeat = tributeManager_.computeFirstPlayerSeat(
@@ -174,12 +191,14 @@ PlayResult GameEngine::finishTributePhaseAndStartPlay() {
     return result;
 }
 
+/// 实现 hasPendingTributeAction 相关逻辑
 bool GameEngine::hasPendingTributeAction() const {
     return tributeState_.active &&
            (state_.phase == GamePhase::TRIBUTE ||
             state_.phase == GamePhase::RETURN_TRIBUTE);
 }
 
+/// 实现 submitTribute 相关逻辑
 PlayResult GameEngine::submitTribute(PlayerId playerId, CardId cardId) {
     PlayResult result;
     if (state_.phase != GamePhase::TRIBUTE || !tributeState_.active) {
@@ -238,6 +257,7 @@ PlayResult GameEngine::submitTribute(PlayerId playerId, CardId cardId) {
     return result;
 }
 
+/// 实现 submitReturn 相关逻辑
 PlayResult GameEngine::submitReturn(PlayerId playerId, CardId cardId) {
     PlayResult result;
     if (state_.phase != GamePhase::RETURN_TRIBUTE || !tributeState_.active) {
@@ -281,10 +301,12 @@ PlayResult GameEngine::submitReturn(PlayerId playerId, CardId cardId) {
     return result;
 }
 
+/// 实现 finalizeTributePhase 相关逻辑
 PlayResult GameEngine::finalizeTributePhase() {
     return finishTributePhaseAndStartPlay();
 }
 
+/// 实现 chooseBotTributeCard 相关逻辑
 std::optional<CardId> GameEngine::chooseBotTributeCard(PlayerId playerId) const {
     const int seat = seatOf(playerId);
     if (seat < 0) return std::nullopt;
@@ -293,6 +315,7 @@ std::optional<CardId> GameEngine::chooseBotTributeCard(PlayerId playerId) const 
     return cardId == 0 ? std::nullopt : std::optional<CardId>(cardId);
 }
 
+/// 实现 chooseBotReturnCard 相关逻辑
 std::optional<CardId> GameEngine::chooseBotReturnCard(PlayerId playerId) const {
     const int seat = seatOf(playerId);
     if (seat < 0) return std::nullopt;
@@ -301,6 +324,7 @@ std::optional<CardId> GameEngine::chooseBotReturnCard(PlayerId playerId) const {
     return cardId == 0 ? std::nullopt : std::optional<CardId>(cardId);
 }
 
+/// 开始对局
 PlayResult GameEngine::startGame() {
     PlayResult result;
     if (state_.phase != GamePhase::WAITING && state_.phase != GamePhase::READY) {
@@ -318,6 +342,7 @@ PlayResult GameEngine::startGame() {
     return dealAndStartPlaying(false);
 }
 
+/// 实现 startNextRound 相关逻辑
 PlayResult GameEngine::startNextRound() {
     PlayResult result;
     if (state_.phase != GamePhase::FINISHED) {
@@ -329,6 +354,7 @@ PlayResult GameEngine::startNextRound() {
     return dealAndStartPlaying(true);
 }
 
+/// 实现 assignFinishRank 相关逻辑
 void GameEngine::assignFinishRank(int playerIndex) {
     int rank = 1;
     for (const auto& p : state_.players) {
@@ -338,6 +364,7 @@ void GameEngine::assignFinishRank(int playerIndex) {
     state_.players[playerIndex].finishRank = rank;
 }
 
+/// 实现 checkTeamWin 相关逻辑
 bool GameEngine::checkTeamWin() const {
     for (int team = 0; team < kTeamCount; ++team) {
         int finished = 0;
@@ -349,6 +376,7 @@ bool GameEngine::checkTeamWin() const {
     return false;
 }
 
+/// 处理出牌请求
 PlayResult GameEngine::playCards(PlayerId playerId, const std::vector<CardId>& cards) {
     PlayResult result;
     if (state_.phase != GamePhase::PLAYING) {
@@ -418,12 +446,14 @@ PlayResult GameEngine::playCards(PlayerId playerId, const std::vector<CardId>& c
     return result;
 }
 
+/// 实现 chooseBotPlay 相关逻辑
 std::optional<std::vector<CardId>> GameEngine::chooseBotPlay(PlayerId playerId) const {
     const int seat = seatOf(playerId);
     if (seat < 0) return std::nullopt;
     return botPlayer_.choosePlay(state_, seat, ruleContext(), analyzer_, ruleEngine_);
 }
 
+/// 处理过牌
 PlayResult GameEngine::pass(PlayerId playerId) {
     PlayResult result;
     if (state_.phase != GamePhase::PLAYING) {
@@ -462,6 +492,7 @@ PlayResult GameEngine::pass(PlayerId playerId) {
     return result;
 }
 
+/// 实现 buildViewFor 相关逻辑
 PlayerView GameEngine::buildViewFor(PlayerId viewerId, int anchorSeatOverride) const {
     PlayerView view;
     view.phase = state_.phase;

@@ -10,47 +10,52 @@
 
 namespace guandan {
 
+/// 上一局结果摘要（用于本局进贡）
 struct PreviousRoundInfo {
-    bool valid = false;
-    int winningTeam = -1;
-    std::array<int, kPlayerCount> finishRankBySeat{};
+    bool valid = false;                              ///< 是否有有效上一局
+    int winningTeam = -1;                            ///< 胜队
+    std::array<int, kPlayerCount> finishRankBySeat{};  ///< 各座位游次
 };
 
+/// 单张进贡或还贡转移
 struct TributeTransfer {
-    int fromSeat = -1;
-    int toSeat = -1;
-    CardId cardId = 0;
+    int fromSeat = -1;  ///< 出牌座位
+    int toSeat = -1;    ///< 收牌座位
+    CardId cardId = 0;  ///< 牌 id
 };
 
+/// 一局进贡/还贡解析结果
 struct TributeRoundResult {
-    bool skipped = false;          // 首局或未开启进贡
-    bool antiTribute = false;      // 抗贡
-    std::vector<TributeTransfer> tributes;
-    std::vector<TributeTransfer> returns;
-    int firstPlayerSeat = 0;
-    int headTributerSeat = -1;     // 给头游进贡的玩家（首出）
-    std::string summary;
+    bool skipped = false;          ///< 首局或未开启进贡
+    bool antiTribute = false;      ///< 抗贡
+    std::vector<TributeTransfer> tributes;  ///< 进贡转移
+    std::vector<TributeTransfer> returns;   ///< 还贡转移
+    int firstPlayerSeat = 0;     ///< 本局首出座位
+    int headTributerSeat = -1;   ///< 给头游进贡的玩家（首出相关）
+    std::string summary;           ///< 文字摘要
 };
 
 /// 进贡阶段计划（尚未转移牌）。
 struct TributePhasePlan {
-    bool skipped = true;
-    bool antiTribute = false;
-    std::vector<int> tributerSeats;
-    std::vector<int> recipientSeats;
-    int headSeat = 0;
-    std::string summary;
+    bool skipped = true;              ///< 是否跳过进贡
+    bool antiTribute = false;         ///< 是否抗贡
+    std::vector<int> tributerSeats;   ///< 需进贡座位
+    std::vector<int> recipientSeats;  ///< 收贡座位
+    int headSeat = 0;                 ///< 头游座位
+    std::string summary;              ///< 摘要
 };
 
 /// 4/6 人掼蛋进贡、还贡、抗贡规则。
 class TributeManager {
 public:
+    /// 生成本局进贡计划（不挪牌）
     TributePhasePlan planRound(
         const GameState& state,
         const GameRuleConfig& config,
         const PreviousRoundInfo& previous
     ) const;
 
+    /// 一次性解析并执行进贡还贡（非交互流程）
     TributeRoundResult resolveRound(
         GameState& state,
         const GameRuleConfig& config,
@@ -58,7 +63,9 @@ public:
         const RuleContext& ctx
     ) const;
 
+    /// 是否可作为进贡牌
     bool isValidTributeCard(const Card& card, const RuleContext& ctx) const;
+    /// 是否可作为还贡牌
     bool isValidReturnCard(const Card& card, const RuleContext& ctx) const;
 
     /// 进贡牌：手牌中最大非逢人配（非红桃级牌）。
@@ -68,6 +75,7 @@ public:
         const RuleContext& ctx
     ) const;
 
+    /// 校验某座位提交的进贡牌
     bool isValidTributeSubmission(
         int seat,
         CardId cardId,
@@ -75,6 +83,7 @@ public:
         const RuleContext& ctx
     ) const;
 
+    /// 校验某座位提交的还贡牌
     bool isValidReturnSubmission(
         int seat,
         CardId cardId,
@@ -96,6 +105,7 @@ public:
         const RuleContext& ctx
     ) const;
 
+    /// 根据提交执行进贡转移并写入 result
     void assignTributes(
         GameState& state,
         const RuleContext& ctx,
@@ -104,6 +114,7 @@ public:
         TributeRoundResult& result
     ) const;
 
+    /// 执行单次还贡转移
     void applyReturnTransfer(
         GameState& state,
         int fromSeat,
@@ -111,6 +122,7 @@ public:
         CardId cardId
     ) const;
 
+    /// 计算本局首出座位
     int computeFirstPlayerSeat(
         const TributeRoundResult& result,
         int headSeat,
@@ -120,12 +132,14 @@ public:
         int playerCount
     ) const;
 
+    /// 机器人：选进贡牌
     CardId pickBestTributeCard(
         const Hand& hand,
         const GameState& state,
         const RuleContext& ctx
     ) const;
 
+    /// 机器人：选还贡牌
     CardId pickBestReturnCard(
         const Hand& hand,
         const GameState& state,
@@ -171,6 +185,7 @@ private:
     void transferCard(GameState& state, int fromSeat, int toSeat, CardId cardId) const;
 };
 
+/// 从终局状态构建 PreviousRoundInfo
 PreviousRoundInfo buildPreviousRoundInfo(const GameState& state, int winningTeam);
 
 }  // namespace guandan

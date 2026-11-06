@@ -1,8 +1,12 @@
 #include "game/team_progress.h"
 #include <algorithm>
 
+/// @file team_progress.cpp
+/// @brief 双方级数进度计算
+
 namespace guandan {
 
+/// 实现 prepareNextRound 相关逻辑
 void TeamProgress::prepareNextRound() {
     if (lastWinningTeam >= 0) {
         attackingTeam = lastWinningTeam;
@@ -11,6 +15,7 @@ void TeamProgress::prepareNextRound() {
     }
 }
 
+/// 实现 applySettlement 相关逻辑
 void TeamProgress::applySettlement(SettlementResult& result) {
     result.teamLevels = levels;
     result.inPassAPhase = inPassAPhase;

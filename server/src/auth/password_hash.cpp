@@ -4,10 +4,14 @@
 #include <iomanip>
 #include <sstream>
 
+/// @file password_hash.cpp
+/// @brief 密码盐生成、哈希与校验
+
 namespace guandan {
 
 namespace {
 
+/// 将字节序列转为十六进制字符串
 std::string bytesToHex(const std::string& bytes) {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');

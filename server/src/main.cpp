@@ -4,10 +4,12 @@
 #include "network/session_manager.h"
 #include "network/websocket_server.h"
 #include "room/room_manager.h"
+#include "room/room_executor.h"
 #include "timer/timer_manager.h"
 #include "user/user_store.h"
 #include "user/avatar_storage.h"
 #include "auth/token_manager.h"
+#include "livekit/livekit_config.h"
 #include "utils/logger.h"
 #include <atomic>
 #include <chrono>
@@ -16,12 +18,16 @@
 #include <string>
 #include <thread>
 
+/// @file main.cpp
+/// @brief 游戏主进程入口，组装并启动 HTTP/WebSocket 与房间调度等服务
+
 int main(int argc, char* argv[]) {
     int wsPort = 9001;
     int httpPort = 8080;
     std::string dbPath = "users.json";
     std::string appVersionPath = "server/config/app_version.json";
     std::string avatarsDir = "downloads/avatars";
+    std::string liveKitConfigPath = "server/config/livekit.json";
     if (argc > 1) {
         wsPort = std::atoi(argv[1]);
     }
@@ -37,6 +43,9 @@ int main(int argc, char* argv[]) {
     if (argc > 5) {
         avatarsDir = argv[5];
     }
+    if (argc > 6) {
+        liveKitConfigPath = argv[6];
+    }
 
     guandan::Logger::info("六人掼蛋游戏服务器启动");
     guandan::Logger::info("规则版本: six_player_guandan_v1");
@@ -45,6 +54,7 @@ int main(int argc, char* argv[]) {
     guandan::Logger::info("用户数据库: " + dbPath);
     guandan::Logger::info("版本配置: " + appVersionPath);
     guandan::Logger::info("头像目录: " + avatarsDir);
+    guandan::Logger::info("LiveKit 配置: " + liveKitConfigPath);
 
     guandan::AppVersionInfo appVersionInfo;
     if (!guandan::loadAppVersionInfo(appVersionPath, appVersionInfo)) {
@@ -55,10 +65,16 @@ int main(int argc, char* argv[]) {
     guandan::TokenManager tokenManager;
     guandan::AuthService authService(userStore, tokenManager);
 
+    guandan::RoomExecutor roomExecutor(4);
     guandan::RoomManager roomManager;
+    roomManager.setRoomExecutor(&roomExecutor);
     guandan::SessionManager sessionManager;
     guandan::TimerManager timerManager;
     guandan::MessageDispatcher dispatcher(roomManager, sessionManager, timerManager, authService);
+    guandan::LiveKitConfig liveKitConfig;
+    if (guandan::loadLiveKitConfig(liveKitConfigPath, liveKitConfig)) {
+        dispatcher.setLiveKitConfig(liveKitConfig);
+    }
 
     guandan::HttpServer httpServer(httpPort);
     httpServer.setAuthService(&authService);

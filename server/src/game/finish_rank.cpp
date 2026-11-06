@@ -1,5 +1,8 @@
 #include "game/finish_rank.h"
 
+/// @file finish_rank.cpp
+/// @brief 玩家出完顺序排名
+
 namespace guandan {
 
 void assignRemainingFinishRanks(GameState& state) {

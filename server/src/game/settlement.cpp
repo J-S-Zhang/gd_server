@@ -2,8 +2,12 @@
 #include <algorithm>
 #include <vector>
 
+/// @file settlement.cpp
+/// @brief 单局与整场结算
+
 namespace guandan {
 
+/// 实现 findRank 相关逻辑
 int Settlement::findRank(const GameState& state, int rank) const {
     for (int i = 0; i < state.playerCount; ++i) {
         if (state.players[i].finishRank == rank) return i;
@@ -11,6 +15,7 @@ int Settlement::findRank(const GameState& state, int rank) const {
     return -1;
 }
 
+/// 实现 sumWinningTeamRanks 相关逻辑
 int Settlement::sumWinningTeamRanks(const GameState& state, int team, int count) const {
     std::vector<int> ranks;
     ranks.reserve(count);
@@ -28,6 +33,7 @@ int Settlement::sumWinningTeamRanks(const GameState& state, int team, int count)
     return sum;
 }
 
+/// 实现 calculate 相关逻辑
 SettlementResult Settlement::calculate(const GameState& state, int playersPerTeam) const {
     SettlementResult result;
     result.ranks.resize(state.playerCount, 0);

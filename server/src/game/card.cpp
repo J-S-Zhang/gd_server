@@ -1,5 +1,8 @@
 #include "game/card.h"
 
+/// @file card.cpp
+/// @brief 单张牌定义与比较
+
 namespace guandan {
 
 Card makeCard(CardId id, Suit suit, Rank rank) {

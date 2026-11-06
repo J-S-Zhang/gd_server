@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "api_key": "devkey",
+  "api_secret": "secret",
+  "token_ttl_seconds": 3600
+}

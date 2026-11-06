@@ -6,10 +6,14 @@
 #include <mutex>
 #include <sstream>
 
+/// @file user_store.cpp
+/// @brief 用户 JSON 持久化存储与查询
+
 namespace guandan {
 
 namespace {
 
+/// 去除字符串首尾空白
 std::string trim(const std::string& s) {
     size_t start = 0;
     while (start < s.size() && std::isspace(static_cast<unsigned char>(s[start]))) ++start;
@@ -18,6 +22,7 @@ std::string trim(const std::string& s) {
     return s.substr(start, end - start);
 }
 
+/// 从 JSON 文本解析字符串字段
 std::string extractJsonStringValue(const std::string& json, const std::string& key) {
     const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
@@ -41,6 +46,7 @@ std::string extractJsonStringValue(const std::string& json, const std::string& k
     return json.substr(pos, end - pos);
 }
 
+/// 从 JSON 文本解析无符号整数字段
 uint64_t extractJsonUintValue(const std::string& json, const std::string& key) {
     const std::string needle = "\"" + key + "\":";
     auto pos = json.find(needle);
@@ -56,6 +62,7 @@ uint64_t extractJsonUintValue(const std::string& json, const std::string& key) {
     }
 }
 
+/// 转义 JSON 字符串特殊字符
 std::string escapeJson(const std::string& s) {
     std::string out;
     out.reserve(s.size());
@@ -74,10 +81,12 @@ std::string escapeJson(const std::string& s) {
 
 }  // namespace
 
+/// 构造 UserStore 实例
 UserStore::UserStore(std::string dbPath) : dbPath_(std::move(dbPath)) {
     load();
 }
 
+/// 从磁盘加载数据
 void UserStore::load() {
     std::lock_guard lock(mutex_);
     users_.clear();
@@ -129,6 +138,7 @@ void UserStore::load() {
     Logger::info("Loaded " + std::to_string(users_.size()) + " users from database");
 }
 
+/// 持久化保存数据
 void UserStore::save() const {
     std::ostringstream oss;
     oss << "{\n";
@@ -166,6 +176,7 @@ void UserStore::save() const {
     out << oss.str();
 }
 
+/// 按昵称查找用户
 std::optional<UserRecord> UserStore::findByNickname(const std::string& nickname) const {
     std::lock_guard lock(mutex_);
     const std::string key = trim(nickname);
@@ -175,6 +186,7 @@ std::optional<UserRecord> UserStore::findByNickname(const std::string& nickname)
     return std::nullopt;
 }
 
+/// 按用户 ID 查找
 std::optional<UserRecord> UserStore::findById(PlayerId id) const {
     std::lock_guard lock(mutex_);
     for (const auto& u : users_) {
@@ -183,6 +195,7 @@ std::optional<UserRecord> UserStore::findById(PlayerId id) const {
     return std::nullopt;
 }
 
+/// 注册新用户
 std::string UserStore::registerUser(const std::string& nickname, const std::string& password,
                                     const std::string& passwordHash, const std::string& salt) {
     std::lock_guard lock(mutex_);
@@ -208,6 +221,7 @@ std::string UserStore::registerUser(const std::string& nickname, const std::stri
     return "";
 }
 
+/// 更新用户战绩统计
 bool UserStore::updateStats(PlayerId id, const UserStats& stats) {
     std::lock_guard lock(mutex_);
     for (auto& u : users_) {
@@ -220,6 +234,7 @@ bool UserStore::updateStats(PlayerId id, const UserStats& stats) {
     return false;
 }
 
+/// 更新用户自定义头像
 bool UserStore::updateAvatar(PlayerId id, const std::string& avatarPath) {
     std::lock_guard lock(mutex_);
     for (auto& u : users_) {
@@ -232,6 +247,7 @@ bool UserStore::updateAvatar(PlayerId id, const std::string& avatarPath) {
     return false;
 }
 
+/// 更新用户预设头像
 bool UserStore::updateAvatarPreset(PlayerId id, const std::string& presetId) {
     std::lock_guard lock(mutex_);
     for (auto& u : users_) {

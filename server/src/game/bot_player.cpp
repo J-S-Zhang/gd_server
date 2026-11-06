@@ -3,10 +3,14 @@
 #include <climits>
 #include <vector>
 
+/// @file bot_player.cpp
+/// @brief 机器人出牌/贡牌决策
+
 namespace guandan {
 
 namespace {
 
+/// cardsFromHand 辅助函数
 std::vector<Card> cardsFromHand(const GameState& state, int seatIndex,
                                 const std::vector<CardId>& ids) {
     std::vector<Card> cards;
@@ -19,16 +23,19 @@ std::vector<Card> cardsFromHand(const GameState& state, int seatIndex,
 
 }  // namespace
 
+/// 实现 leadScore 相关逻辑
 int BotPlayer::leadScore(size_t cardCount, const CardPattern& pattern) {
     return static_cast<int>(cardCount) * 10000 + pattern.primaryRank * 10 +
            static_cast<int>(pattern.type);
 }
 
+/// 实现 beatScore 相关逻辑
 int BotPlayer::beatScore(size_t cardCount, const CardPattern& pattern) {
     return static_cast<int>(cardCount) * 10000 + pattern.primaryRank * 10 +
            static_cast<int>(pattern.type);
 }
 
+/// 实现 choosePlay 相关逻辑
 std::optional<std::vector<CardId>> BotPlayer::choosePlay(
     const GameState& state,
     int seatIndex,

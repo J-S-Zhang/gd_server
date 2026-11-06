@@ -1,9 +1,14 @@
 #include "room/room_manager.h"
 #include "game/room_config.h"
+#include "room/room_executor.h"
 #include "utils/uuid.h"
+
+/// @file room_manager.cpp
+/// @brief 房间创建、加入、查询与销毁
 
 namespace guandan {
 
+/// 创建新房间
 std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
                                               const PlayerJoinInfo& profile,
                                               const std::string& mode) {
@@ -15,8 +20,10 @@ std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
         roomId = generateRoomId();
     }
 
+    if (!executor_) return nullptr;
+
     auto config = RoomConfig::fromModeName(mode);
-    auto room = std::make_shared<Room>(roomId, ownerId, config);
+    auto room = std::make_shared<Room>(roomId, ownerId, config, *executor_);
     room->join(ownerId, profile);
     if (config.mode == GameMode::SOLO) {
         room->fillBots();
@@ -26,6 +33,7 @@ std::shared_ptr<Room> RoomManager::createRoom(PlayerId ownerId,
     return room;
 }
 
+/// 加入指定房间
 std::shared_ptr<Room> RoomManager::joinRoom(const RoomId& roomId, PlayerId playerId,
                                             const PlayerJoinInfo& profile) {
     std::lock_guard lock(mutex_);
@@ -39,12 +47,14 @@ std::shared_ptr<Room> RoomManager::joinRoom(const RoomId& roomId, PlayerId playe
     return it->second;
 }
 
+/// 获取房间实例
 std::shared_ptr<Room> RoomManager::getRoom(const RoomId& roomId) {
     std::lock_guard lock(mutex_);
     auto it = rooms_.find(roomId);
     return it != rooms_.end() ? it->second : nullptr;
 }
 
+/// 移除并销毁房间
 void RoomManager::removeRoom(const RoomId& roomId) {
     std::lock_guard lock(mutex_);
     auto it = rooms_.find(roomId);
@@ -57,6 +67,7 @@ void RoomManager::removeRoom(const RoomId& roomId) {
     rooms_.erase(it);
 }
 
+/// 按玩家查找所在房间
 std::shared_ptr<Room> RoomManager::findRoomByPlayer(PlayerId playerId) {
     std::lock_guard lock(mutex_);
     auto it = playerRoomMap_.find(playerId);
@@ -65,6 +76,7 @@ std::shared_ptr<Room> RoomManager::findRoomByPlayer(PlayerId playerId) {
     return roomIt != rooms_.end() ? roomIt->second : nullptr;
 }
 
+/// 将玩家从房间映射中移除
 void RoomManager::removePlayerFromRoom(PlayerId playerId) {
     std::lock_guard lock(mutex_);
     if (isBotPlayer(playerId)) return;

@@ -3,6 +3,9 @@
 #include <sstream>
 #include <iomanip>
 
+/// @file uuid.cpp
+/// @brief UUID 字符串生成
+
 namespace guandan {
 
 std::string generateRoomId() {

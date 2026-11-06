@@ -5,12 +5,16 @@
 #include <filesystem>
 #include <fstream>
 
+/// @file avatar_storage.cpp
+/// @brief 用户头像文件落盘与公开路径生成
+
 namespace fs = std::filesystem;
 
 namespace guandan {
 
 namespace {
 
+/// 规范化头像图片格式扩展名
 std::string normalizeFormat(const std::string& format) {
     std::string lower = format;
     for (char& c : lower) {
@@ -22,6 +26,7 @@ std::string normalizeFormat(const std::string& format) {
     return "";
 }
 
+/// 规范化公开 URL 路径前缀
 std::string normalizePrefix(std::string prefix) {
     while (!prefix.empty() && prefix.back() == '/') {
         prefix.pop_back();

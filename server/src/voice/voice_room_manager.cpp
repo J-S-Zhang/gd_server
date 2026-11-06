@@ -2,14 +2,19 @@
 
 #include <algorithm>
 
+/// @file voice_room_manager.cpp
+/// @brief 语音房间成员与地址管理
+
 namespace guandan::voice {
 
 namespace {
 
+/// sameAddr 辅助函数
 bool sameAddr(const VoiceSocketAddr& a, const VoiceSocketAddr& b) {
     return a.sin_addr.s_addr == b.sin_addr.s_addr && a.sin_port == b.sin_port;
 }
 
+/// 从语音房间移除用户
 void removeFromRoom(std::unordered_map<std::string, std::vector<uint32_t>>& rooms,
                     const std::string& roomId,
                     uint32_t userId) {
@@ -24,6 +29,7 @@ void removeFromRoom(std::unordered_map<std::string, std::vector<uint32_t>>& room
 
 }  // namespace
 
+/// 加入房间或会话
 void VoiceRoomManager::join(uint32_t userId, const std::string& roomId, const VoiceSocketAddr& addr) {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -45,6 +51,7 @@ void VoiceRoomManager::join(uint32_t userId, const std::string& roomId, const Vo
     }
 }
 
+/// 离开房间或会话
 void VoiceRoomManager::leave(uint32_t userId) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = clients_.find(userId);
@@ -53,6 +60,7 @@ void VoiceRoomManager::leave(uint32_t userId) {
     clients_.erase(it);
 }
 
+/// 实现 touch 相关逻辑
 void VoiceRoomManager::touch(uint32_t userId, const VoiceSocketAddr& addr) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = clients_.find(userId);
@@ -61,6 +69,7 @@ void VoiceRoomManager::touch(uint32_t userId, const VoiceSocketAddr& addr) {
     it->second.lastSeen = std::chrono::steady_clock::now();
 }
 
+/// 实现 peersExcept 相关逻辑
 std::vector<VoiceSocketAddr> VoiceRoomManager::peersExcept(uint32_t userId,
                                                            const std::string& roomId) const {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -78,6 +87,7 @@ std::vector<VoiceSocketAddr> VoiceRoomManager::peersExcept(uint32_t userId,
     return peers;
 }
 
+/// 实现 roomIdForUser 相关逻辑
 bool VoiceRoomManager::roomIdForUser(uint32_t userId, std::string& roomIdOut) const {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = clients_.find(userId);
@@ -86,6 +96,7 @@ bool VoiceRoomManager::roomIdForUser(uint32_t userId, std::string& roomIdOut) co
     return true;
 }
 
+/// 实现 pruneIdle 相关逻辑
 void VoiceRoomManager::pruneIdle(std::chrono::seconds maxIdle) {
     std::lock_guard<std::mutex> lock(mutex_);
     const auto now = std::chrono::steady_clock::now();

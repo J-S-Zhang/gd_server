@@ -12,6 +12,7 @@ namespace guandan {
 /// 测试房机器人：枚举手牌子集，选能压牌的最省牌组合；否则过牌。
 class BotPlayer {
 public:
+    /// 为 seatIndex 选择出牌；无法出牌返回 nullopt（应 pass）
     std::optional<std::vector<CardId>> choosePlay(
         const GameState& state,
         int seatIndex,
