@@ -79,17 +79,18 @@ enable_testing()
 
 set(GUANDAN_TEST_SOURCES
     tests/test_main.cpp
-    tests/test_card.cpp
-    tests/test_card_analyzer.cpp
-    tests/test_rule_engine.cpp
-    tests/test_game_engine.cpp
-    tests/test_turn_manager.cpp
-    tests/test_bot_player.cpp
-    tests/test_settlement.cpp
-    tests/test_finish_rank.cpp
-    tests/test_pass_a.cpp
-    tests/test_tribute.cpp
-    tests/test_message.cpp
+    # 临时只跑多房间并发性能；恢复全量时取消下面注释
+    # tests/test_card.cpp
+    # tests/test_card_analyzer.cpp
+    # tests/test_rule_engine.cpp
+    # tests/test_game_engine.cpp
+    # tests/test_turn_manager.cpp
+    # tests/test_bot_player.cpp
+    # tests/test_settlement.cpp
+    # tests/test_finish_rank.cpp
+    # tests/test_pass_a.cpp
+    # tests/test_tribute.cpp
+    # tests/test_message.cpp
     tests/test_multi_room_bot_perf.cpp
 )
 

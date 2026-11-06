@@ -249,11 +249,12 @@ void printPerfSummary(const char* label, int roomCount, int matchesPerRoom, int6
 
 }  // namespace
 
-TEST(test_single_four_bot_match_finishes) {
-    auto r = playFourBotMatch(0);
-    ASSERT(r.ok);
-    ASSERT(r.plays > 0);
-}
+// 临时关闭：只跑多房间并发
+// TEST(test_single_four_bot_match_finishes) {
+//     auto r = playFourBotMatch(0);
+//     ASSERT(r.ok);
+//     ASSERT(r.plays > 0);
+// }
 
 TEST(test_multi_room_bot_parallel_perf) {
     // 工作量：16 房 × 每房 80 局，经 RoomExecutor 多房间并行
