@@ -7,8 +7,14 @@ services:
       dockerfile: ../deploy/docker/Dockerfile
     ports:
       - "9001:9001"
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql://guandan:guandan_pass@postgres:5432/guandan
     volumes:
       - ../server/logs:/app/logs
+      - ../downloads:/app/downloads
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   postgres:
@@ -21,6 +27,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     restart: unless-stopped
 
   nginx:

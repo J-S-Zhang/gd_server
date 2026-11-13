@@ -6,7 +6,7 @@
 #include "room/room_manager.h"
 #include "room/room_executor.h"
 #include "timer/timer_manager.h"
-#include "user/user_store.h"
+#include "user/user_repository.h"
 #include "user/avatar_storage.h"
 #include "auth/token_manager.h"
 #include "livekit/livekit_config.h"
@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
     int wsPort = 9001;
     int httpPort = 8080;
     std::string dbPath = "users.json";
+    std::string databaseConfigPath = "server/config/database.json";
     std::string appVersionPath = "server/config/app_version.json";
     std::string avatarsDir = "downloads/avatars";
     std::string liveKitConfigPath = "server/config/livekit.json";
@@ -46,6 +47,9 @@ int main(int argc, char* argv[]) {
     if (argc > 6) {
         liveKitConfigPath = argv[6];
     }
+    if (argc > 7) {
+        databaseConfigPath = argv[7];
+    }
 
     guandan::Logger::info("六人掼蛋游戏服务器启动");
     guandan::Logger::info("规则版本: six_player_guandan_v1");
@@ -56,7 +60,7 @@ int main(int argc, char* argv[]) {
 #endif
     guandan::Logger::info("WebSocket 端口: " + std::to_string(wsPort));
     guandan::Logger::info("HTTP 端口: " + std::to_string(httpPort));
-    guandan::Logger::info("用户数据库: " + dbPath);
+    guandan::Logger::info("用户库配置: " + databaseConfigPath + " (JSON 回退: " + dbPath + ")");
     guandan::Logger::info("版本配置: " + appVersionPath);
     guandan::Logger::info("头像目录: " + avatarsDir);
     guandan::Logger::info("LiveKit 配置: " + liveKitConfigPath);
@@ -66,9 +70,16 @@ int main(int argc, char* argv[]) {
         guandan::Logger::info("使用默认 App 版本配置");
     }
 
-    guandan::UserStore userStore(dbPath);
+    guandan::UserRepositoryConfig userRepoConfig;
+    userRepoConfig.jsonFallbackPath = dbPath;
+    guandan::loadUserRepositoryConfig(databaseConfigPath, userRepoConfig);
+    auto userRepository = guandan::createUserRepository(userRepoConfig);
+    if (!userRepository) {
+        guandan::Logger::error("用户存储初始化失败");
+        return 1;
+    }
     guandan::TokenManager tokenManager;
-    guandan::AuthService authService(userStore, tokenManager);
+    guandan::AuthService authService(*userRepository, tokenManager);
 
     guandan::RoomExecutor roomExecutor(4);
     guandan::RoomManager roomManager;

@@ -9,8 +9,8 @@
 namespace guandan {
 
 /// 构造并注入用户存储与令牌管理器
-AuthService::AuthService(UserStore& userStore, TokenManager& tokenManager)
-    : userStore_(userStore), tokenManager_(tokenManager) {}
+AuthService::AuthService(UserRepository& userRepository, TokenManager& tokenManager)
+    : userRepository_(userRepository), tokenManager_(tokenManager) {}
 
 /// 校验密码长度等规则
 std::string AuthService::validatePassword(const std::string& password) {
@@ -37,7 +37,7 @@ AuthResult AuthService::registerUser(const std::string& nickname,
 
     const std::string salt = generateSalt();
     const std::string hash = hashPassword(password, salt);
-    const std::string regErr = userStore_.registerUser(nickname, password, hash, salt);
+    const std::string regErr = userRepository_.registerUser(nickname, password, hash, salt);
     if (!regErr.empty()) {
         result.httpStatus = 409;
         result.errorCode = "nickname_taken";
@@ -45,7 +45,7 @@ AuthResult AuthService::registerUser(const std::string& nickname,
         return result;
     }
 
-    auto user = userStore_.findByNickname(nickname);
+    auto user = userRepository_.findByNickname(nickname);
     if (!user) {
         result.httpStatus = 500;
         result.errorCode = "internal_error";
@@ -63,7 +63,7 @@ AuthResult AuthService::registerUser(const std::string& nickname,
 /// 用户登录
 AuthResult AuthService::login(const std::string& nickname, const std::string& password) {
     AuthResult result;
-    auto user = userStore_.findByNickname(nickname);
+    auto user = userRepository_.findByNickname(nickname);
     if (!user || !verifyPassword(password, user->salt, user->passwordHash)) {
         result.httpStatus = 401;
         result.errorCode = "invalid_credentials";
@@ -82,7 +82,7 @@ AuthResult AuthService::login(const std::string& nickname, const std::string& pa
 std::optional<UserRecord> AuthService::validateToken(const std::string& token) {
     auto userId = tokenManager_.validateToken(token);
     if (!userId) return std::nullopt;
-    return userStore_.findById(*userId);
+    return userRepository_.findById(*userId);
 }
 
 /// 更新用户自定义头像
@@ -123,14 +123,14 @@ AvatarUpdateResult AuthService::updateAvatar(const std::string& token,
         return result;
     }
 
-    if (!userStore_.updateAvatar(user->id, *avatarPath)) {
+    if (!userRepository_.updateAvatar(user->id, *avatarPath)) {
         result.httpStatus = 500;
         result.errorCode = "save_failed";
         result.message = "头像保存失败，请稍后重试";
         return result;
     }
 
-    auto updated = userStore_.findById(user->id);
+    auto updated = userRepository_.findById(user->id);
     if (!updated) {
         result.httpStatus = 500;
         result.errorCode = "internal_error";
@@ -174,14 +174,14 @@ AvatarPresetUpdateResult AuthService::updateAvatarPreset(const std::string& toke
         return result;
     }
 
-    if (!userStore_.updateAvatarPreset(user->id, presetId)) {
+    if (!userRepository_.updateAvatarPreset(user->id, presetId)) {
         result.httpStatus = 500;
         result.errorCode = "save_failed";
         result.message = "头像预设保存失败";
         return result;
     }
 
-    auto updated = userStore_.findById(user->id);
+    auto updated = userRepository_.findById(user->id);
     if (!updated) {
         result.httpStatus = 500;
         result.errorCode = "internal_error";

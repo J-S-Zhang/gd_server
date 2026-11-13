@@ -3,7 +3,7 @@
 #include "auth/token_manager.h"
 #include "user/avatar_storage.h"
 #include "user/user.h"
-#include "user/user_store.h"
+#include "user/user_repository.h"
 #include <optional>
 #include <string>
 
@@ -40,7 +40,7 @@ struct AuthResult {
 /// 用户注册、登录、token 校验与头像更新
 class AuthService {
 public:
-    AuthService(UserStore& userStore, TokenManager& tokenManager);
+    AuthService(UserRepository& userRepository, TokenManager& tokenManager);
 
     /// 注册新用户
     AuthResult registerUser(const std::string& nickname, const std::string& password);
@@ -56,7 +56,7 @@ public:
                                                 const std::string& presetId);
 
 private:
-    UserStore& userStore_;       ///< 用户持久化
+    UserRepository& userRepository_;  ///< 用户持久化
     TokenManager& tokenManager_; ///< token 管理
 
     /// 校验密码强度/格式，通过返回空字符串，否则返回错误说明

@@ -42,7 +42,8 @@ set(GUANDAN_CORE_SOURCES
     src/utils/hmac_sha256.cpp
     src/livekit/livekit_config.cpp
     src/livekit/livekit_token.cpp
-    src/user/user_store.cpp
+    src/user/json_user_repository.cpp
+    src/user/user_repository_factory.cpp
     src/user/avatar_storage.cpp
     src/auth/password_hash.cpp
     src/auth/token_manager.cpp
@@ -50,8 +51,27 @@ set(GUANDAN_CORE_SOURCES
     src/game/room_config.cpp
 )
 
+option(GUANDAN_USE_POSTGRES "Persist users in PostgreSQL when postgres_url is configured" ON)
+
+set(GUANDAN_USER_PG_SOURCES src/user/postgres_user_repository.cpp)
+if(GUANDAN_USE_POSTGRES)
+    find_package(PostgreSQL QUIET)
+    if(PostgreSQL_FOUND)
+        list(APPEND GUANDAN_CORE_SOURCES ${GUANDAN_USER_PG_SOURCES})
+        message(STATUS "Guandan user storage: PostgreSQL client (libpq) enabled")
+    else()
+        message(STATUS "Guandan user storage: libpq not found, PostgreSQL backend disabled at build time")
+    endif()
+endif()
+
 add_library(guandan_core STATIC ${GUANDAN_CORE_SOURCES})
 target_include_directories(guandan_core PUBLIC ${GUANDAN_INCLUDE_DIR})
+
+if(GUANDAN_USE_POSTGRES AND PostgreSQL_FOUND)
+    target_compile_definitions(guandan_core PUBLIC GUANDAN_HAS_POSTGRES)
+    target_include_directories(guandan_core PRIVATE ${PostgreSQL_INCLUDE_DIRS})
+    target_link_libraries(guandan_core PUBLIC PostgreSQL::PostgreSQL)
+endif()
 
 # -----------------------------------------------------------------------------
 # 网络模型开关（编译期二选一）
